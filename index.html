@@ -1,0 +1,139 @@
+<html>
+  <head>
+    <title>GraphTV</title>
+    <script src='js/lib/jquery.js'></script>
+	<script src="https://code.highcharts.com/js/highcharts.js"></script>
+	<script src="http://code.highcharts.com/modules/exporting.js"></script>
+	<script src="http://rawgithub.com/phpepe/highcharts-regression/master/highcharts-regression.js"></script>
+    <link rel='stylesheet' href='https://code.highcharts.com/css/highcharts.css'>
+    <script src='js/omdb.js'></script>
+
+	<style>
+		html, body {
+			font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
+			background-color: black;
+			color: white;
+			overflow: hidden;
+		}
+		.outer_search_container, .outer_ratings_container {
+			position: absolute;
+			top: 0;
+			left: 0;
+			bottom: 0;
+			right: 0;
+			height: 100%;
+			display: flex;
+			overflow: hide;
+		}
+		.outer_search_container {
+			flex-direction: column;
+			justify-content: center;
+			align-items: center;
+		}
+
+		.search_container {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			font-size: 2rem;
+		}
+		.search_box {
+			font-size: 2rem;
+			height: 3rem;
+		}
+		.search_wrapper {
+			display: flex;
+		}
+
+		.result {
+			display: flex;
+			font-size: 1.5rem;
+			cursor: pointer;
+		}
+		.result div {
+			padding: 1rem;
+		}
+
+		.show {
+			padding-top: .5rem;
+			padding-left: .5rem;
+			width: 40%;
+			opacity: .5;
+			transform: translateX(-10rem);
+		 	transition: all 200ms;
+			word-break: break-all;
+			max-height: 7rem;
+			overflow: hidden;
+			z-index: 1;
+		}
+
+		.show:hover {
+			transform: translateX(0);
+			max-height: '';
+			width: 80%;
+			opacity: 1;
+		 	transition: all 200ms;
+			background-color: rgba(0, 0, 0, .5);
+		}
+
+		.show_info {
+			display: flex;
+			align-items: center;
+		}
+
+		.show_info .val {
+			flex-grow: 1;
+		}
+
+		.show_info .key {
+			padding: .1rem;
+			font-size: 1rem;
+			width: 10rem;
+		}
+		.ratings_container {
+			position: absolute;
+			top: 0;
+			left: 0;
+			bottom: 0;
+			right: 0;
+			padding: 1rem;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+		.hidden {
+			display: none;
+		}
+		.highcharts-background {
+			fill: black;
+		}
+	</style>
+
+  </head>
+  <body>
+
+
+
+	<div class='outer_ratings_container hidden'>
+		<div class='show'></div>
+
+		<div class='ratings_container'>
+			<div class='ratings'></div>
+		</div>
+
+	</div>
+
+	<div class='outer_search_container hidden'>
+		<div class='search_container'>
+			<input type='search' class='search_box' autofocus></input>
+			<div class='search_results'></div>
+		</div>
+
+		<div class='results_container'>
+		</div>
+	</div>
+
+	<script>init()</script>
+
+  </body>
+</html>
