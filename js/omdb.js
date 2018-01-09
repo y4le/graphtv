@@ -115,6 +115,9 @@ function chartRatings() {
     }
     data[i] = {
       regression: true,
+      regressionSettings: {
+        tooltip: { enabled: false }
+      },
       name: 'Season ' + (i+1),
       color: `rgba(${(45 + 81*i) % 255}, ${(110 + 81*i) % 255}, ${(180 + 81*i) % 255}, .5)`,
       data: episodeData
@@ -172,7 +175,12 @@ function chartRatings() {
           }
         },
         tooltip: {
-          pointFormatter: function() { return `${window.episode_name_dict[parseInt(this.x)]}<br/>${this.y}/10` }
+          pointFormatter: function() {
+            if (this.series.name.indexOf('Season') > -1) {
+              return `${window.episode_name_dict[parseInt(this.x)]}<br/>${this.y}/10`
+            }
+            return false;
+          }
         }
       }
     },
