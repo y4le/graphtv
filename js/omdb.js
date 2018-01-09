@@ -99,7 +99,7 @@ function chartRatings() {
   data = new Array(window.seasons.length);
 
   let x_axis_counter = 0;
-  let episode_name_dict = [];
+  window.episode_name_dict = [];
 
   for (let i = 0; i < window.seasons.length; i++) {
     let season = window.seasons[i];
@@ -110,7 +110,7 @@ function chartRatings() {
         parseFloat(x_axis_counter),
         parseFloat(season.Episodes[j].imdbRating)
       ];
-      episode_name_dict[j] = season.Episodes[j].Title;
+      window.episode_name_dict[x_axis_counter] = `${j+1} - ${season.Episodes[j].Title}`;
       
     }
     data[i] = {
@@ -172,8 +172,7 @@ function chartRatings() {
           }
         },
         tooltip: {
-          headerFormat: '<b>{point.key}</b><br>',
-          pointFormat: '#{point.x}: {point.y}/10'
+          pointFormatter: function() { return `${window.episode_name_dict[parseInt(this.x)]}<br/>${this.y}/10` }
         }
       }
     },
