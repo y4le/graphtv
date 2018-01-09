@@ -11,7 +11,7 @@ function getParameterByName(name) { // https://stackoverflow.com/a/5158301
 
 function omdbApi(query, callback) {
   $.ajax({
-    url: `http://www.omdbapi.com/?${query}&apikey=${apiKey}`,
+    url: `https://www.omdbapi.com/?${query}&apikey=${apiKey}`,
     success: callback
   });
 }
