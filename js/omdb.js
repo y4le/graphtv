@@ -78,7 +78,7 @@ function onIdData(data, imdbId, season) {
 }
 
 
-function init() {
+function omdb_init() {
   let imdbId = getParameterByName('i');
   if (imdbId) {
     $('.outer_ratings_container').removeClass('hidden');
@@ -113,22 +113,29 @@ function chartRatings() {
       window.episode_name_dict[x_axis_counter] = `${j+1} - ${season.Episodes[j].Title}`;
       
     }
+    const myColor = tinycolor.random().saturate(100);
     data[i] = {
       regression: true,
       regressionSettings: {
+        color: myColor,
         tooltip: { enabled: false }
       },
       name: 'Season ' + (i+1),
-      color: `rgba(${(45 + 81*i) % 255}, ${(110 + 81*i) % 255}, ${(180 + 81*i) % 255}, .5)`,
+      color: myColor,
       data: episodeData
     }
   }
+  
+  window.chartData = data
+  $(window).on('resize', reChart);
+  reChart()
+}
 
-
+function reChart() {
   $('.ratings').highcharts({
     chart: {
       type: 'scatter',
-      width: $(window).width() * .9,
+      width: $(window).width(),
       height: 500,
       plotBackgroundColor: '#000000',
       zoomType: 'xy'
@@ -187,6 +194,6 @@ function chartRatings() {
     pane: {
       backgroundColor: '#000000'
     },
-    series: data
+    series: window.chartData
   });
 }
