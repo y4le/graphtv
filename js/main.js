@@ -1,6 +1,6 @@
 // - Search Page Events
 function onSearch(e) {
-  const searchTerm = $('.search_box').val();
+  const searchTerm = document.querySelector('.search_box').value
   console.log(searchTerm);
 
   omdbSearch(searchTerm, function (data) {
@@ -11,14 +11,31 @@ function onSearch(e) {
 }
 
 function showResults(results) {
-  let $results = $("<div class='results_container'></div>");
+  let results_el = document.createElement('div');
+  results_el.classList.add('results_container');
+
   for (idx in results) {
-    let result = results[idx];
-    let $result = $(`<div class='result' onclick="onResultClick('${result.imdbID}')"></div>`);
-    $result.append(`<div class='result_title'>${result.Title}</div><div class='result_year'>${result.Year}</div>`);
-    $results.append($result);
+    let result_data = results[idx];
+    let result_el = document.createElement('div');
+    result_el.classList.add('result');
+    result_el.onclick = function() {
+      onResultClick(result_data.imdbID);
+    };
+
+    const result_title_el = document.createElement('div');
+    result_title_el.classList.add('result_title');
+    result_title_el.textContent = result_data.Title;
+    result_el.appendChild(result_title_el);
+
+    const result_year_el = document.createElement('div');
+    result_year_el.classList.add('result_year');
+    result_year_el.textContent = result_data.Year;
+    result_el.appendChild(result_year_el);
+
+    results_el.appendChild(result_el);
   }
-  $('.results_container').replaceWith($results);
+
+  document.querySelector('.results_container').replaceWith(results_el);
 }
 
 function onResultClick(imdbId) {
@@ -27,12 +44,29 @@ function onResultClick(imdbId) {
 
 // - Result Page Events
 function onIdData(data, imdbId, season) {
-  let $show = $("<div class='show'></div>");
+  const show_el = document.createElement('div');
+  show_el.classList.add('show');
+
   for (key in data) {
-    $show.append($(`<div class='show_info show_${key}'><div class='key'>${key}</div><div class='val'>${data[key]}</div></div>`));
+    const datum_el = document.createElement('div');
+    datum_el.classList.add('show_info');
+    datum_el.classList.add(`show_${key}`);
+
+    const key_el = document.createElement('div');
+    key_el.classList.add('key');
+    key_el.textContent = key;
+    datum_el.appendChild(key_el);
+
+    const val_el = document.createElement('div');
+    val_el.classList.add('val');
+    val_el.textContent = data[key];
+    datum_el.appendChild(val_el);
+
+    show_el.appendChild(datum_el);
   }
 
-  $('.show').replaceWith($show);
+  document.querySelector('.show').replaceWith(show_el);
+
   window.seasons = new Array(data.totalSeasons);
   window.seasonsLeft = data.totalSeasons;
   for (let i = 0; i < data.totalSeasons; i++) {
@@ -40,7 +74,8 @@ function onIdData(data, imdbId, season) {
       window.seasons[i] = data;
       window.seasonsLeft--;
       if (!window.seasonsLeft) {
-        chartRatings()
+        createLineChart(window.seasons);
+        // chartRatings()
       }
     }, i + 1);
   }
@@ -53,15 +88,16 @@ function init() {
   });
   let imdbId = params.i
   if (imdbId) {
-    $('.outer_ratings_container').removeClass('hidden');
+    document.querySelector('.outer_ratings_container').classList.remove('hidden');
     omdbById(imdbId, (a, b) => { onIdData(a, imdbId, b) });
   } else {
-    $('.outer_search_container').removeClass('hidden');
-    $('.search_box').keypress(function (e) {
+    document.querySelector('.outer_search_container').classList.remove('hidden');
+    search_box_el = document.querySelector('.search_box');
+    search_box_el.addEventListener('keypress', function(e) {
       if (e.which === 13) {
         onSearch();
       }
     });
-    $('.search_box').focus();
+    search_box_el.focus();
   }
 }

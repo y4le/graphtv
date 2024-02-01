@@ -1,95 +1,56 @@
-function chartRatings() {
-  data = new Array(window.seasons.length);
+function createLineChart(seasons) {
+  const ctx = document.querySelector('.ratings').getContext('2d');
+  const data = [];
+  let labels = [];
+  episode_name_dict = [];
 
-  let x_axis_counter = 0;
-  window.episode_name_dict = [];
+  episode_counter = 0;
 
-  for (let i = 0; i < window.seasons.length; i++) {
-    let season = window.seasons[i];
-    episodeData = new Array(season.Episodes.length);
-    for (let j = 0; j < episodeData.length; j++) {
-      x_axis_counter++;
-      episodeData[j] = [
-        parseFloat(x_axis_counter),
-        parseFloat(season.Episodes[j].imdbRating)
-      ];
-      window.episode_name_dict[x_axis_counter] = `${j + 1} - ${season.Episodes[j].Title}`;
-
+  seasons.forEach((season, seasonIndex) => {
+    const episodeData = [];
+    for (let i = 0; i < episode_counter; i++) {
+      episodeData.push(NaN);
     }
-    data[i] = {
-      regression: true,
-      regressionSettings: {
-        tooltip: { enabled: false }
-      },
-      name: 'Season ' + (i + 1),
-      color: `rgba(${(45 + 81 * i) % 255}, ${(110 + 81 * i) % 255}, ${(180 + 81 * i) % 255}, .5)`,
-      data: episodeData
-    }
-  }
 
+    season.Episodes.forEach(function (episode, episodeIndex) {
+      episode_counter += 1;
+      let episodeNumber = episodeIndex + 1;
+      episode_name_dict[episodeNumber] = `${episodeNumber} - ${episode.Title}`;
+      labels.push(`S${seasonIndex + 1}E${episodeNumber}`);
+      episodeData.push(parseFloat(episode.imdbRating));
+    });
 
-  $('.ratings').highcharts({
-    chart: {
-      type: 'scatter',
-      width: $(window).width() * .9,
-      height: 500,
-      plotBackgroundColor: '#000000',
-      zoomType: 'xy'
+    data.push({
+      label: `Season ${seasonIndex + 1}`,
+      backgroundColor: `rgba(${(45 + 81 * seasonIndex) % 255}, ${(110 + 81 * seasonIndex) % 255}, ${(180 + 81 * seasonIndex) % 255}, .5)`,
+      borderColor: `rgba(${(45 + 81 * seasonIndex) % 255}, ${(110 + 81 * seasonIndex) % 255}, ${(180 + 81 * seasonIndex) % 255}, 1)`,
+      data: episodeData,
+      fill: false,
+    });
+  });
+
+  const config = {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: data,
     },
-    title: {
-      enabled: false,
-      text: 'Ratings'
-    },
-    xAxis: {
-      title: {
-        enabled: false,
-        text: 'episode #'
+    options: {
+      scales: {
+        y: {
+          grace: '20%',
+          max: 10
+        }
       },
-      startOnTick: true,
-      endOnTick: true,
-      showLastLabel: true
-    },
-    yAxis: {
-      title: {
-        enabled: true,
-        text: 'Episode Rating'
-      }
-    },
-    legend: {
-      enabled: false,
-    },
-    plotOptions: {
-      scatter: {
-        marker: {
-          radius: 4,
-          symbol: 'circle',
-          states: {
-            hover: {
-              enabled: true,
-              lineColor: 'rgb(100,100,100)'
-            }
-          }
-        },
-        states: {
-          hover: {
-            marker: {
-              enabled: false
-            }
-          }
-        },
-        tooltip: {
-          pointFormatter: function () {
-            if (this.series.name.indexOf('Season') > -1) {
-              return `${window.episode_name_dict[parseInt(this.x)]}<br/>${this.y}/10`
-            }
-            return false;
+      tooltips: {
+        callbacks: {
+          label: function(tooltipItem, chart) {
+            const episodeLabel = episode_name_dict[tooltipItem.index + 1];
+            return `${episodeLabel}: ${tooltipItem.yLabel}/10`;
           }
         }
       }
-    },
-    pane: {
-      backgroundColor: '#000000'
-    },
-    series: data
-  });
+    }
+  };
+  new Chart(ctx, config);
 }

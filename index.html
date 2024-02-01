@@ -1,12 +1,10 @@
 <html>
   <head>
     <title>GraphTV</title>
-    <script src='js/lib/jquery.js'></script>
-	<script src="https://code.highcharts.com/js/highcharts.js"></script>
-	<script src="https://code.highcharts.com/modules/exporting.js"></script>
-    <script src='js/lib/highcharts-regression.js'></script>
-    <link rel='stylesheet' href='https://code.highcharts.com/css/highcharts.css'>
-	<link type="text/css" rel="stylesheet" href="/css/styles.css" />
+		<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+		<link type="text/css" rel="stylesheet" href="css/styles.css" />
+
     <script src='js/omdb.js'></script>
     <script src='js/charting.js'></script>
     <script src='js/main.js'></script>
@@ -17,7 +15,7 @@
 		<div class='show'></div>
 
 		<div class='ratings_container'>
-			<div class='ratings'></div>
+			<canvas class='ratings'></canvas>
 		</div>
 	</div>
 
