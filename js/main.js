@@ -1,4 +1,32 @@
-// - Search Page Events
+function init() {
+  const params = get_url_params();
+  let imdbId = params.i
+  if (imdbId) {
+    render_results_page(imdbId);
+  } else {
+    render_search_page();
+  }
+}
+
+function get_url_params() {
+  return new Proxy(new URLSearchParams(window.location.search), {
+    get: (searchParams, prop) => searchParams.get(prop),
+  });
+}
+
+// Search Page
+
+function render_search_page() {
+  document.querySelector('.outer_search_container').classList.remove('hidden');
+  search_box_el = document.querySelector('.search_box');
+  search_box_el.addEventListener('keypress', function (e) {
+    if (e.which === 13) {
+      onSearch();
+    }
+  });
+  search_box_el.focus();
+}
+
 function onSearch(e) {
   const searchTerm = document.querySelector('.search_box').value
   console.log(searchTerm);
@@ -18,7 +46,7 @@ function showResults(results) {
     let result_data = results[idx];
     let result_el = document.createElement('div');
     result_el.classList.add('result');
-    result_el.onclick = function() {
+    result_el.onclick = function () {
       onResultClick(result_data.imdbID);
     };
 
@@ -42,7 +70,13 @@ function onResultClick(imdbId) {
   window.location.href = `${window.location.pathname}?i=${imdbId}`;
 }
 
-// - Result Page Events
+// Show Page
+
+function render_results_page(imdbId) {
+  document.querySelector('.outer_ratings_container').classList.remove('hidden');
+  omdbById(imdbId, (a, b) => { onIdData(a, imdbId, b) });
+}
+
 function onIdData(data, imdbId, season) {
   const show_el = document.createElement('div');
   show_el.classList.add('show');
@@ -74,30 +108,10 @@ function onIdData(data, imdbId, season) {
       window.seasons[i] = data;
       window.seasonsLeft--;
       if (!window.seasonsLeft) {
-        createLineChart(window.seasons);
+        createLineChart(window.seasons)
         // chartRatings()
       }
     }, i + 1);
   }
 }
 
-
-function init() {
-  const params = new Proxy(new URLSearchParams(window.location.search), {
-    get: (searchParams, prop) => searchParams.get(prop),
-  });
-  let imdbId = params.i
-  if (imdbId) {
-    document.querySelector('.outer_ratings_container').classList.remove('hidden');
-    omdbById(imdbId, (a, b) => { onIdData(a, imdbId, b) });
-  } else {
-    document.querySelector('.outer_search_container').classList.remove('hidden');
-    search_box_el = document.querySelector('.search_box');
-    search_box_el.addEventListener('keypress', function(e) {
-      if (e.which === 13) {
-        onSearch();
-      }
-    });
-    search_box_el.focus();
-  }
-}
