@@ -81,6 +81,8 @@ function onIdData(data, imdbId, season) {
   const show_el = document.createElement('div');
   show_el.classList.add('show');
 
+  document.querySelector('.poster').src = data.Poster;
+
   for (key in data) {
     const datum_el = document.createElement('div');
     datum_el.classList.add('show_info');

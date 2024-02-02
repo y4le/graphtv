@@ -50,41 +50,48 @@ body {
     padding: 1rem;
 }
 
+.info {
+    display: flex;
+    width: 100%;
+}
+
 .show {
     padding-top: .5rem;
     padding-left: .5rem;
-    width: 40%;
-    opacity: .5;
-    transform: translateX(-10rem);
+    /* opacity: .5; */
+    /* transform: translateX(-10rem); */
     transition: all 200ms;
     word-break: break-all;
-    max-height: 7rem;
+    max-height: 6rem;
     overflow: hidden;
     z-index: 1;
+    flex-grow: 1;
 }
 
 .show:hover {
-    transform: translateX(0);
-    max-height: '';
-    width: 80%;
+    max-height: 50rem;
     opacity: 1;
     transition: all 200ms;
     background-color: rgba(0, 0, 0, .5);
 }
 
-.show_info {
-    display: flex;
-    align-items: center;
+.show_info div {
+    display: inline;
 }
 
 .show_info .val {
     flex-grow: 1;
+    padding: 0 1rem;
 }
 
 .show_info .key {
     padding: .1rem;
     font-size: 1rem;
-    width: 10rem;
+}
+
+.poster {
+    max-height: 20vh;
+    padding: 0.5rem;
 }
 
 .ratings_container {
