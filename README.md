@@ -7,7 +7,13 @@ It graphs the ratings of a TV show episode-by-episode so you can easily see the 
 
 ### TODO
 - [X] split up scripts
-- [ ] kill jquery
-- [ ] replace charting library
-- [ ] add tvdb api
+- [X] kill jquery
+- [X] replace charting library
+- [ ] prettify charting
+- [X] add tmdb api
+- [X] modify omdb/tmdb methods to pull out data into a uniform format then pass to the callback
+- [X] modify API interacting code to use async/await
+- [X] allow webapp to toggle omdb/tmdb
 - [ ] touch up search ui
+- [ ] add typeahead in search
+
