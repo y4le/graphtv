@@ -5,9 +5,6 @@ import { hichart } from './hichart.js'
 function renderResultsPage (seriesId) {
   document.querySelector('.outer_ratings_container').classList.remove('hidden')
   getSeries(seriesId).then((data) => { onIdData(data, seriesId) })
-  window.onresize = function (event) {
-    reloadResultsPage()
-  }
 }
 
 function onIdData (data, seriesId) {
@@ -43,15 +40,9 @@ function onIdData (data, seriesId) {
       window.seasons[i] = data
       window.seasonsLeft--
       if (!window.seasonsLeft) {
-        reloadResultsPage()
+        chartjs(window.seasons)
       }
     })
-  }
-}
-
-function reloadResultsPage () {
-  if (window.seasonsLeft === 0) {
-    hichart(window.seasons)
   }
 }
 

@@ -110,6 +110,10 @@ function hichart (seasons) {
   $ratings.id = 'ratings'
   $container.appendChild($ratings)
   Highcharts.chart('ratings', hichartsOptions) // eslint-disable-line
+
+  window.onresize = function (_) {
+    hichart(window.seasons)
+  }
 }
 
 export { hichart }
