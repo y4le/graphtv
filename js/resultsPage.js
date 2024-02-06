@@ -1,9 +1,12 @@
 import { getSeries, getSeason } from './api.js'
-import { createLineChart } from './charting.js'
+import { hichart } from './hichart.js'
 
 function renderResultsPage (seriesId) {
   document.querySelector('.outer_ratings_container').classList.remove('hidden')
   getSeries(seriesId).then((data) => { onIdData(data, seriesId) })
+  window.onresize = function (event) {
+    reloadResultsPage()
+  }
 }
 
 function onIdData (data, seriesId) {
@@ -13,21 +16,21 @@ function onIdData (data, seriesId) {
   document.querySelector('.poster').src = data.poster
 
   for (const key in data) {
-    const $datum = document.createElement('div')
-    $datum.classList.add('show_info')
-    $datum.classList.add(`show_${key}`)
-
     const $key = document.createElement('div')
     $key.classList.add('key')
     $key.textContent = key
-    $datum.appendChild($key)
+    $key.classList.add('start_hidden')
 
     const $val = document.createElement('div')
     $val.classList.add('val')
     $val.textContent = data[key]
-    $datum.appendChild($val)
+    $val.classList.add(`show_${key}`)
+    if (key !== 'title') {
+      $val.classList.add('start_hidden')
+    }
 
-    $show.appendChild($datum)
+    $show.appendChild($key)
+    $show.appendChild($val)
   }
 
   document.querySelector('.show').replaceWith($show)
@@ -39,11 +42,14 @@ function onIdData (data, seriesId) {
       window.seasons[i] = data
       window.seasonsLeft--
       if (!window.seasonsLeft) {
-        createLineChart(window.seasons)
-        // chartRatings()
+        reloadResultsPage()
       }
     })
   }
+}
+
+function reloadResultsPage () {
+  hichart(window.seasons)
 }
 
 export { renderResultsPage }

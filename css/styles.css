@@ -8,19 +8,14 @@ body {
 
 .outer_search_container,
 .outer_ratings_container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    right: 0;
+    width: 100%;
     height: 100%;
     display: flex;
-    overflow: hide;
+    flex-direction: column;
 }
 
 .outer_search_container {
-    flex-direction: column;
-    justify-content: center;
+    justify-content: start;
     align-items: center;
 }
 
@@ -34,6 +29,7 @@ body {
 .search_box {
     font-size: 2rem;
     height: 3rem;
+    margin: 2rem;
 }
 
 .search_wrapper {
@@ -44,6 +40,11 @@ body {
     display: flex;
     font-size: 1.5rem;
     cursor: pointer;
+    
+}
+
+.result:hover, .result:active {
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 .result div {
@@ -52,64 +53,67 @@ body {
 
 .info {
     display: flex;
+    flex-direction: row-reverse;
     width: 100%;
 }
 
 .show {
+    transition: all 200ms;
     padding-top: .5rem;
     padding-left: .5rem;
-    /* opacity: .5; */
-    /* transform: translateX(-10rem); */
     transition: all 200ms;
     word-break: break-all;
     max-height: 6rem;
     overflow: hidden;
-    z-index: 1;
     flex-grow: 1;
+    display: grid;
+    grid-template-columns: 0fr 1fr;
 }
 
-.show:hover {
-    max-height: 50rem;
-    opacity: 1;
+.poster:hover + .show, .poster:active + .show {
     transition: all 200ms;
+    max-height: 50rem;
     background-color: rgba(0, 0, 0, .5);
-}
-
-.show_info div {
-    display: inline;
-}
-
-.show_info .val {
-    flex-grow: 1;
-    padding: 0 1rem;
-}
-
-.show_info .key {
-    padding: .1rem;
+    grid-template-columns: 1fr 5fr;
     font-size: 1rem;
 }
 
+.show .show_title {
+    transition: all 200ms;
+    font-size: 3rem;
+}
+
+.show .start_hidden {
+    transition: all 200ms;
+    max-height: 0;
+    overflow: hidden;
+}
+
+.poster:hover + .show .show_title, .poster:active + .show .show_title {
+    transition: all 200ms;
+    font-size: 1rem;
+}
+
+.poster:hover + .show .start_hidden, .poster:active + .show .start_hidden {
+    transition: all 200ms;
+    max-height: 50rem;
+}
+
 .poster {
-    max-height: 20vh;
+    height: 20vh;
     padding: 0.5rem;
 }
 
 .ratings_container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    right: 0;
     padding: 1rem;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    flex-grow: 1;
+}
+
+#ratings {
+    width: 100%;
+    height: 100%;
 }
 
 .hidden {
     display: none;
-}
-
-.highcharts-background {
-    fill: black;
 }

@@ -42,4 +42,18 @@ function getApiType () {
   return window.apiType
 }
 
-export { getUrlParams, getApiType }
+function generateXaxis (seasons) {
+  const labels = [null] // fill x=0
+
+  seasons.forEach((season, seasonIndex) => {
+    season.episodes.forEach((_, episodeIndex) => {
+      const seasonString = `S${(seasonIndex + 1).toString().padStart(2, '0')}`
+      const episodeString = `E${(episodeIndex + 1).toString().padStart(2, '0')}`
+      labels.push(`${seasonString}${episodeString}`)
+    })
+  })
+
+  return labels
+}
+
+export { getUrlParams, getApiType, generateXaxis }

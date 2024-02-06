@@ -1,7 +1,7 @@
-function createLineChart (seasons) {
-  const ctx = document.querySelector('.ratings').getContext('2d')
+import { generateXaxis } from './util.js'
+
+function chartjs (seasons) {
   const data = []
-  const labels = []
   const episodeNames = []
 
   let episodeCounter = 0
@@ -16,7 +16,6 @@ function createLineChart (seasons) {
       episodeCounter += 1
       const episodeNumber = episodeIndex + 1
       episodeNames[episodeNumber] = `${episodeNumber} - ${episode.title}`
-      labels.push(`S${seasonIndex + 1}E${episodeNumber}`)
       episodeData.push(parseFloat(episode.rating))
     })
 
@@ -32,7 +31,7 @@ function createLineChart (seasons) {
   const config = {
     type: 'line',
     data: {
-      labels,
+      labels: generateXaxis(seasons),
       datasets: data
     },
     options: {
@@ -52,7 +51,13 @@ function createLineChart (seasons) {
       }
     }
   }
+
+  const $container = document.querySelector('.ratings_container')
+  const $ratings = document.createElement('canvas')
+  $ratings.id = 'ratings'
+  $container.appendChild($ratings)
+  const ctx = $ratings.getContext('2d')
   new Chart(ctx, config) // eslint-disable-line
 }
 
-export { createLineChart }
+export { chartjs }
