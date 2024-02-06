@@ -40,7 +40,7 @@ function onIdData (data, seriesId) {
       window.seasons[i] = data
       window.seasonsLeft--
       if (!window.seasonsLeft) {
-        chartjs(window.seasons)
+        hichart(window.seasons)
       }
     })
   }

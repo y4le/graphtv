@@ -19,6 +19,10 @@ async function tmdbToken () {
 async function tmdbSearch (searchTerm) {
   const query = `search/tv?query=${encodeURIComponent(searchTerm)}`
   const data = await tmdbApi(query)
+  return parseSearch(data)
+}
+
+function parseSearch (data) {
   const results = data.results.slice(0, 10) // limit to first 10
   const shows = []
   for (const result of results) {
@@ -38,6 +42,10 @@ async function tmdbSearch (searchTerm) {
 async function tmdbSeries (seriesId) {
   const query = `tv/${seriesId}`
   const result = await tmdbApi(query)
+  return parseSeries(result)
+}
+
+function parseSeries (result) {
   const series = {
     title: result.name,
     plot: result.overview,
@@ -57,6 +65,10 @@ async function tmdbSeries (seriesId) {
 async function tmdbSeason (seriesId, seasonNumber) {
   const query = `tv/${seriesId}/season/${seasonNumber}`
   const result = await tmdbApi(query)
+  return parseSeason(result)
+}
+
+function parseSeason (result) {
   const season = {
     episodes: result.episodes.map((episode) => {
       return {
@@ -79,4 +91,4 @@ async function tmdbSeason (seriesId, seasonNumber) {
   return season
 }
 
-export { tmdbSearch, tmdbSeries, tmdbSeason }
+export { tmdbSearch, tmdbSeries, tmdbSeason, parseSearch, parseSeries, parseSeason }

@@ -4,6 +4,22 @@ function getUrlParams () {
   })
 }
 
+function preserveParams (newLink) {
+  const urlParams = getUrlParams()
+
+  let link = newLink
+
+  if (urlParams.debug) {
+    link += '&debug'
+  }
+
+  if (urlParams.api) {
+    link += '&api=' + urlParams.api
+  }
+
+  return link
+}
+
 function getApiType () {
   // return either 'tmdb' or 'omdb'
   if (window.apiType) {
@@ -16,7 +32,10 @@ function getApiType () {
   const urlParams = getUrlParams()
 
   if (urlParams.api) {
-    if (urlParams.api !== 'omdb' && urlParams.api !== 'tmdb') {
+    if (urlParams.api === 'omdb') {
+      window.alert('omdb api deprecated')
+    }
+    if (urlParams.api !== 'testdb' && urlParams.api !== 'tmdb') {
       console.error(`unknown api param: ${urlParams.api}. should be 'omdb' or 'tmdb'`)
     } else {
       explicitApi = urlParams.api
@@ -31,10 +50,8 @@ function getApiType () {
   }
 
   if (urlParams.i) {
-    if (explicitApi && explicitApi !== 'omdb') {
-      console.error(`wrong apiType: ${explicitApi} for omdbId`)
-    }
-    implicitApi = 'omdb'
+    window.alert('omdb api deprecated')
+    // TODO: consider using external search API to find imdbId
   }
 
   window.apiType = implicitApi || explicitApi || 'tmdb'
@@ -81,4 +98,4 @@ function clampNum (lowerBound, n, upperBound) {
   return Math.max(lowerBound, Math.min(n, upperBound))
 }
 
-export { getUrlParams, getApiType, generateXAxisLabels, getColorStep, clampNum }
+export { getUrlParams, preserveParams, getApiType, generateXAxisLabels, getColorStep, clampNum }

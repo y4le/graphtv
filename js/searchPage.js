@@ -1,4 +1,5 @@
 import { search } from './api.js'
+import { preserveParams } from './util.js'
 
 function renderSearchPage () {
   document.querySelector('.outer_search_container').classList.remove('hidden')
@@ -29,11 +30,13 @@ function showResults (results) {
     $result.classList.add('result')
     if (result.imdbId) {
       $result.onclick = function () {
-        window.location.href = `${window.location.pathname}?i=${result.imdbId}`
+        const link = preserveParams(`${window.location.pathname}?i=${result.imdbId}`)
+        window.location.href = link
       }
     } else if (result.tmdbId) {
       $result.onclick = function () {
-        window.location.href = `${window.location.pathname}?t=${result.tmdbId}`
+        const link = preserveParams(`${window.location.pathname}?t=${result.tmdbId}`)
+        window.location.href = link
       }
     } else {
       console.warn(`missing series ID for ${result.title}`)

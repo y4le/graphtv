@@ -3,7 +3,7 @@ import { offsetLinearRegression } from './stats.js'
 
 function chartjs (seasons) {
   const datasets = []
-  const episodeNames = []
+  const absoluteEpisodes = []
 
   let episodeCounter = 0
 
@@ -12,8 +12,7 @@ function chartjs (seasons) {
 
     season.episodes.forEach((episode, episodeIndex) => {
       episodeCounter += 1
-      const episodeNumber = episodeIndex + 1
-      episodeNames[episodeNumber] = `${episodeNumber} - ${episode.title}`
+      absoluteEpisodes[episodeCounter] = episode
       episodeData.push({ x: episodeCounter, y: parseFloat(episode.rating) })
     })
 
@@ -45,7 +44,7 @@ function chartjs (seasons) {
   })
 
   const config = {
-    type: 'scatter', // Changed from 'line' to 'scatter'
+    type: 'scatter',
     data: {
       labels: generateXAxisLabels(seasons),
       datasets
@@ -71,8 +70,8 @@ function chartjs (seasons) {
           },
           callbacks: {
             label: function (tooltipItem, chart) {
-              const episodeLabel = episodeNames[tooltipItem.index + 1]
-              return `${episodeLabel}: ${tooltipItem.yLabel}/10`
+              const episode = absoluteEpisodes[tooltipItem.raw.x]
+              return [episode.title, episode.rating.toFixed(2)]
             }
           }
         }
