@@ -1,4 +1,5 @@
 import { getSeries, getSeason } from './api.js'
+import { chartjs } from './chartjs.js'
 import { hichart } from './hichart.js'
 
 function renderResultsPage (seriesId) {
@@ -49,7 +50,9 @@ function onIdData (data, seriesId) {
 }
 
 function reloadResultsPage () {
-  hichart(window.seasons)
+  if (window.seasonsLeft === 0) {
+    hichart(window.seasons)
+  }
 }
 
 export { renderResultsPage }
