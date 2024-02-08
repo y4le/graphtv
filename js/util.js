@@ -20,45 +20,6 @@ function preserveParams (newLink) {
   return link
 }
 
-function getApiType () {
-  // return either 'tmdb' or 'omdb'
-  if (window.apiType) {
-    return window.apiType
-  }
-
-  let explicitApi
-  let implicitApi
-
-  const urlParams = getUrlParams()
-
-  if (urlParams.api) {
-    if (urlParams.api === 'omdb') {
-      window.alert('omdb api deprecated')
-    }
-    if (urlParams.api !== 'testdb' && urlParams.api !== 'tmdb') {
-      console.error(`unknown api param: ${urlParams.api}. should be 'omdb' or 'tmdb'`)
-    } else {
-      explicitApi = urlParams.api
-    }
-  }
-
-  if (urlParams.t) {
-    if (explicitApi && explicitApi !== 'tmdb') {
-      console.error(`wrong apiType: ${explicitApi} for tmdbId`)
-    }
-    implicitApi = 'tmdb'
-  }
-
-  if (urlParams.i) {
-    window.alert('omdb api deprecated')
-    // TODO: consider using external search API to find imdbId
-  }
-
-  window.apiType = implicitApi || explicitApi || 'tmdb'
-
-  return window.apiType
-}
-
 function generateXAxisLabels (seasons) {
   const labels = [null] // fill x=0
 
@@ -98,4 +59,4 @@ function clampNum (lowerBound, n, upperBound) {
   return Math.max(lowerBound, Math.min(n, upperBound))
 }
 
-export { getUrlParams, preserveParams, getApiType, generateXAxisLabels, getColorStep, clampNum }
+export { getUrlParams, preserveParams, generateXAxisLabels, getColorStep, clampNum }
