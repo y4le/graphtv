@@ -5,19 +5,18 @@ function getUrlParams () {
 }
 
 function preserveParams (newLink) {
-  const urlParams = getUrlParams()
+  const existingUrlParams = getUrlParams()
+  const url = new URL(newLink, window.location.origin)
+  const paramsToPreserve = ['debug', 'api']
 
-  let link = newLink
+  paramsToPreserve.forEach(param => {
+    const value = existingUrlParams[param]
+    if (value !== null) {
+      url.searchParams.set(param, value)
+    }
+  })
 
-  if (urlParams.debug) {
-    link += '&debug'
-  }
-
-  if (urlParams.api) {
-    link += '&api=' + urlParams.api
-  }
-
-  return link
+  return url.toString()
 }
 
 function generateXAxisLabels (seasons) {
