@@ -1,0 +1,33 @@
+{
+  "name": "graphtv",
+  "version": "1.0.0",
+  "description": "GraphTV rewrite with bundled dependencies, provider-aware data, and a D3 visualization system.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "size": "node scripts/report-bundle-size.mjs"
+  },
+  "keywords": [
+    "tv",
+    "ratings",
+    "visualization"
+  ],
+  "license": "ISC",
+  "dependencies": {
+    "d3": "^7.9.0",
+    "jsdom": "^26.1.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.22.0",
+    "prettier": "^3.5.3",
+    "vite": "^5.4.19",
+    "vitest": "^1.6.1"
+  }
+}
