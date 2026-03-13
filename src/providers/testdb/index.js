@@ -21,8 +21,8 @@ const tmdbShow = normalizeTmdbShow(tmdbShowFixture, normalizeTmdbExternalIds(tmd
 const omdbShow = normalizeOmdbShow(omdbShowFixture)
 
 const primaryRecord = {
-  provider: 'tvmaze',
-  show: tvmazeShow,
+  provider: 'testdb',
+  show: { ...tvmazeShow, id: 'testdb:the-wire' },
   seasons: normalizeTvmazeEpisodes(tvmazeEpisodesFixture)
 }
 
@@ -40,13 +40,16 @@ const supplementalRecords = [
 ]
 
 export async function search(query) {
-  const normalizedSearch = normalizeTvmazeSearch(tvmazeSearchFixture)
+  const normalizedSearch = normalizeTvmazeSearch(tvmazeSearchFixture).map((show) => ({
+    ...show,
+    id: 'testdb:the-wire'
+  }))
   return normalizedSearch.filter((show) => show.title.toLowerCase().includes(query.toLowerCase()))
 }
 
 export async function getShow(id) {
   const shows = {
-    'tvmaze:179': tvmazeShow,
+    'testdb:the-wire': primaryRecord.show,
     'tmdb:1438': tmdbShow,
     'omdb:tt0306414': omdbShow
   }
@@ -55,7 +58,7 @@ export async function getShow(id) {
 }
 
 export async function getSeasons(id) {
-  if (id.startsWith('tvmaze:')) {
+  if (id.startsWith('testdb:')) {
     return primaryRecord.seasons
   }
 
@@ -72,7 +75,7 @@ export async function getSeasons(id) {
 
 export async function resolveShowRef({ externalIds }) {
   if (externalIds?.imdb === 'tt0306414') {
-    return 'tvmaze:179'
+    return 'testdb:the-wire'
   }
 
   return null

@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint .",
+    "lint": "eslint src test scripts eslint.config.js vite.config.js",
     "format": "prettier --write .",
     "size": "node scripts/report-bundle-size.mjs"
   },
