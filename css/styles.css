@@ -124,6 +124,10 @@ kbd {
   margin: 0 auto;
 }
 
+.search-document-empty {
+  padding-top: clamp(2rem, 8vh, 5rem);
+}
+
 .document-title,
 .show-copy h1 {
   margin: 0.4rem 0 0;

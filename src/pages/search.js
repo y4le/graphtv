@@ -20,15 +20,8 @@ export function renderSearchPage(container) {
         <p class="masthead-mark">GraphTV</p>
         <p class="masthead-hint">Press <kbd>/</kbd> to search, <kbd>?</kbd> for help, <kbd>v</kbd> for view options.</p>
       </header>
-      <section class="search-document">
-        <p class="document-kicker">Episode ratings as an analytical document.</p>
-        <h1 class="document-title">Search a show and inspect how its seasons rise, fall, and disagree across sources.</h1>
-        <p class="document-lede">
-          Default provider: ${getProviderLabel(provider)}.
-          Search results, charts, and debug inspection all share the same normalized model.
-        </p>
+      <section class="search-document ${query ? '' : 'search-document-empty'}">
         <form class="search-form" aria-label="Search shows">
-          <label class="search-label" for="search-query">Search shows</label>
           <div class="search-row">
             <input
               id="search-query"
@@ -60,6 +53,11 @@ export function renderSearchPage(container) {
   const input = container.querySelector('#search-query')
   const resultsStatus = container.querySelector('.results-status')
   const resultsRoot = container.querySelector('.search-results-list')
+  const searchDocument = container.querySelector('.search-document')
+
+  function syncEmptyLayout(isEmpty) {
+    searchDocument.classList.toggle('search-document-empty', isEmpty)
+  }
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault()
@@ -77,12 +75,14 @@ export function renderSearchPage(container) {
     resultsRoot.innerHTML = ''
     state.results = []
     state.selectedIndex = -1
+    syncEmptyLayout(false)
 
     try {
       const results = await searchShows(nextQuery, provider)
 
       if (results.length === 0) {
         resultsStatus.innerHTML = renderEmpty(`No shows found for “${escapeHtml(nextQuery)}”.`)
+        syncEmptyLayout(true)
         return
       }
 
@@ -90,8 +90,10 @@ export function renderSearchPage(container) {
       state.selectedIndex = 0
       resultsStatus.innerHTML = ''
       renderResultsList(resultsRoot, state.results, state.selectedIndex)
+      syncEmptyLayout(false)
     } catch (error) {
       resultsStatus.innerHTML = renderError(error.message)
+      syncEmptyLayout(true)
     }
   })
 
