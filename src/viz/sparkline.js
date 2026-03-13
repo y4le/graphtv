@@ -6,6 +6,7 @@ export function createSparkline(svgNode, config) {
   const svg = select(svgNode)
   const brushLayer = svg.append('g').attr('class', 'viewport-brush')
   let suppressBrushEvents = false
+  let lastTouchEndAt = 0
 
   const brush = brushX().on('brush end', (event) => {
     if (suppressBrushEvents || !event.selection || !config.dimensions.width) {
@@ -22,6 +23,8 @@ export function createSparkline(svgNode, config) {
   ])
 
   brushLayer.call(brush)
+  svgNode.addEventListener('dblclick', handleViewportReset)
+  svgNode.addEventListener('touchend', handleTouchEnd)
 
   function render(nextConfig) {
     config = nextConfig
@@ -80,7 +83,25 @@ export function createSparkline(svgNode, config) {
   return {
     render,
     destroy() {
+      svgNode.removeEventListener('dblclick', handleViewportReset)
+      svgNode.removeEventListener('touchend', handleTouchEnd)
       svg.selectAll('*').remove()
     }
+  }
+
+  function handleViewportReset(event) {
+    event.preventDefault()
+    config.onViewportReset?.()
+  }
+
+  function handleTouchEnd(event) {
+    const now = Date.now()
+    if (now - lastTouchEndAt <= 320) {
+      handleViewportReset(event)
+      lastTouchEndAt = 0
+      return
+    }
+
+    lastTouchEndAt = now
   }
 }

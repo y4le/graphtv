@@ -257,6 +257,37 @@ export function createChart(container, seasons, options = {}) {
     render()
   }
 
+  function resetViewportWidth(chartWidth, isScrollable) {
+    const defaultViewport = createDefaultViewport(model, chartWidth, isMobile())
+    const defaultWidth = defaultViewport.end - defaultViewport.start + 1
+    const currentCenter = viewport
+      ? viewport.start + (viewport.end - viewport.start) / 2
+      : defaultViewport.start + (defaultViewport.end - defaultViewport.start) / 2
+    const centeredStart = currentCenter - (defaultWidth - 1) / 2
+
+    viewport = clampViewport(
+      {
+        start: centeredStart,
+        end: centeredStart + defaultWidth - 1
+      },
+      model
+    )
+
+    if (isScrollable) {
+      const contentWidth = getScrollableBodyWidth(chartWidth)
+      const maxScrollLeft = Math.max(contentWidth - chartWidth, 0)
+      const maxStart = Math.max(1, model.xMax - defaultWidth + 1)
+      const ratio = maxStart > 1 ? (viewport.start - 1) / (maxStart - 1) : 0
+      suppressScrollSync = true
+      bodyShell.scrollLeft = ratio * maxScrollLeft
+      queueMicrotask(() => {
+        suppressScrollSync = false
+      })
+    }
+
+    render()
+  }
+
   function renderDesktopChart(chartTheme, axisWidth, chartWidth, chartHeight, sparklineHeight) {
     ensureViewport(chartWidth)
     const uiSettings = getUiSettings()
@@ -314,10 +345,17 @@ export function createChart(container, seasons, options = {}) {
       }
     })
 
-    renderSparkline(chartTheme, sparklineScales, chartWidth + axisWidth, sparklineHeight, (nextViewport) => {
-      viewport = clampViewport(nextViewport, model)
-      render()
-    })
+    renderSparkline(
+      chartTheme,
+      sparklineScales,
+      chartWidth + axisWidth,
+      sparklineHeight,
+      (nextViewport) => {
+        viewport = clampViewport(nextViewport, model)
+        render()
+      },
+      () => resetViewportWidth(chartWidth, false)
+    )
   }
 
   function renderScrollableMobileChart(chartTheme, axisWidth, chartWidth, chartHeight, sparklineHeight) {
@@ -384,21 +422,28 @@ export function createChart(container, seasons, options = {}) {
       }
     })
 
-    renderSparkline(chartTheme, sparklineScales, chartWidth + axisWidth, sparklineHeight, (nextViewport) => {
-      viewport = clampViewport(nextViewport, model)
-      const maxScrollLeft = Math.max(contentWidth - chartWidth, 0)
-      const maxStart = Math.max(1, model.xMax - (viewport.end - viewport.start + 1) + 1)
-      const ratio = maxStart > 1 ? (viewport.start - 1) / (maxStart - 1) : 0
-      suppressScrollSync = true
-      bodyShell.scrollLeft = ratio * maxScrollLeft
-      queueMicrotask(() => {
-        suppressScrollSync = false
-      })
-      render()
-    })
+    renderSparkline(
+      chartTheme,
+      sparklineScales,
+      chartWidth + axisWidth,
+      sparklineHeight,
+      (nextViewport) => {
+        viewport = clampViewport(nextViewport, model)
+        const maxScrollLeft = Math.max(contentWidth - chartWidth, 0)
+        const maxStart = Math.max(1, model.xMax - (viewport.end - viewport.start + 1) + 1)
+        const ratio = maxStart > 1 ? (viewport.start - 1) / (maxStart - 1) : 0
+        suppressScrollSync = true
+        bodyShell.scrollLeft = ratio * maxScrollLeft
+        queueMicrotask(() => {
+          suppressScrollSync = false
+        })
+        render()
+      },
+      () => resetViewportWidth(chartWidth, true)
+    )
   }
 
-  function renderSparkline(chartTheme, sparklineScales, width, height, onViewportChange) {
+  function renderSparkline(chartTheme, sparklineScales, width, height, onViewportChange, onViewportReset) {
     if (!sparkline) {
       sparkline = createSparkline(sparklineSvg, {
         model,
@@ -406,7 +451,8 @@ export function createChart(container, seasons, options = {}) {
         theme: chartTheme,
         dimensions: { width, height },
         scales: sparklineScales,
-        onViewportChange
+        onViewportChange,
+        onViewportReset
       })
       return
     }
@@ -417,7 +463,8 @@ export function createChart(container, seasons, options = {}) {
       theme: chartTheme,
       dimensions: { width, height },
       scales: sparklineScales,
-      onViewportChange
+      onViewportChange,
+      onViewportReset
     })
   }
 
