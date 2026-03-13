@@ -250,6 +250,13 @@ export function createChart(container, seasons, options = {}) {
     render()
   }
 
+  function clearActivePoint() {
+    hoverPointId = null
+    selectedPointId = null
+    updateDetail(null)
+    render()
+  }
+
   function renderDesktopChart(chartTheme, axisWidth, chartWidth, chartHeight, sparklineHeight) {
     ensureViewport(chartWidth)
     const uiSettings = getUiSettings()
@@ -498,13 +505,12 @@ export function createChart(container, seasons, options = {}) {
     { passive: false }
   )
 
-  shell.addEventListener('click', (event) => {
-    if (isMobile() && event.target === shell.querySelector('.ratings-chart')) {
-      hoverPointId = null
-      selectedPointId = null
-      updateDetail(null)
-      render()
+  bodyShell.addEventListener('click', (event) => {
+    if (event.target.closest('.episode-point')) {
+      return
     }
+
+    clearActivePoint()
   })
 
   const resizeObserver = new ResizeObserver(() => {
