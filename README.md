@@ -1,19 +1,37 @@
-# graphTV
+# GraphTV
 
-This is a small personal project inspired by the great graphtv.kevinformatics.com.
+GraphTV is a bundled client-side app for exploring TV episode ratings across multiple providers.
 
-It graphs the ratings of a TV show episode-by-episode so you can easily see the consistency and trajectory.
+## Local development
 
-### TODO
-- [X] split up scripts
-- [X] kill jquery
-- [X] replace charting library
-- [ ] prettify charting
-- [X] add tmdb api
-- [X] modify omdb/tmdb methods to pull out data into a uniform format then pass to the callback
-- [X] deprecate omdb
-- [X] modify API interacting code to use async/await
-- [X] allow webapp to toggle omdb/tmdb
-- [ ] touch up search ui
-- [ ] add typeahead in search
+```bash
+npm install
+npm run dev
+```
 
+Use `.env.local` for provider credentials:
+
+```bash
+TMDB_BEARER_TOKEN=
+OMDB_API_KEY=
+TVDB_API_KEY=
+TVDB_READ_TOKEN=
+```
+
+## GitHub Pages
+
+This repo includes a GitHub Pages workflow at [.github/workflows/deploy-pages.yml](/Users/yale/dev/graphtv/.github/workflows/deploy-pages.yml).
+
+To deploy:
+
+1. In GitHub, set `Settings -> Pages -> Build and deployment -> Source` to `GitHub Actions`.
+2. Add these repository secrets if you want the keyed providers enabled in the deployed build:
+   - `TMDB_BEARER_TOKEN`
+   - `OMDB_API_KEY`
+   - `TVDB_API_KEY`
+   - `TVDB_READ_TOKEN`
+3. Push to `master` or run the workflow manually.
+
+Important:
+- This is a static client-side deploy. Any keyed provider credentials included in the build are exposed to the browser.
+- The build step obfuscates them to avoid trivial harvesting from git, but it does not keep them secret from users.
