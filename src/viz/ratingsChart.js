@@ -58,6 +58,21 @@ export function createChart(container, seasons, options = {}) {
   let hoverPointId = null
   let sparkline = null
   let suppressScrollSync = false
+  let suppressScrollSyncFrame = null
+
+  function setScrollLeftSuppressed(scrollLeft) {
+    suppressScrollSync = true
+    bodyShell.scrollLeft = scrollLeft
+    if (suppressScrollSyncFrame) {
+      cancelAnimationFrame(suppressScrollSyncFrame)
+    }
+    suppressScrollSyncFrame = requestAnimationFrame(() => {
+      suppressScrollSyncFrame = requestAnimationFrame(() => {
+        suppressScrollSyncFrame = null
+        suppressScrollSync = false
+      })
+    })
+  }
 
   const sidenote = createSidenote({
     desktopRoot: options.detailRoot ?? readingPane,
@@ -69,7 +84,7 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function usesScrollableBody() {
-    return isMobile() && model.xMax > 40
+    return false
   }
 
   function getPointById(id) {
@@ -206,11 +221,7 @@ export function createChart(container, seasons, options = {}) {
     const contentWidth = getScrollableBodyWidth(width)
     const maxScrollLeft = Math.max(contentWidth - width, 0)
     const ratio = model.xMax > 1 ? (point.x - 1) / (model.xMax - 1) : 0
-    suppressScrollSync = true
-    bodyShell.scrollLeft = ratio * maxScrollLeft
-    queueMicrotask(() => {
-      suppressScrollSync = false
-    })
+    setScrollLeftSuppressed(ratio * maxScrollLeft)
   }
 
   function updateViewportFromScroll() {
@@ -218,13 +229,13 @@ export function createChart(container, seasons, options = {}) {
     const contentWidth = getScrollableBodyWidth(width)
     const maxScrollLeft = Math.max(contentWidth - width, 0)
     const ratio = maxScrollLeft > 0 ? bodyShell.scrollLeft / maxScrollLeft : 0
-    const visibleEpisodes = Math.max(1, Math.round(width / MOBILE_POINT_SPACING))
-    const maxStart = Math.max(1, model.xMax - visibleEpisodes + 1)
+    const currentWidth = viewport ? viewport.end - viewport.start + 1 : Math.max(1, Math.round(width / MOBILE_POINT_SPACING))
+    const maxStart = Math.max(1, model.xMax - currentWidth + 1)
     const start = 1 + ratio * (maxStart - 1)
     viewport = clampViewport(
       {
         start,
-        end: start + visibleEpisodes - 1
+        end: start + currentWidth - 1
       },
       model
     )
@@ -278,11 +289,7 @@ export function createChart(container, seasons, options = {}) {
       const maxScrollLeft = Math.max(contentWidth - chartWidth, 0)
       const maxStart = Math.max(1, model.xMax - defaultWidth + 1)
       const ratio = maxStart > 1 ? (viewport.start - 1) / (maxStart - 1) : 0
-      suppressScrollSync = true
-      bodyShell.scrollLeft = ratio * maxScrollLeft
-      queueMicrotask(() => {
-        suppressScrollSync = false
-      })
+      setScrollLeftSuppressed(ratio * maxScrollLeft)
     }
 
     render()
@@ -303,6 +310,7 @@ export function createChart(container, seasons, options = {}) {
 
     shell.dataset.scrollable = 'false'
     bodyShell.style.overflowX = 'hidden'
+    bodyShell.style.touchAction = isMobile() ? 'none' : ''
     bodyShell.scrollLeft = 0
 
     axisSvg.attr('viewBox', `0 0 ${axisWidth} ${chartHeight}`).attr('width', axisWidth).attr('height', chartHeight)
@@ -434,11 +442,7 @@ export function createChart(container, seasons, options = {}) {
         const maxScrollLeft = Math.max(contentWidth - chartWidth, 0)
         const maxStart = Math.max(1, model.xMax - (viewport.end - viewport.start + 1) + 1)
         const ratio = maxStart > 1 ? (viewport.start - 1) / (maxStart - 1) : 0
-        suppressScrollSync = true
-        bodyShell.scrollLeft = ratio * maxScrollLeft
-        queueMicrotask(() => {
-          suppressScrollSync = false
-        })
+        setScrollLeftSuppressed(ratio * maxScrollLeft)
         render()
       },
       () => resetViewportWidth(chartWidth, true)
@@ -451,6 +455,7 @@ export function createChart(container, seasons, options = {}) {
         model,
         viewport,
         theme: chartTheme,
+        mobileInteraction: isMobile(),
         dimensions: { width, height },
         scales: sparklineScales,
         onViewportChange,
@@ -463,6 +468,7 @@ export function createChart(container, seasons, options = {}) {
       model,
       viewport,
       theme: chartTheme,
+      mobileInteraction: isMobile(),
       dimensions: { width, height },
       scales: sparklineScales,
       onViewportChange,
@@ -554,7 +560,176 @@ export function createChart(container, seasons, options = {}) {
     { passive: false }
   )
 
+  let gesture = null
+  let suppressNextClick = false
+  let flingFrame = null
+  const FLING_FRICTION = 0.95
+  const FLING_MIN_VELOCITY = 0.3
+
+  function stopFling() {
+    if (flingFrame) {
+      cancelAnimationFrame(flingFrame)
+      flingFrame = null
+    }
+  }
+
+  function startFling(velocityPxPerMs) {
+    stopFling()
+    const chartWidth = Math.max(bodyShell.clientWidth, 240)
+    const viewportWidth = viewport.end - viewport.start
+    const pixelsPerEpisode = chartWidth / viewportWidth
+    let velocity = -velocityPxPerMs * 16 / pixelsPerEpisode
+
+    function step() {
+      velocity *= FLING_FRICTION
+      if (Math.abs(velocity) < FLING_MIN_VELOCITY / pixelsPerEpisode) {
+        flingFrame = null
+        return
+      }
+      const prev = viewport
+      viewport = clampViewport({
+        start: viewport.start + velocity,
+        end: viewport.end + velocity
+      }, model)
+      if (viewport.start === prev.start && viewport.end === prev.end) {
+        flingFrame = null
+        return
+      }
+      render()
+      flingFrame = requestAnimationFrame(step)
+    }
+
+    flingFrame = requestAnimationFrame(step)
+  }
+
+  bodyShell.addEventListener('pointerdown', (event) => {
+    if (event.pointerType !== 'touch' || !isMobile() || !viewport) {
+      return
+    }
+
+    stopFling()
+
+    if (!gesture) {
+      gesture = {
+        type: 'pending',
+        pointers: new Map([[event.pointerId, event.clientX]]),
+        startX: event.clientX,
+        startViewport: { ...viewport },
+        prevX: event.clientX,
+        prevTime: performance.now(),
+        velocity: 0
+      }
+      return
+    }
+
+    gesture.pointers.set(event.pointerId, event.clientX)
+    if (gesture.pointers.size >= 2) {
+      const xs = Array.from(gesture.pointers.values())
+      gesture = {
+        type: 'pinch',
+        pointers: gesture.pointers,
+        initialSpan: Math.max(Math.abs(xs[1] - xs[0]), 1),
+        startViewport: { ...viewport }
+      }
+    }
+  })
+
+  bodyShell.addEventListener('pointermove', (event) => {
+    if (!gesture || event.pointerType !== 'touch' || !gesture.pointers.has(event.pointerId)) {
+      return
+    }
+
+    gesture.pointers.set(event.pointerId, event.clientX)
+
+    if (gesture.type === 'pinch') {
+      const xs = Array.from(gesture.pointers.values())
+      const currentSpan = Math.abs(xs[1] - xs[0])
+      const scale = gesture.initialSpan / Math.max(currentSpan, 1)
+      const startWidth = gesture.startViewport.end - gesture.startViewport.start + 1
+      const startCenter = gesture.startViewport.start + (startWidth - 1) / 2
+      const newWidth = Math.max(2, Math.round(startWidth * scale))
+
+      viewport = clampViewport({
+        start: startCenter - (newWidth - 1) / 2,
+        end: startCenter + (newWidth - 1) / 2
+      }, model)
+      render()
+      return
+    }
+
+    const now = performance.now()
+    const dt = now - gesture.prevTime
+    if (dt > 0) {
+      const instantV = (event.clientX - gesture.prevX) / dt
+      gesture.velocity = gesture.velocity * 0.4 + instantV * 0.6
+    }
+    gesture.prevX = event.clientX
+    gesture.prevTime = now
+
+    const deltaX = event.clientX - gesture.startX
+    if (gesture.type === 'pending' && Math.abs(deltaX) < 8) {
+      return
+    }
+
+    gesture.type = 'pan'
+    const chartWidth = Math.max(bodyShell.clientWidth, 240)
+    const viewportWidth = gesture.startViewport.end - gesture.startViewport.start
+    const pixelsPerEpisode = chartWidth / viewportWidth
+    const deltaEpisodes = -deltaX / pixelsPerEpisode
+
+    viewport = clampViewport({
+      start: gesture.startViewport.start + deltaEpisodes,
+      end: gesture.startViewport.end + deltaEpisodes
+    }, model)
+    render()
+  })
+
+  function endGesture(event) {
+    if (!gesture || !gesture.pointers.has(event.pointerId)) {
+      return
+    }
+
+    const wasPan = gesture.type === 'pan'
+    const velocity = gesture.velocity
+
+    gesture.pointers.delete(event.pointerId)
+
+    if (gesture.pointers.size === 0) {
+      if (gesture.type !== 'pending') {
+        suppressNextClick = true
+      }
+      gesture = null
+
+      if (wasPan && Math.abs(velocity) > 0.15) {
+        startFling(velocity)
+      }
+      return
+    }
+
+    if (gesture.type === 'pinch' && gesture.pointers.size === 1) {
+      const [, x] = gesture.pointers.entries().next().value
+      gesture = {
+        type: 'pending',
+        pointers: gesture.pointers,
+        startX: x,
+        startViewport: { ...viewport },
+        prevX: x,
+        prevTime: performance.now(),
+        velocity: 0
+      }
+      suppressNextClick = true
+    }
+  }
+
+  bodyShell.addEventListener('pointerup', endGesture)
+  bodyShell.addEventListener('pointercancel', endGesture)
+
   bodyShell.addEventListener('click', (event) => {
+    if (suppressNextClick) {
+      suppressNextClick = false
+      return
+    }
+
     if (event.target.closest('.episode-point')) {
       return
     }
