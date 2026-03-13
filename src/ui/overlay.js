@@ -61,7 +61,7 @@ export function createOverlayController() {
       if (
         (config.id === 'help' && (event.key === '?' || event.key === 'F1')) ||
         (config.id === 'view-options' && event.key === 'v') ||
-        (config.id === 'debug' && event.key === 'D')
+        (config.id === 'debug' && (event.key === 'd' || event.key === 'D'))
       ) {
         event.preventDefault()
         close()
@@ -151,25 +151,32 @@ export function openDebugOverlay(overlayController, page) {
     return
   }
 
+  const sections = page.getDebugSections()
+
   overlayController.open({
     id: 'debug',
     title: 'Debug',
     className: 'overlay-debug',
     content: `
       <div class="debug-overlay-sections">
-        ${page
-          .getDebugSections()
+        ${sections
           .map(
-            (section) => `
+            (section, index) => `
               <section class="debug-section">
-                <h3>${section.title}</h3>
-                <pre>${escapeHtml(JSON.stringify(section.data, null, 2))}</pre>
+                <div class="debug-section-header">
+                  <h3>${section.title}</h3>
+                  ${renderRawJsonLink(section)}
+                </div>
+                ${renderDebugSection(section, index)}
               </section>
             `
           )
           .join('')}
       </div>
     `,
+    onMount({ content }) {
+      hydrateDebugTrees(content, sections)
+    },
     onKeyDown(event, { content }) {
       if (event.key === 'j' || event.key === 'ArrowDown') {
         event.preventDefault()
@@ -182,6 +189,192 @@ export function openDebugOverlay(overlayController, page) {
       }
     }
   })
+}
+
+function renderDebugSection(section, index) {
+  if (section.title === 'Provider catalog' && Array.isArray(section.data)) {
+    return renderProviderCatalogTable(section.data)
+  }
+
+  return `<div class="debug-json-tree" data-debug-tree-index="${index}"></div>`
+}
+
+function renderRawJsonLink(section) {
+  if (!isRawJsonSection(section)) {
+    return ''
+  }
+
+  const href = `data:application/json;charset=utf-8,${encodeURIComponent(
+    JSON.stringify(section.data, null, 2)
+  )}`
+
+  return `<a class="debug-raw-link" href="${escapeAttribute(href)}" target="_blank" rel="noreferrer">raw</a>`
+}
+
+function isRawJsonSection(section) {
+  return section.title === 'Provider diagnostics' || section.title === 'Merged bundle'
+}
+
+function renderProviderCatalogTable(rows) {
+  const columns = [
+    { key: 'provider', label: 'Provider' },
+    { key: 'configured', label: 'Status', format: (value) => (value ? 'configured' : 'missing') },
+    { key: 'access', label: 'Access' },
+    { key: 'requirement', label: 'Requirement', format: (value) => value || 'none' }
+  ]
+
+  return `
+    <div class="debug-provider-table" role="table" aria-label="Provider settings">
+      <div class="debug-provider-row debug-provider-row-header" role="row">
+        ${columns
+          .map((column) => `<span class="debug-provider-cell" role="columnheader">${column.label}</span>`)
+          .join('')}
+      </div>
+      ${rows
+        .map(
+          (row) => `
+            <div class="debug-provider-row" role="row">
+              ${columns
+                .map((column) => {
+                  const rawValue = row[column.key]
+                  const value = column.format ? column.format(rawValue, row) : rawValue
+                  return `<span class="debug-provider-cell" role="cell">${escapeHtml(String(value))}</span>`
+                })
+                .join('')}
+            </div>
+          `
+        )
+        .join('')}
+    </div>
+  `
+}
+
+function hydrateDebugTrees(content, sections) {
+  content.querySelectorAll('[data-debug-tree-index]').forEach((root) => {
+    const index = Number(root.dataset.debugTreeIndex)
+    const section = sections[index]
+    const shouldOpen = section.title === 'Provider diagnostics' || section.title === 'Merged bundle'
+    root.replaceChildren(createJsonNode(section.data, 0, shouldOpen))
+  })
+}
+
+function createJsonNode(value, depth, shouldOpen = false, keyLabel = null) {
+  if (Array.isArray(value)) {
+    return createJsonBranchNode({
+      keyLabel,
+      summary: `Array(${value.length})`,
+      depth,
+      shouldOpen,
+      entries: value.map((item, index) => [String(index), item])
+    })
+  }
+
+  if (value && typeof value === 'object') {
+    return createJsonBranchNode({
+      keyLabel,
+      summary: `Object(${Object.keys(value).length})`,
+      depth,
+      shouldOpen,
+      entries: Object.entries(value)
+    })
+  }
+
+  const leaf = document.createElement('div')
+  leaf.className = 'debug-json-leaf'
+  leaf.style.setProperty('--debug-depth', depth)
+
+  if (keyLabel !== null) {
+    leaf.appendChild(createJsonTextSpan('debug-json-key', `${keyLabel}:`))
+  }
+
+  leaf.appendChild(createJsonTextSpan('debug-json-value', formatJsonValue(value)))
+  return leaf
+}
+
+function createJsonBranchNode({ keyLabel, summary, depth, shouldOpen, entries }) {
+  const details = document.createElement('details')
+  details.className = 'debug-json-branch'
+  details.style.setProperty('--debug-depth', depth)
+  details.open = shouldOpen
+
+  const summaryNode = document.createElement('summary')
+  summaryNode.className = 'debug-json-summary'
+  if (keyLabel !== null) {
+    summaryNode.appendChild(createJsonTextSpan('debug-json-key', `${keyLabel}:`))
+  }
+  summaryNode.appendChild(createJsonTextSpan('debug-json-meta', summary))
+  details.appendChild(summaryNode)
+
+  const childrenNode = document.createElement('div')
+  childrenNode.className = 'debug-json-children'
+  details.appendChild(childrenNode)
+
+  let populated = false
+  const populate = () => {
+    if (populated) {
+      return
+    }
+    populated = true
+    progressivelyAppendJsonChildren(childrenNode, entries, depth + 1)
+  }
+
+  if (shouldOpen) {
+    populate()
+  } else {
+    details.addEventListener(
+      'toggle',
+      () => {
+        if (details.open) {
+          populate()
+        }
+      },
+      { once: true }
+    )
+  }
+
+  return details
+}
+
+function progressivelyAppendJsonChildren(container, entries, depth) {
+  const queue = [...entries]
+
+  function appendChunk() {
+    const fragment = document.createDocumentFragment()
+    let remaining = 40
+
+    while (queue.length > 0 && remaining > 0) {
+      const [key, value] = queue.shift()
+      fragment.appendChild(createJsonNode(value, depth, false, key))
+      remaining -= 1
+    }
+
+    container.appendChild(fragment)
+
+    if (queue.length > 0) {
+      requestAnimationFrame(appendChunk)
+    }
+  }
+
+  appendChunk()
+}
+
+function createJsonTextSpan(className, text) {
+  const node = document.createElement('span')
+  node.className = className
+  node.textContent = text
+  return node
+}
+
+function formatJsonValue(value) {
+  if (typeof value === 'string') {
+    return `"${value}"`
+  }
+
+  if (value === null) {
+    return 'null'
+  }
+
+  return String(value)
 }
 
 export function openViewOptionsOverlay(overlayController) {
@@ -365,7 +558,7 @@ function resultsHelpSections() {
         { keys: '/, q', action: 'Return to search' },
         { keys: 'v', action: 'Open view options' },
         { keys: '?, F1', action: 'Open help' },
-        { keys: 'D', action: 'Toggle debug overlay' }
+        { keys: 'd / D', action: 'Toggle debug overlay' }
       ]
     },
     {
@@ -390,7 +583,7 @@ function searchHelpSections() {
         { keys: '/', action: 'Focus search input' },
         { keys: 'v', action: 'Open view options' },
         { keys: '?, F1', action: 'Open help' },
-        { keys: 'D', action: 'Toggle debug overlay' }
+        { keys: 'd / D', action: 'Toggle debug overlay' }
       ]
     },
     {
@@ -443,6 +636,10 @@ function escapeHtml(value) {
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value).replaceAll('"', '&quot;')
 }
 
 function getMotionBehavior() {

@@ -597,6 +597,8 @@ kbd {
 }
 
 .overlay-panel {
+  display: flex;
+  flex-direction: column;
   width: min(42rem, calc(100vw - 2rem));
   max-height: min(85vh, 44rem);
   overflow: hidden;
@@ -629,7 +631,8 @@ kbd {
 }
 
 .overlay-content {
-  max-height: calc(85vh - 4rem);
+  min-height: 0;
+  flex: 1 1 auto;
   overflow: auto;
   padding: 1rem 1.1rem 1.2rem;
 }
@@ -637,6 +640,96 @@ kbd {
 .help-section + .help-section,
 .debug-overlay-sections .debug-section + .debug-section {
   margin-top: 1.2rem;
+}
+
+.debug-section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.debug-raw-link {
+  color: var(--textSecondary);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.debug-provider-table {
+  display: grid;
+  gap: 0.3rem;
+  margin-top: 0.8rem;
+  font-family: var(--font-sans);
+  font-size: 0.94rem;
+}
+
+.debug-provider-row {
+  display: grid;
+  grid-template-columns: minmax(6rem, 1.1fr) minmax(6rem, 0.9fr) minmax(6rem, 0.9fr) minmax(10rem, 1.4fr);
+  gap: 1rem;
+  align-items: baseline;
+}
+
+.debug-provider-row-header {
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--lineSoft);
+  color: var(--textSecondary);
+}
+
+.debug-provider-cell {
+  white-space: nowrap;
+}
+
+.debug-json-tree {
+  margin-top: 0.8rem;
+  font-family: var(--font-sans);
+  font-size: 0.94rem;
+}
+
+.debug-json-branch,
+.debug-json-leaf {
+  margin-left: calc(var(--debug-depth, 0) * 1rem);
+}
+
+.debug-json-summary,
+.debug-json-leaf {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: baseline;
+  min-height: 1.5rem;
+}
+
+.debug-json-summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.debug-json-summary::-webkit-details-marker {
+  display: none;
+}
+
+.debug-json-summary::before {
+  content: '+';
+  color: var(--textSecondary);
+}
+
+.debug-json-branch[open] > .debug-json-summary::before {
+  content: '-';
+}
+
+.debug-json-key {
+  color: var(--textPrimary);
+}
+
+.debug-json-meta,
+.debug-json-value {
+  color: var(--textSecondary);
+}
+
+.debug-json-children {
+  display: grid;
 }
 
 .help-grid {

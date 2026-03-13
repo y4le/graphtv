@@ -18,8 +18,7 @@ export async function renderResultsPage(container, showRef) {
   `
 
   try {
-    const params = getUrlParams()
-    const debugEnabled = params.has('debug')
+    const debugEnabled = true
     const { provider } = parseShowRef(showRef)
     const bundle = await getShowBundle(showRef, {
       compareProviders: getComparisonProviders(provider)

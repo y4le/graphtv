@@ -8,7 +8,7 @@ export function renderSearchPage(container) {
   const params = getUrlParams()
   const provider = getActiveProvider(params)
   const query = params.get('q') ?? ''
-  const debugEnabled = params.has('debug')
+  const debugEnabled = true
   const state = {
     results: [],
     selectedIndex: -1

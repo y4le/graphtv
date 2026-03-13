@@ -67,7 +67,9 @@ export function getProviderCatalog() {
   return Object.entries(PROVIDER_META).map(([provider, meta]) => ({
     provider,
     label: meta.label,
-    configured: isProviderConfigured(provider)
+    configured: isProviderConfigured(provider),
+    access: meta.alwaysAvailable ? 'public' : 'client-keyed',
+    requirement: meta.alwaysAvailable ? 'none' : meta.requiresSecret
   }))
 }
 

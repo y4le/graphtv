@@ -75,7 +75,7 @@ export function createKeyboardController({ page, overlayController }) {
       return true
     }
 
-    if (key === 'D') {
+    if (key === 'd' || key === 'D') {
       event.preventDefault()
       openDebugOverlay(overlayController, page)
       return true
