@@ -234,6 +234,22 @@ export function createChart(container, seasons, options = {}) {
     return Math.max(width, (model.xMax - 1) * MOBILE_POINT_SPACING + 40)
   }
 
+  function panViewport(deltaEpisodes) {
+    if (!viewport || deltaEpisodes === 0) {
+      return
+    }
+
+    const width = viewport.end - viewport.start
+    viewport = clampViewport(
+      {
+        start: viewport.start + deltaEpisodes,
+        end: viewport.start + deltaEpisodes + width
+      },
+      model
+    )
+    render()
+  }
+
   function renderDesktopChart(chartTheme, axisWidth, chartWidth, chartHeight, sparklineHeight) {
     ensureViewport(chartWidth)
     const uiSettings = getUiSettings()
@@ -459,6 +475,28 @@ export function createChart(container, seasons, options = {}) {
       }
     })
   })
+
+  bodyShell.addEventListener(
+    'wheel',
+    (event) => {
+      if (usesScrollableBody() || event.ctrlKey) {
+        return
+      }
+
+      const horizontalDelta = Math.abs(event.deltaX) > 0 ? event.deltaX : event.shiftKey ? event.deltaY : 0
+      if (!horizontalDelta) {
+        return
+      }
+
+      const visibleEpisodes = Math.max((viewport?.end ?? 1) - (viewport?.start ?? 1), 1)
+      const pixelsPerEpisode = Math.max(bodyShell.clientWidth / visibleEpisodes, 1)
+      const deltaEpisodes = horizontalDelta / pixelsPerEpisode
+
+      event.preventDefault()
+      panViewport(deltaEpisodes)
+    },
+    { passive: false }
+  )
 
   shell.addEventListener('click', (event) => {
     if (isMobile() && event.target === shell.querySelector('.ratings-chart')) {
