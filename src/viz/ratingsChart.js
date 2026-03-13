@@ -329,6 +329,7 @@ export function createChart(container, seasons, options = {}) {
     renderCrosshair(mainSvg, getActivePoint(), mainScales, { width: chartWidth, height: chartHeight }, chartTheme)
     renderPoints(mainSvg, getVisiblePoints(model, viewport), mainScales, chartTheme, {
       activePointId: getActivePoint()?.id ?? null,
+      hoverEnabled: !isMobile(),
       totalSeasons: model.totalSeasons,
       onHover(point) {
         hoverPointId = point.id
@@ -406,6 +407,7 @@ export function createChart(container, seasons, options = {}) {
     renderCrosshair(mainSvg, getActivePoint(), fullScales, { width: contentWidth, height: chartHeight }, chartTheme)
     renderPoints(mainSvg, model.points, fullScales, chartTheme, {
       activePointId: getActivePoint()?.id ?? null,
+      hoverEnabled: !isMobile(),
       totalSeasons: model.totalSeasons,
       onHover(point) {
         hoverPointId = point.id

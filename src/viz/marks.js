@@ -136,9 +136,12 @@ export function renderPoints(svg, points, scales, theme, interactions) {
         ? theme.spotColor
         : theme.seasonColor(point.seasonIndex, interactions.totalSeasons)
     )
-    .on('mouseenter', (_, point) => interactions.onHover(point))
-    .on('mouseleave', () => interactions.onLeave())
-    .on('click', (_, point) => interactions.onSelect(point))
+    .on('mouseenter', (_, point) => interactions.hoverEnabled && interactions.onHover(point))
+    .on('mouseleave', () => interactions.hoverEnabled && interactions.onLeave())
+    .on('click', (event, point) => {
+      event.stopPropagation()
+      interactions.onSelect(point)
+    })
 }
 
 function buildTickValues(scales, minRating, maxRating) {
