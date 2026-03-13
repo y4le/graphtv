@@ -1,5 +1,6 @@
 import { getActiveProvider, getProviderCatalog, getProviderLabel, searchShows } from '../data/provider.js'
 import { buildUrl, getUrlParams, preserveDebugParams } from '../lib/url.js'
+import { bindSettingsControls, renderDisplayControls } from '../viz/theme.js'
 import { renderEmpty, renderError, renderLoading } from './shared.js'
 
 export function renderSearchPage(container) {
@@ -8,37 +9,53 @@ export function renderSearchPage(container) {
   const query = params.get('q') ?? ''
 
   container.innerHTML = `
-    <main class="page-shell">
-      <section class="search-hero panel">
-        <p class="eyebrow">GraphTV</p>
-        <h1>Search a show and inspect episode ratings across providers.</h1>
-        <p class="lede">Default provider: ${getProviderLabel(provider)}. Use debug mode to inspect normalized data and provider availability.</p>
-        <form class="search-form">
+    <main class="document-shell document-shell-search">
+      <header class="masthead">
+        <p class="masthead-mark">GraphTV</p>
+        ${renderDisplayControls()}
+      </header>
+      <section class="search-document">
+        <p class="document-kicker">Episode ratings as an analytical document.</p>
+        <h1 class="document-title">Search a show and inspect how its seasons rise, fall, and disagree across sources.</h1>
+        <p class="document-lede">
+          Default provider: ${getProviderLabel(provider)}.
+          Search results, charts, and debug inspection all share the same normalized model.
+        </p>
+        <form class="search-form" aria-label="Search shows">
           <label class="search-label" for="search-query">Search shows</label>
           <div class="search-row">
-            <input id="search-query" name="q" type="search" value="${escapeAttribute(query)}" placeholder="The Wire" autocomplete="off" required />
+            <input
+              id="search-query"
+              name="q"
+              type="search"
+              value="${escapeAttribute(query)}"
+              placeholder="The Americans"
+              autocomplete="off"
+              required
+            />
             <button type="submit">Search</button>
           </div>
         </form>
-        <div class="provider-pills">
+        <p class="provider-note">
+          Configured sources:
           ${getProviderCatalog()
-            .map(
-              (item) => `<span class="provider-pill ${item.configured ? 'configured' : 'disabled'}">${item.label}</span>`
-            )
+            .map((item) => `<span class="provider-inline ${item.configured ? 'configured' : 'disabled'}">${item.label}</span>`)
             .join('')}
-        </div>
-      </section>
-      <section class="results-panel panel">
-        <div class="results-status">${query ? renderLoading('Searching…') : renderEmpty('Search for a show to begin.')}</div>
-        <div class="search-results"></div>
+        </p>
+        <section class="search-results-section" aria-live="polite">
+          <div class="results-status">${query ? renderLoading('Searching…') : renderEmpty('Search for a series title to begin.')}</div>
+          <ol class="search-results-list"></ol>
+        </section>
       </section>
       <aside class="debug-root"></aside>
     </main>
   `
 
+  bindSettingsControls(container)
+
   const form = container.querySelector('.search-form')
   const resultsStatus = container.querySelector('.results-status')
-  const resultsRoot = container.querySelector('.search-results')
+  const resultsRoot = container.querySelector('.search-results-list')
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault()
@@ -59,7 +76,7 @@ export function renderSearchPage(container) {
       const results = await searchShows(nextQuery, provider)
 
       if (results.length === 0) {
-        resultsStatus.innerHTML = renderEmpty('No shows matched that query.')
+        resultsStatus.innerHTML = renderEmpty(`No shows found for “${escapeHtml(nextQuery)}”.`)
         return
       }
 
@@ -67,21 +84,15 @@ export function renderSearchPage(container) {
       resultsRoot.innerHTML = results
         .map(
           (show) => `
-            <article class="result-card">
-              <a href="${buildShowLink(show.id)}" class="result-link">
-                <div class="result-poster-shell">
-                  ${
-                    show.poster
-                      ? `<img src="${show.poster}" alt="" class="result-poster" />`
-                      : `<div class="poster-fallback">No art</div>`
-                  }
-                </div>
-                <div class="result-copy">
-                  <h2>${show.title}</h2>
-                  <p>${show.year || 'Unknown year'}</p>
-                </div>
+            <li class="search-result-item">
+              <a href="${buildShowLink(show.id)}" class="search-result-link">
+                ${show.poster ? `<img src="${show.poster}" alt="" class="search-result-poster" />` : '<span class="search-result-rule" aria-hidden="true"></span>'}
+                <span class="search-result-copy">
+                  <span class="search-result-title">${escapeHtml(show.title)}</span>
+                  <span class="search-result-meta">${escapeHtml(show.year || 'Unknown year')}</span>
+                </span>
               </a>
-            </article>
+            </li>
           `
         )
         .join('')
@@ -111,6 +122,14 @@ function buildShowLink(showId) {
 
 function escapeAttribute(value) {
   return value.replaceAll('"', '&quot;')
+}
+
+function escapeHtml(value) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
 }
 
 async function renderSearchDebug(container, data) {

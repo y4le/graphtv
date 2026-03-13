@@ -1,9 +1,11 @@
 import { renderResultsPage } from './pages/results.js'
 import { renderSearchPage } from './pages/search.js'
 import { getUrlParams, normalizeLegacyParams } from './lib/url.js'
+import { initializeTheme } from './viz/theme.js'
 
 async function bootstrap() {
   const app = document.querySelector('#app')
+  initializeTheme()
   const normalizedParams = normalizeLegacyParams()
   const canonicalSearch = normalizedParams.toString()
 

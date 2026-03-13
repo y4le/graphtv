@@ -1,13 +1,13 @@
 export function renderLoading(message = 'Loading...') {
-  return `<div class="state-card" role="status">${message}</div>`
+  return `<p class="state-copy" role="status">${message}</p>`
 }
 
 export function renderEmpty(message) {
-  return `<div class="state-card">${message}</div>`
+  return `<p class="state-copy">${message}</p>`
 }
 
 export function renderError(message) {
-  return `<div class="state-card error-state">${message}</div>`
+  return `<p class="state-copy error-state">${message}</p>`
 }
 
 export function formatRatingBadge(rating) {

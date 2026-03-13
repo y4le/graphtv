@@ -2,7 +2,7 @@ import { create } from 'd3'
 
 import { buildChartModel, createScales } from './scales.js'
 import { renderAxes, renderPoints, renderSeasonSeparators, renderTrendlines } from './marks.js'
-import { chartTheme } from './theme.js'
+import { getChartTheme } from './theme.js'
 import { createTooltip, getTooltipContent } from './tooltip.js'
 
 const PADDING = {
@@ -23,6 +23,7 @@ export function createChart(container, seasons) {
   let latestSeasons = seasons
 
   function render() {
+    const chartTheme = getChartTheme()
     const width = Math.max(container.clientWidth, 320)
     const height = Math.max(Math.min(width * 0.58, 560), 320)
     const model = buildChartModel(latestSeasons)
