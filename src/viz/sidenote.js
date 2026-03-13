@@ -27,14 +27,16 @@ export function createSidenote({ desktopRoot, mobileRoot }) {
       ? `
           <div class="sidenote-card">
             <div class="sidenote-header">
-              <p class="sidenote-kicker">S${String(point.season).padStart(2, '0')}E${String(point.episode).padStart(2, '0')}</p>
-              <h3 class="sidenote-title">${escapeHtml(point.title)}</h3>
-              <p class="sidenote-meta">${escapeHtml(point.date ?? 'Unknown air date')}</p>
-              ${
-                typeof point.rating === 'number'
-                  ? `<p class="sidenote-rating">${point.rating.toFixed(1)}</p>`
-                  : '<p class="sidenote-rating">n/a</p>'
-              }
+              <p class="sidenote-caption">
+                <span class="sidenote-kicker">S${String(point.season).padStart(2, '0')}E${String(point.episode).padStart(2, '0')}</span>
+                <span class="sidenote-title">${escapeHtml(point.title)}</span>
+                ${
+                  typeof point.rating === 'number'
+                    ? `<span class="sidenote-rating">${point.rating.toFixed(1)}</span>`
+                    : '<span class="sidenote-rating">n/a</span>'
+                }
+                <span class="sidenote-meta">${escapeHtml(point.date ?? 'Unknown air date')}</span>
+              </p>
             </div>
             <ul class="sidenote-ratings">${formatRatingList(point)}</ul>
             ${

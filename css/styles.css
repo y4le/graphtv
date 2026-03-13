@@ -498,8 +498,19 @@ kbd {
   background: var(--lineStrong);
 }
 
+.sidenote-caption,
 .sidenote-kicker {
   margin: 0;
+}
+
+.sidenote-caption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.75rem;
+  align-items: baseline;
+}
+
+.sidenote-kicker {
   color: var(--textSecondary);
   font-family: var(--font-sans);
   font-size: 0.84rem;
@@ -508,15 +519,12 @@ kbd {
 }
 
 .sidenote-header {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 0.45rem 1rem;
-  align-items: baseline;
+  display: block;
 }
 
 .sidenote-title {
   margin: 0;
-  font-size: 1.12rem;
+  font-size: 1.08rem;
   font-weight: 400;
   line-height: 1.15;
 }
@@ -525,9 +533,8 @@ kbd {
   margin: 0;
   color: var(--spotColor);
   font-family: var(--font-sans);
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-variant-numeric: tabular-nums;
-  text-align: right;
 }
 
 .sidenote-meta {
@@ -896,14 +903,6 @@ kbd {
   .reading-pane-shell,
   .main-chart-shell {
     gap: 0.35rem;
-  }
-
-  .sidenote-header {
-    grid-template-columns: 1fr;
-  }
-
-  .sidenote-rating {
-    text-align: left;
   }
 
   .overlay-panel {
