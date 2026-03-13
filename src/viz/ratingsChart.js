@@ -98,6 +98,10 @@ export function createChart(container, seasons, options = {}) {
     return getPointById(selectedPointId) ?? model.ratedPoints[0] ?? null
   }
 
+  function ensureNavigablePoint() {
+    return getActivePoint() ?? ensureSelectedPoint()
+  }
+
   function ensureViewport(width) {
     const defaultViewport = createDefaultViewport(model, width, isMobile())
 
@@ -112,6 +116,10 @@ export function createChart(container, seasons, options = {}) {
   function setSelectedPoint(point, source = 'keyboard') {
     if (!point) {
       return
+    }
+
+    if (source === 'keyboard') {
+      hoverPointId = null
     }
 
     selectedPointId = point.id
@@ -135,7 +143,7 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function moveEpisode(delta) {
-    const currentPoint = ensureSelectedPoint()
+    const currentPoint = ensureNavigablePoint()
     if (!currentPoint) {
       return
     }
@@ -146,7 +154,7 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function moveSeason(delta) {
-    const activePoint = ensureSelectedPoint()
+    const activePoint = ensureNavigablePoint()
     if (!activePoint) {
       return
     }

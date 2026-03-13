@@ -6,6 +6,10 @@ export function createKeyboardController({ page, overlayController }) {
 
   function onKeyDown(event) {
     if (overlayController.isOpen()) {
+      if (event.key === 'v' && overlayController.getActiveId() === 'view-options') {
+        event.preventDefault()
+        overlayController.close()
+      }
       return
     }
 
