@@ -1,13 +1,14 @@
 import { fetchJson } from '../shared.js'
+import { getClientSecret } from '../../config/clientSecrets.js'
 import { normalizeOmdbSearch, normalizeOmdbSeason, normalizeOmdbShow } from './normalize.js'
 
 const API_ROOT = 'https://www.omdbapi.com/'
 
 function getKey() {
-  const key = import.meta.env.VITE_OMDB_API_KEY
+  const key = getClientSecret('omdbApiKey')
 
   if (!key) {
-    throw new Error('OMDb is not configured. Set VITE_OMDB_API_KEY to enable it.')
+    throw new Error('OMDb is not configured. Set OMDB_API_KEY to enable it.')
   }
 
   return key

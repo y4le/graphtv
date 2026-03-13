@@ -1,4 +1,5 @@
 import { mergeShowRecords } from './merge.js'
+import { CLIENT_SECRET_KEYS, hasClientSecret } from '../config/clientSecrets.js'
 
 const PROVIDER_LOADERS = {
   omdb: () => import('../providers/omdb/transport.js'),
@@ -11,7 +12,7 @@ const DEFAULT_PROVIDER = 'tvmaze'
 const PROVIDER_META = {
   omdb: {
     label: 'OMDb',
-    requiresEnv: 'VITE_OMDB_API_KEY'
+    requiresSecret: CLIENT_SECRET_KEYS.omdb
   },
   testdb: {
     label: 'Fixture DB',
@@ -19,7 +20,7 @@ const PROVIDER_META = {
   },
   tmdb: {
     label: 'TMDB',
-    requiresEnv: 'VITE_TMDB_BEARER_TOKEN'
+    requiresSecret: CLIENT_SECRET_KEYS.tmdb
   },
   tvmaze: {
     label: 'TVmaze',
@@ -59,7 +60,7 @@ export function isProviderConfigured(providerName) {
     return true
   }
 
-  return Boolean(import.meta.env[meta.requiresEnv])
+  return hasClientSecret(meta.requiresSecret)
 }
 
 export function getProviderCatalog() {

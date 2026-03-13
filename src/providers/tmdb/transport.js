@@ -1,4 +1,5 @@
 import { fetchJson } from '../shared.js'
+import { getClientSecret } from '../../config/clientSecrets.js'
 import {
   normalizeTmdbExternalIds,
   normalizeTmdbSearch,
@@ -9,10 +10,10 @@ import {
 const API_ROOT = 'https://api.themoviedb.org/3'
 
 function getHeaders() {
-  const token = import.meta.env.VITE_TMDB_BEARER_TOKEN
+  const token = getClientSecret('tmdbBearerToken')
 
   if (!token) {
-    throw new Error('TMDB is not configured. Set VITE_TMDB_BEARER_TOKEN to enable it.')
+    throw new Error('TMDB is not configured. Set TMDB_BEARER_TOKEN to enable it.')
   }
 
   return {

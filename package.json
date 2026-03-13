@@ -8,11 +8,16 @@
     "node": ">=22.12.0"
   },
   "scripts": {
+    "prepare:client-secrets": "node scripts/generate-client-secrets.mjs",
+    "predev": "npm run prepare:client-secrets",
     "dev": "vite",
+    "prebuild": "npm run prepare:client-secrets",
     "build": "vite build",
     "preview": "vite preview",
+    "pretest": "npm run prepare:client-secrets",
     "test": "vitest run",
     "test:watch": "vitest",
+    "prelint": "npm run prepare:client-secrets",
     "lint": "eslint src test scripts eslint.config.js vite.config.js",
     "format": "prettier --write .",
     "size": "node scripts/report-bundle-size.mjs"
