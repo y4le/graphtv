@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { getAverageRating, linearRegression, trendline } from '../../src/data/stats.js'
+import { getAverageRating, linearRegression, linearRegressionFromPoints, trendline, trendlineFromPoints } from '../../src/data/stats.js'
 
 describe('data/stats', () => {
   it('computes a standard linear regression', () => {
@@ -32,6 +32,32 @@ describe('data/stats', () => {
     expect(trendline([8.3, 8.1, 8.5], 4)).toEqual([
       { x: 4, y: 8.199999999999996 },
       { x: 6, y: 8.400000000000004 }
+    ])
+  })
+
+  it('supports regression over explicit x/y points without collapsing gaps', () => {
+    expect(
+      linearRegressionFromPoints([
+        { x: 3, y: 8 },
+        { x: 5, y: null },
+        { x: 7, y: 10 }
+      ])
+    ).toEqual({
+      slope: 0.5,
+      intercept: 6.5
+    })
+  })
+
+  it('keeps explicit-point trendlines aligned to the first and last rated x values', () => {
+    expect(
+      trendlineFromPoints([
+        { x: 3, y: 8 },
+        { x: 5, y: null },
+        { x: 7, y: 10 }
+      ])
+    ).toEqual([
+      { x: 3, y: 8 },
+      { x: 7, y: 10 }
     ])
   })
 

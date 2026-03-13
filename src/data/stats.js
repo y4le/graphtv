@@ -1,7 +1,12 @@
 export function linearRegression(values) {
-  const points = values
-    .map((value, index) => ({ x: index, y: value }))
-    .filter((point) => typeof point.y === 'number')
+  const points = values.map((value, index) => ({ x: index, y: value }))
+  return linearRegressionFromPoints(points)
+}
+
+export function linearRegressionFromPoints(values) {
+  const points = values.filter(
+    (point) => typeof point?.x === 'number' && Number.isFinite(point.x) && typeof point?.y === 'number'
+  )
 
   if (points.length === 0) {
     return null
@@ -61,6 +66,25 @@ export function trendline(values, startX) {
   return [
     { x: startX, y: startY },
     { x: endX, y: endY }
+  ]
+}
+
+export function trendlineFromPoints(values) {
+  const points = values.filter(
+    (point) => typeof point?.x === 'number' && Number.isFinite(point.x) && typeof point?.y === 'number'
+  )
+  const regression = linearRegressionFromPoints(points)
+
+  if (!regression || points.length === 0) {
+    return null
+  }
+
+  const startX = points[0].x
+  const endX = points[points.length - 1].x
+
+  return [
+    { x: startX, y: regression.slope * startX + regression.intercept },
+    { x: endX, y: regression.slope * endX + regression.intercept }
   ]
 }
 

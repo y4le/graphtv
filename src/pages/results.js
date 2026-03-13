@@ -1,25 +1,24 @@
-import { getAverageRating } from '../data/stats.js'
 import {
   getComparisonProviders,
   getProviderCatalog,
   getProviderLabel,
-  getShowBundle
+  getShowBundle,
+  parseShowRef
 } from '../data/provider.js'
 import { getUrlParams } from '../lib/url.js'
 import { createChart } from '../viz/ratingsChart.js'
+import { bindSettingsControls, renderDisplayControls } from '../viz/theme.js'
 import { formatRatingBadge, renderError, renderLoading } from './shared.js'
 
 export async function renderResultsPage(container, showRef) {
   container.innerHTML = `
-    <main class="page-shell">
-      <section class="panel">
-        ${renderLoading('Loading show details…')}
-      </section>
+    <main class="document-shell">
+      ${renderLoading('Loading show details…')}
     </main>
   `
 
   try {
-    const { provider } = parseRef(showRef)
+    const { provider } = parseShowRef(showRef)
     const bundle = await getShowBundle(showRef, {
       compareProviders: getComparisonProviders(provider)
     })
@@ -27,56 +26,70 @@ export async function renderResultsPage(container, showRef) {
     document.title = `${bundle.show.title} · GraphTV`
 
     container.innerHTML = `
-      <main class="page-shell results-shell">
-        <section class="panel show-panel">
-          <a class="back-link" href="${buildBackHref()}">← Back to search</a>
-          <div class="show-grid">
-            <div class="show-poster-shell">
-              ${
-                bundle.show.poster
-                  ? `<img src="${bundle.show.poster}" alt="" class="show-poster" />`
-                  : `<div class="poster-fallback large">No art</div>`
-              }
-            </div>
-            <div class="show-copy">
-              <p class="eyebrow">${getProviderLabel(bundle.primarySource)}</p>
-              <h1>${bundle.show.title}</h1>
-              <p class="show-meta">${[bundle.show.year, ...bundle.show.genres].filter(Boolean).join(' · ')}</p>
-              <div class="rating-badges">
-                ${bundle.show.ratings.map((rating) => `<span class="rating-badge">${formatRatingBadge(rating)}</span>`).join('')}
+      <main class="document-shell results-document">
+        <header class="masthead">
+          <a class="back-link" href="${buildBackHref()}">Back to search</a>
+          ${renderDisplayControls()}
+        </header>
+        <section class="results-layout">
+          <aside class="results-context">
+            <div class="show-header">
+              <div class="show-poster-shell">
+                ${
+                  bundle.show.poster
+                    ? `<img src="${bundle.show.poster}" alt="" class="show-poster" />`
+                    : `<div class="poster-fallback large">No art</div>`
+                }
               </div>
-              <p class="show-plot">${bundle.show.plot ?? 'No overview available.'}</p>
-              ${
-                bundle.mismatches.length
-                  ? `<p class="mismatch-note">Provider mismatches detected: ${bundle.mismatches.length}. Open debug mode for details.</p>`
-                  : ''
-              }
+              <div class="show-copy">
+                <p class="document-kicker">${getProviderLabel(bundle.primarySource)}</p>
+                <h1>${escapeHtml(bundle.show.title)}</h1>
+                <p class="show-meta">${escapeHtml([bundle.show.year, ...bundle.show.genres].filter(Boolean).join(' · '))}</p>
+                <div class="rating-badges">
+                  ${bundle.show.ratings.map((rating) => `<span class="rating-badge">${formatRatingBadge(rating)}</span>`).join('')}
+                </div>
+                <p class="show-plot">${escapeHtml(bundle.show.plot ?? 'No synopsis available.')}</p>
+                ${
+                  bundle.mismatches.length
+                    ? `<p class="mismatch-note">Provider mismatches detected: ${bundle.mismatches.length}. Use debug mode for the raw comparison.</p>`
+                    : ''
+                }
+              </div>
             </div>
-          </div>
-        </section>
-        <section class="panel chart-panel">
-          <div class="chart-header">
-            <div>
-              <p class="eyebrow">Ratings chart</p>
-              <h2>Episode trajectory</h2>
+            <section class="context-notes">
+              <div class="chart-meta">
+                <p class="document-kicker">Sources in play</p>
+                <p class="provider-note compact">
+                  ${getProviderCatalog()
+                    .filter((item) => item.configured)
+                    .map((item) => `<span class="provider-inline configured">${item.label}</span>`)
+                    .join('')}
+                </p>
+              </div>
+              <div class="sidenote-root"></div>
+            </section>
+          </aside>
+          <section class="results-data">
+            <div class="chart-intro">
+              <p class="document-kicker">Episode trajectory</p>
+              <p class="document-lede chart-lede">
+                The sparkline gives the whole-series silhouette; the main chart keeps the current viewport readable.
+              </p>
             </div>
-            <div class="provider-pills compact">
-              ${getProviderCatalog()
-                .filter((item) => item.configured)
-                .map((item) => `<span class="provider-pill configured">${item.label}</span>`)
-                .join('')}
-            </div>
-          </div>
-          <div class="chart-root"></div>
+            <div class="chart-root"></div>
+            <div class="mobile-detail-root"></div>
+          </section>
         </section>
       </main>
       <aside class="debug-root"></aside>
     `
 
+    bindSettingsControls(container)
+
     const chartRoot = container.querySelector('.chart-root')
     const chart = createChart(chartRoot, bundle.seasons, {
-      getEpisodeLabel: (episode) => `${episode.title} · ${formatEpisodeRatings(episode.ratings)}`,
-      getEpisodeDisplayRating: (episode) => getAverageRating(episode.ratings)
+      desktopDetailRoot: container.querySelector('.sidenote-root'),
+      mobileDetailRoot: container.querySelector('.mobile-detail-root')
     })
 
     const params = getUrlParams()
@@ -95,13 +108,6 @@ export async function renderResultsPage(container, showRef) {
         {
           title: 'Merged bundle',
           data: bundle
-        },
-        {
-          title: 'Chart summary',
-          data: {
-            seasons: bundle.seasons.length,
-            episodes: bundle.seasons.reduce((count, season) => count + season.episodes.length, 0)
-          }
         }
       ])
     }
@@ -109,19 +115,12 @@ export async function renderResultsPage(container, showRef) {
     return chart
   } catch (error) {
     container.innerHTML = `
-      <main class="page-shell">
-        <section class="panel">
-          ${renderError(error.message)}
-        </section>
+      <main class="document-shell">
+        ${renderError(error.message)}
       </main>
     `
     return null
   }
-}
-
-function parseRef(showRef) {
-  const [provider, id] = showRef.split(':')
-  return { provider, id }
 }
 
 function buildBackHref() {
@@ -140,9 +139,10 @@ function buildBackHref() {
   return nextParams.toString() ? `?${nextParams.toString()}` : window.location.pathname
 }
 
-function formatEpisodeRatings(ratings) {
-  return ratings
-    .filter((rating) => typeof rating.rating === 'number')
-    .map((rating) => `${rating.source.toUpperCase()} ${rating.rating.toFixed(1)}`)
-    .join(' · ')
+function escapeHtml(value) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
 }
