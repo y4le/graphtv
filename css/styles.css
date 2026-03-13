@@ -876,8 +876,17 @@ kbd {
     position: static;
   }
 
+  .results-data {
+    margin-left: -1rem;
+    margin-right: -0.5rem;
+  }
+
+  .chart-kicker {
+    padding-inline: 1rem;
+  }
+
   .main-chart-shell {
-    gap: 0.5rem;
+    gap: 0.35rem;
   }
 
   .show-header {
@@ -886,7 +895,7 @@ kbd {
 
   .reading-pane-shell,
   .main-chart-shell {
-    gap: 0.5rem;
+    gap: 0.35rem;
   }
 
   .sidenote-header {

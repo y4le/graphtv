@@ -18,6 +18,7 @@ import { createSparkline } from './sparkline.js'
 import { getChartTheme, getUiSettings } from './theme.js'
 
 const MOBILE_QUERY = '(max-width: 767px)'
+const MOBILE_LANDSCAPE_QUERY = '(max-width: 767px) and (orientation: landscape)'
 const MOBILE_POINT_SPACING = 18
 
 export function createChart(container, seasons, options = {}) {
@@ -51,6 +52,7 @@ export function createChart(container, seasons, options = {}) {
   const bodyShell = shell.querySelector('.chart-body-shell')
   const readingPane = shell.querySelector('[data-reading-pane]')
   const mediaQuery = window.matchMedia(MOBILE_QUERY)
+  const mobileLandscapeQuery = window.matchMedia(MOBILE_LANDSCAPE_QUERY)
 
   const model = buildChartModel(seasons)
   let viewport = null
@@ -85,6 +87,36 @@ export function createChart(container, seasons, options = {}) {
 
   function usesScrollableBody() {
     return false
+  }
+
+  function isMobileLandscape() {
+    return mobileLandscapeQuery.matches
+  }
+
+  function getChartDimensions() {
+    if (!isMobile()) {
+      return {
+        chartHeight: 410,
+        sparklineHeight: 40
+      }
+    }
+
+    if (!isMobileLandscape()) {
+      return {
+        chartHeight: 260,
+        sparklineHeight: 30
+      }
+    }
+
+    const chartTop = container.getBoundingClientRect().top
+    const availableHeight = Math.max(window.innerHeight - chartTop - 12, 180)
+    const sparklineHeight = clamp(Math.round(availableHeight * 0.11), 24, 34)
+    const chartHeight = clamp(availableHeight - sparklineHeight - 18, 140, 220)
+
+    return {
+      chartHeight,
+      sparklineHeight
+    }
   }
 
   function getPointById(id) {
@@ -479,10 +511,9 @@ export function createChart(container, seasons, options = {}) {
   function render() {
     const chartTheme = getChartTheme()
     const width = Math.max(container.clientWidth, 320)
-    const axisWidth = isMobile() ? 48 : 56
+    const axisWidth = isMobile() ? 40 : 56
     const chartWidth = Math.max(width - axisWidth - 16, 240)
-    const chartHeight = isMobile() ? 260 : 410
-    const sparklineHeight = isMobile() ? 30 : 40
+    const { chartHeight, sparklineHeight } = getChartDimensions()
 
     shell.style.setProperty('--axis-width', `${axisWidth}px`)
     shell.style.setProperty('--chart-height', `${chartHeight}px`)
@@ -517,9 +548,9 @@ export function createChart(container, seasons, options = {}) {
 
     updateViewportFromScroll()
     const chartTheme = getChartTheme()
-    const axisWidth = isMobile() ? 48 : 56
+    const axisWidth = isMobile() ? 40 : 56
     const chartWidth = Math.max(container.clientWidth - axisWidth - 16, 240)
-    const sparklineHeight = isMobile() ? 30 : 40
+    const { sparklineHeight } = getChartDimensions()
     const sparklineScales = createSparklineScales(model, {
       width: chartWidth + axisWidth,
       height: sparklineHeight
