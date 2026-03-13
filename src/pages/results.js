@@ -69,7 +69,6 @@ export async function renderResultsPage(container, showRef) {
             </p>
           </aside>
           <section class="results-data">
-            <p class="document-kicker chart-kicker">Episode trajectory</p>
             <div class="chart-root"></div>
           </section>
         </section>
