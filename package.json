@@ -4,6 +4,9 @@
   "description": "GraphTV rewrite with bundled dependencies, provider-aware data, and a D3 visualization system.",
   "type": "module",
   "private": true,
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -27,7 +30,7 @@
   "devDependencies": {
     "eslint": "^9.22.0",
     "prettier": "^3.5.3",
-    "vite": "^5.4.19",
-    "vitest": "^1.6.1"
+    "vite": "^8.0.0",
+    "vitest": "^4.1.0"
   }
 }
