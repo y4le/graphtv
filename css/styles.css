@@ -105,6 +105,21 @@ button {
   text-transform: uppercase;
 }
 
+.masthead-hint {
+  margin: 0;
+  color: var(--textSecondary);
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+}
+
+kbd {
+  padding: 0.08rem 0.35rem;
+  border: 1px solid var(--lineStrong);
+  border-radius: 999px;
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+}
+
 .search-document {
   width: min(100%, var(--searchMaxWidth));
   margin: 0 auto;
@@ -271,6 +286,14 @@ button {
   text-decoration: none;
 }
 
+.search-result-item.is-selected {
+  border-color: var(--spotColorMuted);
+}
+
+.search-result-item.is-selected .search-result-title {
+  color: var(--spotColor);
+}
+
 .search-result-poster {
   width: 2.7rem;
   aspect-ratio: 3 / 4;
@@ -294,29 +317,6 @@ button {
 
 .search-result-title {
   font-size: 1.26rem;
-}
-
-.display-controls {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 1rem 1.5rem;
-}
-
-.display-group {
-  display: flex;
-  align-items: baseline;
-  gap: 0.7rem;
-}
-
-.display-options {
-  display: flex;
-  gap: 0.65rem;
-}
-
-.display-option[aria-pressed='true'] {
-  color: var(--spotColor);
-  border-color: currentColor;
 }
 
 .results-shell {
@@ -490,10 +490,12 @@ button {
 
 .chart-body-shell {
   min-width: 0;
+  overflow-x: hidden;
+  scrollbar-width: thin;
 }
 
 .chart-body-shell svg {
-  width: 100%;
+  display: block;
   height: auto;
   overflow: visible;
 }
@@ -579,6 +581,18 @@ button {
   cursor: pointer;
 }
 
+.chart-shell[data-scrollable='true'] .chart-body-shell::after {
+  content: '';
+  position: sticky;
+  right: 0;
+  display: block;
+  width: 1.5rem;
+  height: 100%;
+  margin-left: auto;
+  background: linear-gradient(90deg, transparent, var(--canvas));
+  pointer-events: none;
+}
+
 .viewport-brush .overlay {
   fill: transparent;
 }
@@ -630,6 +644,138 @@ button {
   min-height: 16rem;
 }
 
+.overlay-root[hidden] {
+  display: none;
+}
+
+.overlay-root {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+}
+
+.overlay-backdrop {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 1.25rem;
+  background: color-mix(in srgb, var(--canvas) 76%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.overlay-panel {
+  width: min(42rem, calc(100vw - 2rem));
+  max-height: min(85vh, 44rem);
+  overflow: hidden;
+  border: 1px solid var(--lineStrong);
+  background: var(--canvas);
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.18);
+}
+
+.overlay-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem 0.85rem;
+  border-bottom: 1px solid var(--lineSoft);
+}
+
+.overlay-title {
+  margin: 0;
+  font-size: 1.45rem;
+  font-weight: 400;
+}
+
+.overlay-close {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--textSecondary);
+  cursor: pointer;
+}
+
+.overlay-content {
+  max-height: calc(85vh - 4rem);
+  overflow: auto;
+  padding: 1rem 1.1rem 1.2rem;
+}
+
+.help-section + .help-section,
+.debug-overlay-sections .debug-section + .debug-section {
+  margin-top: 1.2rem;
+}
+
+.help-grid {
+  display: grid;
+  grid-template-columns: minmax(8rem, 12rem) 1fr;
+  gap: 0.35rem 1rem;
+  margin: 0.8rem 0 0;
+}
+
+.help-grid dt,
+.help-grid dd {
+  margin: 0;
+}
+
+.help-grid dt {
+  color: var(--textPrimary);
+  font-family: var(--font-sans);
+}
+
+.help-grid dd {
+  color: var(--textSecondary);
+}
+
+.view-options-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.view-option-row {
+  display: grid;
+  grid-template-columns: 7rem 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--lineSoft);
+  background: var(--canvasSubtle);
+  text-align: left;
+}
+
+.view-option-row:focus-visible,
+.view-value:focus-visible,
+.overlay-close:focus-visible,
+.back-link:focus-visible,
+.search-row input:focus-visible,
+.search-row button:focus-visible {
+  outline: 2px solid var(--spotColor);
+  outline-offset: 2px;
+}
+
+.view-option-label,
+.view-option-hint {
+  font-family: var(--font-sans);
+}
+
+.view-option-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.view-value {
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--lineSoft);
+  background: transparent;
+}
+
+.view-value[aria-pressed='true'] {
+  border-color: var(--spotColor);
+  color: var(--spotColor);
+}
+
 .search-results,
 .provider-pills {
   display: flex;
@@ -646,8 +792,6 @@ button {
 
   .masthead,
   .chart-header,
-  .display-controls,
-  .display-group,
   .search-row {
     flex-direction: column;
     align-items: flex-start;
@@ -684,6 +828,18 @@ button {
 
   .sidenote-root {
     display: none;
+  }
+
+  .overlay-panel {
+    width: calc(100vw - 1rem);
+  }
+
+  .help-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .view-option-row {
+    grid-template-columns: 1fr;
   }
 }
 

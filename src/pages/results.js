@@ -7,8 +7,8 @@ import {
 } from '../data/provider.js'
 import { getUrlParams } from '../lib/url.js'
 import { createChart } from '../viz/ratingsChart.js'
-import { bindSettingsControls, renderDisplayControls } from '../viz/theme.js'
 import { formatRatingBadge, renderError, renderLoading } from './shared.js'
+import { requestSearchFocusOnNextPage } from './search.js'
 
 export async function renderResultsPage(container, showRef) {
   container.innerHTML = `
@@ -18,6 +18,8 @@ export async function renderResultsPage(container, showRef) {
   `
 
   try {
+    const params = getUrlParams()
+    const debugEnabled = params.has('debug')
     const { provider } = parseShowRef(showRef)
     const bundle = await getShowBundle(showRef, {
       compareProviders: getComparisonProviders(provider)
@@ -29,7 +31,7 @@ export async function renderResultsPage(container, showRef) {
       <main class="document-shell results-document">
         <header class="masthead">
           <a class="back-link" href="${buildBackHref()}">Back to search</a>
-          ${renderDisplayControls()}
+          <p class="masthead-hint">Press <kbd>?</kbd> for help, <kbd>v</kbd> for view options, <kbd>q</kbd> to return.</p>
         </header>
         <section class="results-layout">
           <aside class="results-context">
@@ -43,7 +45,7 @@ export async function renderResultsPage(container, showRef) {
               </div>
               <div class="show-copy">
                 <p class="document-kicker">${getProviderLabel(bundle.primarySource)}</p>
-                <h1>${escapeHtml(bundle.show.title)}</h1>
+                <h1 tabindex="-1" class="results-title">${escapeHtml(bundle.show.title)}</h1>
                 <p class="show-meta">${escapeHtml([bundle.show.year, ...bundle.show.genres].filter(Boolean).join(' · '))}</p>
                 <div class="rating-badges">
                   ${bundle.show.ratings.map((rating) => `<span class="rating-badge">${formatRatingBadge(rating)}</span>`).join('')}
@@ -81,45 +83,76 @@ export async function renderResultsPage(container, showRef) {
           </section>
         </section>
       </main>
-      <aside class="debug-root"></aside>
     `
 
-    bindSettingsControls(container)
-
-    const chartRoot = container.querySelector('.chart-root')
-    const chart = createChart(chartRoot, bundle.seasons, {
+    const chart = createChart(container.querySelector('.chart-root'), bundle.seasons, {
       desktopDetailRoot: container.querySelector('.sidenote-root'),
       mobileDetailRoot: container.querySelector('.mobile-detail-root')
     })
+    const title = container.querySelector('.results-title')
 
-    const params = getUrlParams()
-    if (params.has('debug')) {
-      const debugRoot = container.querySelector('.debug-root')
-      const { renderDebugPanel } = await import('../debug/panel.js')
-      renderDebugPanel(debugRoot, [
-        {
-          title: 'Provider catalog',
-          data: getProviderCatalog()
-        },
-        {
-          title: 'Provider diagnostics',
-          data: bundle.providerDiagnostics
-        },
-        {
-          title: 'Merged bundle',
-          data: bundle
-        }
-      ])
+    return {
+      kind: 'results',
+      debugEnabled,
+      chart,
+      focusInitial() {
+        title.focus({ preventScroll: true })
+      },
+      focusSearch() {
+        requestSearchFocusOnNextPage()
+        window.location.href = buildBackHref()
+      },
+      goBack() {
+        requestSearchFocusOnNextPage()
+        window.location.href = buildBackHref()
+      },
+      getDebugSections() {
+        return [
+          {
+            title: 'Provider catalog',
+            data: getProviderCatalog()
+          },
+          {
+            title: 'Provider diagnostics',
+            data: bundle.providerDiagnostics
+          },
+          {
+            title: 'Merged bundle',
+            data: bundle
+          },
+          {
+            title: 'Chart state',
+            data: chart.getDebugState()
+          }
+        ]
+      },
+      destroy() {
+        chart.destroy()
+      }
     }
-
-    return chart
   } catch (error) {
     container.innerHTML = `
       <main class="document-shell">
         ${renderError(error.message)}
       </main>
     `
-    return null
+    return {
+      kind: 'results',
+      debugEnabled: false,
+      chart: null,
+      focusInitial() {},
+      focusSearch() {
+        requestSearchFocusOnNextPage()
+        window.location.href = buildBackHref()
+      },
+      goBack() {
+        requestSearchFocusOnNextPage()
+        window.location.href = buildBackHref()
+      },
+      getDebugSections() {
+        return []
+      }
+    }
   }
 }
 

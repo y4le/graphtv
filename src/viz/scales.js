@@ -189,6 +189,16 @@ export function createMainScales(model, viewport, dimensions) {
   }
 }
 
+export function createFullSeriesScales(model, dimensions) {
+  const domain = resolveRatingDomain(model.ratedPoints)
+
+  return {
+    xScale: scaleLinear().domain([1, model.xMax]).range([0, dimensions.width]),
+    yScale: scaleLinear().domain(domain).range([dimensions.height, 0]),
+    yDomain: domain
+  }
+}
+
 function resolveRatingDomain(points) {
   const ratings = points.map((point) => point.rating).filter((rating) => typeof rating === 'number')
 

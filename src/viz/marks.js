@@ -143,39 +143,9 @@ export function renderPoints(svg, points, scales, theme, interactions) {
         ? theme.spotColor
         : theme.seasonColor(point.seasonIndex, interactions.totalSeasons)
     )
-    .attr('tabindex', 0)
-    .attr('role', 'button')
-    .attr('aria-label', (point) => buildPointAriaLabel(point))
     .on('mouseenter', (_, point) => interactions.onHover(point))
     .on('mouseleave', () => interactions.onLeave())
-    .on('focus', (_, point) => interactions.onFocus(point))
-    .on('blur', () => interactions.onBlur())
     .on('click', (_, point) => interactions.onSelect(point))
-    .on('keydown', function (event, point) {
-      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
-        event.preventDefault()
-        interactions.onNavigate(point, 1)
-      }
-
-      if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
-        event.preventDefault()
-        interactions.onNavigate(point, -1)
-      }
-
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        interactions.onEscape()
-        this.blur()
-      }
-    })
-
-  if (interactions.focusPointId) {
-    const activeNode = pointLayer.selectAll('.episode-point').filter((point) => point.id === interactions.focusPointId)
-
-    if (!activeNode.empty() && document.activeElement !== activeNode.node()) {
-      activeNode.node().focus({ preventScroll: true })
-    }
-  }
 }
 
 function buildTickValues(scales, minRating, maxRating) {
@@ -188,12 +158,6 @@ function buildTickValues(scales, minRating, maxRating) {
     })
 
   return [minRating, ...domainTicks, maxRating]
-}
-
-function buildPointAriaLabel(point) {
-  const seasonEpisode = `Season ${point.season}, episode ${point.episode}`
-  const rating = typeof point.rating === 'number' ? `rated ${formatRating(point.rating)}` : 'unrated'
-  return `${seasonEpisode}, ${point.title}, ${rating}`
 }
 
 function clamp(value, min, max) {

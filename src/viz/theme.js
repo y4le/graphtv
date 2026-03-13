@@ -156,80 +156,18 @@ export function updateUiSettings(nextPartial) {
   return uiSettings
 }
 
-export function bindSettingsControls(container) {
-  const root = typeof container === 'string' ? document.querySelector(container) : container
-  if (!root) {
-    return
-  }
-
-  root.querySelectorAll('[data-theme-option]').forEach((button) => {
-    button.addEventListener('click', () => {
-      updateUiSettings({ theme: button.dataset.themeOption })
-      syncSettingsControls(root)
-    })
-  })
-
-  root.querySelectorAll('[data-palette-option]').forEach((button) => {
-    button.addEventListener('click', () => {
-      updateUiSettings({ palette: button.dataset.paletteOption })
-      syncSettingsControls(root)
-    })
-  })
-
-  syncSettingsControls(root)
-}
-
-export function syncSettingsControls(container) {
-  const root = typeof container === 'string' ? document.querySelector(container) : container
-  if (!root) {
-    return
-  }
-
-  const settings = getUiSettings()
-
-  root.querySelectorAll('[data-theme-option]').forEach((button) => {
-    button.setAttribute('aria-pressed', String(button.dataset.themeOption === settings.theme))
-  })
-
-  root.querySelectorAll('[data-palette-option]').forEach((button) => {
-    button.setAttribute('aria-pressed', String(button.dataset.paletteOption === settings.palette))
+export function toggleTheme() {
+  return updateUiSettings({
+    theme: uiSettings.theme === 'light' ? 'dark' : 'light'
   })
 }
 
-export function renderDisplayControls() {
-  const settings = getUiSettings()
-
-  return `
-    <section class="display-controls" aria-label="Display settings">
-      <div class="display-group">
-        <span class="display-label">Theme</span>
-        <div class="display-options" role="group" aria-label="Theme">
-          ${THEMES.map((theme) => renderControlButton('theme', theme, settings.theme === theme)).join('')}
-        </div>
-      </div>
-      <div class="display-group">
-        <span class="display-label">Season palette</span>
-        <div class="display-options" role="group" aria-label="Season palette">
-          ${PALETTES.map((palette) => renderControlButton('palette', palette, settings.palette === palette)).join('')}
-        </div>
-      </div>
-    </section>
-  `
-}
-
-function renderControlButton(kind, value, isActive) {
-  const dataAttribute = kind === 'theme' ? 'data-theme-option' : 'data-palette-option'
-  const label = value.charAt(0).toUpperCase() + value.slice(1)
-  return `
-    <button
-      class="display-option"
-      type="button"
-      ${dataAttribute}="${value}"
-      aria-pressed="${String(isActive)}"
-    >
-      ${label}
-    </button>
-  `
+export function cyclePalette() {
+  const currentIndex = PALETTES.indexOf(uiSettings.palette)
+  const nextIndex = (currentIndex + 1) % PALETTES.length
+  return updateUiSettings({
+    palette: PALETTES[nextIndex]
+  })
 }
 
 export function seasonColor(paletteId, seasonIndex, totalSeasons, themeId = uiSettings.theme) {

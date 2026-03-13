@@ -4,11 +4,11 @@ import {
   buildChartModel,
   clampViewport,
   createDefaultViewport,
+  createFullSeriesScales,
   createMainScales,
   createSparklineScales,
   getMacroTrendline,
   getVisiblePoints,
-  getVisibleRatedPoints,
   getVisibleSeasonSpans,
   getVisibleSeasonTrendlines
 } from './scales.js'
@@ -18,6 +18,7 @@ import { createSparkline } from './sparkline.js'
 import { getChartTheme } from './theme.js'
 
 const MOBILE_QUERY = '(max-width: 767px)'
+const MOBILE_POINT_SPACING = 18
 
 export function createChart(container, seasons, options = {}) {
   container.innerHTML = ''
@@ -46,28 +47,36 @@ export function createChart(container, seasons, options = {}) {
   const bodyShell = shell.querySelector('.chart-body-shell')
   const mediaQuery = window.matchMedia(MOBILE_QUERY)
 
-  let model = buildChartModel(seasons)
+  const model = buildChartModel(seasons)
   let viewport = null
-  let detailPointId = null
+  let selectedPointId = null
   let hoverPointId = null
-  let focusPointId = null
   let sparkline = null
+  let suppressScrollSync = false
 
   const sidenote = createSidenote({
     desktopRoot: options.desktopDetailRoot,
     mobileRoot: options.mobileDetailRoot
   })
 
+  function isMobile() {
+    return mediaQuery.matches
+  }
+
+  function usesScrollableBody() {
+    return isMobile() && model.xMax > 40
+  }
+
   function getPointById(id) {
     return id ? model.points.find((point) => point.id === id) ?? null : null
   }
 
-  function getActivePoint() {
-    return getPointById(hoverPointId) || getPointById(focusPointId) || (isMobile() ? getPointById(detailPointId) : null)
+  function getRatedPoints() {
+    return model.ratedPoints
   }
 
-  function isMobile() {
-    return mediaQuery.matches
+  function getActivePoint() {
+    return getPointById(hoverPointId) || getPointById(selectedPointId)
   }
 
   function updateDetail(point) {
@@ -79,6 +88,10 @@ export function createChart(container, seasons, options = {}) {
     sidenote.renderPoint(point)
   }
 
+  function ensureSelectedPoint() {
+    return getPointById(selectedPointId) ?? model.ratedPoints[0] ?? null
+  }
+
   function ensureViewport(width) {
     const defaultViewport = createDefaultViewport(model, width, isMobile())
 
@@ -87,39 +100,127 @@ export function createChart(container, seasons, options = {}) {
       return
     }
 
-    const currentWidth = viewport.end - viewport.start + 1
-    const defaultWidth = defaultViewport.end - defaultViewport.start + 1
-    const nextViewport =
-      model.xMax <= 40
-        ? defaultViewport
-        : {
-            start: viewport.start,
-            end: viewport.start + Math.min(currentWidth, defaultWidth) - 1
-          }
-
-    viewport = clampViewport(nextViewport, model)
+    viewport = clampViewport(viewport, model)
   }
 
-  function centerViewportAround(x) {
-    const width = viewport.end - viewport.start + 1
-    const halfWidth = Math.floor(width / 2)
+  function setSelectedPoint(point, source = 'keyboard') {
+    if (!point) {
+      return
+    }
+
+    selectedPointId = point.id
+    updateDetail(point)
+
+    if (usesScrollableBody()) {
+      syncScrollableViewportToPoint(point, source === 'keyboard')
+    } else if (point.x < viewport.start || point.x > viewport.end) {
+      const width = viewport.end - viewport.start + 1
+      const halfWidth = Math.floor(width / 2)
+      viewport = clampViewport(
+        {
+          start: point.x - halfWidth,
+          end: point.x - halfWidth + width - 1
+        },
+        model
+      )
+    }
+
+    render()
+  }
+
+  function moveEpisode(delta) {
+    const currentPoint = ensureSelectedPoint()
+    if (!currentPoint) {
+      return
+    }
+    const points = getRatedPoints()
+    const currentIndex = points.findIndex((point) => point.id === currentPoint.id)
+    const nextIndex = clamp(currentIndex + delta, 0, points.length - 1)
+    setSelectedPoint(points[nextIndex])
+  }
+
+  function moveSeason(delta) {
+    const activePoint = ensureSelectedPoint()
+    if (!activePoint) {
+      return
+    }
+
+    const seasonAnchors = getSeasonAnchors()
+    const currentSeasonIndex = seasonAnchors.findIndex((point) => point.season === activePoint.season)
+    const nextSeasonIndex = clamp(currentSeasonIndex + delta, 0, seasonAnchors.length - 1)
+    setSelectedPoint(seasonAnchors[nextSeasonIndex])
+  }
+
+  function jumpBoundary(edge) {
+    const points = getRatedPoints()
+    if (points.length === 0) {
+      return
+    }
+
+    setSelectedPoint(edge === 'start' ? points[0] : points[points.length - 1])
+  }
+
+  function getSeasonAnchors() {
+    const anchors = []
+    const seen = new Set()
+
+    for (const point of model.ratedPoints) {
+      if (!seen.has(point.season)) {
+        seen.add(point.season)
+        anchors.push(point)
+      }
+    }
+
+    return anchors
+  }
+
+  function syncScrollableViewportToPoint(point, shouldScroll) {
+    const width = Math.max(bodyShell.clientWidth, 240)
+    const visibleEpisodes = Math.max(1, Math.round(width / MOBILE_POINT_SPACING))
     viewport = clampViewport(
       {
-        start: x - halfWidth,
-        end: x - halfWidth + width - 1
+        start: point.x - Math.floor(visibleEpisodes / 2),
+        end: point.x - Math.floor(visibleEpisodes / 2) + visibleEpisodes - 1
+      },
+      model
+    )
+
+    if (!shouldScroll) {
+      return
+    }
+
+    const contentWidth = getScrollableBodyWidth(width)
+    const maxScrollLeft = Math.max(contentWidth - width, 0)
+    const ratio = model.xMax > 1 ? (point.x - 1) / (model.xMax - 1) : 0
+    suppressScrollSync = true
+    bodyShell.scrollLeft = ratio * maxScrollLeft
+    queueMicrotask(() => {
+      suppressScrollSync = false
+    })
+  }
+
+  function updateViewportFromScroll() {
+    const width = Math.max(bodyShell.clientWidth, 240)
+    const contentWidth = getScrollableBodyWidth(width)
+    const maxScrollLeft = Math.max(contentWidth - width, 0)
+    const ratio = maxScrollLeft > 0 ? bodyShell.scrollLeft / maxScrollLeft : 0
+    const visibleEpisodes = Math.max(1, Math.round(width / MOBILE_POINT_SPACING))
+    const maxStart = Math.max(1, model.xMax - visibleEpisodes + 1)
+    const start = 1 + ratio * (maxStart - 1)
+    viewport = clampViewport(
+      {
+        start,
+        end: start + visibleEpisodes - 1
       },
       model
     )
   }
 
-  function render() {
-    const chartTheme = getChartTheme()
-    const width = Math.max(container.clientWidth, 320)
-    const axisWidth = isMobile() ? 48 : 56
-    const chartWidth = Math.max(width - axisWidth - 16, 240)
-    const chartHeight = isMobile() ? 260 : 410
-    const sparklineHeight = isMobile() ? 30 : 40
+  function getScrollableBodyWidth(width) {
+    return Math.max(width, (model.xMax - 1) * MOBILE_POINT_SPACING + 40)
+  }
 
+  function renderDesktopChart(chartTheme, axisWidth, chartWidth, chartHeight, sparklineHeight) {
     ensureViewport(chartWidth)
 
     const mainScales = createMainScales(model, viewport, {
@@ -130,21 +231,17 @@ export function createChart(container, seasons, options = {}) {
       width: chartWidth + axisWidth,
       height: sparklineHeight
     })
-    const visiblePoints = getVisiblePoints(model, viewport)
-    const visibleRatedPoints = getVisibleRatedPoints(model, viewport)
-    const activePoint = getActivePoint()
 
-    shell.style.setProperty('--chart-height', `${chartHeight}px`)
-    shell.style.setProperty('--axis-width', `${axisWidth}px`)
+    shell.dataset.scrollable = 'false'
+    bodyShell.style.overflowX = 'hidden'
+    bodyShell.scrollLeft = 0
 
     axisSvg.attr('viewBox', `0 0 ${axisWidth} ${chartHeight}`).attr('width', axisWidth).attr('height', chartHeight)
     mainSvg.attr('viewBox', `0 0 ${chartWidth} ${chartHeight}`).attr('width', chartWidth).attr('height', chartHeight)
+    mainSvg.style('width', '100%')
 
     axisSvg.selectAll('*').remove()
     renderRangeFrame(axisSvg, mainScales, { width: axisWidth, height: chartHeight }, chartTheme)
-
-    mainSvg.selectAll('.chart-background').data([null]).join('rect').attr('class', 'chart-background').attr('width', chartWidth).attr('height', chartHeight).attr('fill', chartTheme.background)
-
     renderTrendlines(
       mainSvg,
       getVisibleSeasonTrendlines(model, viewport),
@@ -152,15 +249,20 @@ export function createChart(container, seasons, options = {}) {
       mainScales,
       chartTheme
     )
-    renderSeasonLabels(mainSvg, getVisibleSeasonSpans(model, viewport), viewport, mainScales, { width: chartWidth, height: chartHeight }, chartTheme)
-    renderCrosshair(mainSvg, activePoint, mainScales, { width: chartWidth, height: chartHeight }, chartTheme)
-    renderPoints(mainSvg, visiblePoints, mainScales, chartTheme, {
-      activePointId: activePoint?.id ?? null,
-      focusPointId,
+    renderSeasonLabels(
+      mainSvg,
+      getVisibleSeasonSpans(model, viewport),
+      viewport,
+      mainScales,
+      { width: chartWidth, height: chartHeight },
+      chartTheme
+    )
+    renderCrosshair(mainSvg, getActivePoint(), mainScales, { width: chartWidth, height: chartHeight }, chartTheme)
+    renderPoints(mainSvg, getVisiblePoints(model, viewport), mainScales, chartTheme, {
+      activePointId: getActivePoint()?.id ?? null,
       totalSeasons: model.totalSeasons,
       onHover(point) {
         hoverPointId = point.id
-        detailPointId = point.id
         updateDetail(point)
         render()
       },
@@ -168,127 +270,162 @@ export function createChart(container, seasons, options = {}) {
         hoverPointId = null
         render()
       },
-      onFocus(point) {
-        focusPointId = point.id
-        detailPointId = point.id
-        updateDetail(point)
-        if (point.x < viewport.start || point.x > viewport.end) {
-          centerViewportAround(point.x)
-        }
-        render()
-      },
-      onBlur() {
-        focusPointId = null
-        render()
-      },
       onSelect(point) {
-        detailPointId = point.id
+        hoverPointId = null
+        setSelectedPoint(point, 'pointer')
+      }
+    })
+
+    renderSparkline(chartTheme, sparklineScales, chartWidth + axisWidth, sparklineHeight, (nextViewport) => {
+      viewport = clampViewport(nextViewport, model)
+      render()
+    })
+  }
+
+  function renderScrollableMobileChart(chartTheme, axisWidth, chartWidth, chartHeight, sparklineHeight) {
+    const contentWidth = getScrollableBodyWidth(chartWidth)
+    const fullScales = createFullSeriesScales(model, {
+      width: contentWidth,
+      height: chartHeight
+    })
+    updateViewportFromScroll()
+    const sparklineScales = createSparklineScales(model, {
+      width: chartWidth + axisWidth,
+      height: sparklineHeight
+    })
+
+    shell.dataset.scrollable = 'true'
+    bodyShell.style.overflowX = 'auto'
+
+    axisSvg.attr('viewBox', `0 0 ${axisWidth} ${chartHeight}`).attr('width', axisWidth).attr('height', chartHeight)
+    mainSvg.attr('viewBox', `0 0 ${contentWidth} ${chartHeight}`).attr('width', contentWidth).attr('height', chartHeight)
+    mainSvg.style('width', `${contentWidth}px`)
+
+    axisSvg.selectAll('*').remove()
+    renderRangeFrame(axisSvg, fullScales, { width: axisWidth, height: chartHeight }, chartTheme)
+    renderTrendlines(mainSvg, model.seasonTrendlines.map((trendline) => ({
+      ...trendline,
+      points: [
+        { x: trendline.startX, y: trendline.regression.slope * trendline.startX + trendline.regression.intercept },
+        { x: trendline.endX, y: trendline.regression.slope * trendline.endX + trendline.regression.intercept }
+      ]
+    })), getMacroTrendline(model, { start: 1, end: model.xMax }), fullScales, chartTheme)
+    renderSeasonLabels(
+      mainSvg,
+      model.seasonSpans,
+      { start: 1, end: model.xMax },
+      fullScales,
+      { width: contentWidth, height: chartHeight },
+      chartTheme
+    )
+    renderCrosshair(mainSvg, getActivePoint(), fullScales, { width: contentWidth, height: chartHeight }, chartTheme)
+    renderPoints(mainSvg, model.points, fullScales, chartTheme, {
+      activePointId: getActivePoint()?.id ?? null,
+      totalSeasons: model.totalSeasons,
+      onHover(point) {
         hoverPointId = point.id
         updateDetail(point)
         render()
       },
-      onNavigate(point, direction) {
-        const points = visibleRatedPoints.length ? model.ratedPoints : model.points.filter((entry) => typeof entry.rating === 'number')
-        const currentIndex = points.findIndex((entry) => entry.id === point.id)
-        const nextPoint = points[currentIndex + direction]
-
-        if (!nextPoint) {
-          return
-        }
-
-        detailPointId = nextPoint.id
-        focusPointId = nextPoint.id
+      onLeave() {
         hoverPointId = null
-        updateDetail(nextPoint)
-        if (nextPoint.x < viewport.start || nextPoint.x > viewport.end) {
-          centerViewportAround(nextPoint.x)
-        }
         render()
       },
-      onEscape() {
+      onSelect(point) {
         hoverPointId = null
-        focusPointId = null
-        if (isMobile()) {
-          detailPointId = null
-          updateDetail(null)
-        }
-        render()
+        setSelectedPoint(point, 'pointer')
       }
     })
 
+    renderSparkline(chartTheme, sparklineScales, chartWidth + axisWidth, sparklineHeight, (nextViewport) => {
+      viewport = clampViewport(nextViewport, model)
+      const maxScrollLeft = Math.max(contentWidth - chartWidth, 0)
+      const maxStart = Math.max(1, model.xMax - (viewport.end - viewport.start + 1) + 1)
+      const ratio = maxStart > 1 ? (viewport.start - 1) / (maxStart - 1) : 0
+      suppressScrollSync = true
+      bodyShell.scrollLeft = ratio * maxScrollLeft
+      queueMicrotask(() => {
+        suppressScrollSync = false
+      })
+      render()
+    })
+  }
+
+  function renderSparkline(chartTheme, sparklineScales, width, height, onViewportChange) {
     if (!sparkline) {
       sparkline = createSparkline(sparklineSvg, {
         model,
         viewport,
         theme: chartTheme,
-        dimensions: {
-          width: chartWidth + axisWidth,
-          height: sparklineHeight
-        },
+        dimensions: { width, height },
         scales: sparklineScales,
-        onViewportChange(nextViewport) {
-          viewport = clampViewport(nextViewport, model)
-          render()
-        }
+        onViewportChange
       })
+      return
+    }
+
+    sparkline.render({
+      model,
+      viewport,
+      theme: chartTheme,
+      dimensions: { width, height },
+      scales: sparklineScales,
+      onViewportChange
+    })
+  }
+
+  function render() {
+    const chartTheme = getChartTheme()
+    const width = Math.max(container.clientWidth, 320)
+    const axisWidth = isMobile() ? 48 : 56
+    const chartWidth = Math.max(width - axisWidth - 16, 240)
+    const chartHeight = isMobile() ? 260 : 410
+    const sparklineHeight = isMobile() ? 30 : 40
+
+    shell.style.setProperty('--axis-width', `${axisWidth}px`)
+    shell.style.setProperty('--chart-height', `${chartHeight}px`)
+
+    mainSvg.selectAll('*').remove()
+
+    if (usesScrollableBody()) {
+      renderScrollableMobileChart(chartTheme, axisWidth, chartWidth, chartHeight, sparklineHeight)
     } else {
-      sparkline.render({
-        model,
-        viewport,
-        theme: chartTheme,
-        dimensions: {
-          width: chartWidth + axisWidth,
-          height: sparklineHeight
-        },
-        scales: sparklineScales,
-        onViewportChange(nextViewport) {
-          viewport = clampViewport(nextViewport, model)
-          render()
-        }
-      })
-    }
-
-    bodyShell.onscroll = () => {
-      if (!isMobile()) {
-        return
-      }
-
-      const scrollRatio = bodyShell.scrollWidth > bodyShell.clientWidth ? bodyShell.scrollLeft / (bodyShell.scrollWidth - bodyShell.clientWidth) : 0
-      const widthInEpisodes = viewport.end - viewport.start + 1
-      const maxStart = Math.max(1, model.xMax - widthInEpisodes + 1)
-      viewport = clampViewport(
-        {
-          start: 1 + scrollRatio * (maxStart - 1),
-          end: 1 + scrollRatio * (maxStart - 1) + widthInEpisodes - 1
-        },
-        model
-      )
-      sparkline.render({
-        model,
-        viewport,
-        theme: chartTheme,
-        dimensions: {
-          width: chartWidth + axisWidth,
-          height: sparklineHeight
-        },
-        scales: sparklineScales,
-        onViewportChange(nextViewport) {
-          viewport = clampViewport(nextViewport, model)
-          render()
-        }
-      })
-    }
-
-    if (!detailPointId) {
-      updateDetail(null)
+      renderDesktopChart(chartTheme, axisWidth, chartWidth, chartHeight, sparklineHeight)
     }
   }
+
+  bodyShell.addEventListener('scroll', () => {
+    if (!usesScrollableBody() || suppressScrollSync) {
+      return
+    }
+
+    updateViewportFromScroll()
+    const chartTheme = getChartTheme()
+    const axisWidth = isMobile() ? 48 : 56
+    const chartWidth = Math.max(container.clientWidth - axisWidth - 16, 240)
+    const sparklineHeight = isMobile() ? 30 : 40
+    const sparklineScales = createSparklineScales(model, {
+      width: chartWidth + axisWidth,
+      height: sparklineHeight
+    })
+
+    sparkline?.render({
+      model,
+      viewport,
+      theme: chartTheme,
+      dimensions: { width: chartWidth + axisWidth, height: sparklineHeight },
+      scales: sparklineScales,
+      onViewportChange(nextViewport) {
+        viewport = clampViewport(nextViewport, model)
+        render()
+      }
+    })
+  })
 
   shell.addEventListener('click', (event) => {
     if (isMobile() && event.target === shell.querySelector('.ratings-chart')) {
       hoverPointId = null
-      focusPointId = null
-      detailPointId = null
+      selectedPointId = null
       updateDetail(null)
       render()
     }
@@ -307,13 +444,16 @@ export function createChart(container, seasons, options = {}) {
   render()
 
   return {
-    update(nextSeasons) {
-      model = buildChartModel(nextSeasons)
-      viewport = null
-      detailPointId = null
-      hoverPointId = null
-      focusPointId = null
-      render()
+    moveEpisode,
+    moveSeason,
+    jumpBoundary,
+    getDebugState() {
+      return {
+        selectedPointId,
+        hoverPointId,
+        viewport,
+        mobileScrollable: usesScrollableBody()
+      }
     },
     destroy() {
       resizeObserver.disconnect()
@@ -322,4 +462,8 @@ export function createChart(container, seasons, options = {}) {
       container.innerHTML = ''
     }
   }
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max)
 }

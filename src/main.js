@@ -1,6 +1,8 @@
 import { renderResultsPage } from './pages/results.js'
 import { renderSearchPage } from './pages/search.js'
 import { getUrlParams, normalizeLegacyParams } from './lib/url.js'
+import { createKeyboardController } from './ui/keyboard.js'
+import { createOverlayController } from './ui/overlay.js'
 import { initializeTheme } from './viz/theme.js'
 
 async function bootstrap() {
@@ -15,13 +17,20 @@ async function bootstrap() {
 
   const params = getUrlParams()
   const showRef = params.get('show')
+  const overlayController = createOverlayController()
+  let pageController
 
   if (showRef) {
-    await renderResultsPage(app, showRef)
-    return
+    pageController = await renderResultsPage(app, showRef)
+  } else {
+    pageController = renderSearchPage(app)
   }
 
-  renderSearchPage(app)
+  createKeyboardController({
+    page: pageController,
+    overlayController
+  })
+  pageController.focusInitial?.()
 }
 
 bootstrap()
