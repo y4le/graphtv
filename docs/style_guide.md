@@ -163,7 +163,9 @@ Rules:
 - Desktop detail belongs in a sidenote region adjacent to the chart.
 - Mobile detail belongs inline below the chart.
 - Keep the last meaningful detail visible until replaced or cleared.
-- Support keyboard navigation across episode points.
+- Full keyboard navigation with simultaneous vim and conventional key support. See `docs/keyboard.md` for the complete specification.
+- Results-page keyboard navigation should target chart state directly in normal mode; chart interaction should not depend on tabbing into a dense point cloud first.
+- Global single-letter shortcuts should suspend when focus is inside native interactive controls or trapped overlays.
 - Avoid floating tooltip systems as the primary information surface.
 - Animated transitions should be tasteful and functional — they orient the user during state changes (viewport pans, detail swaps, theme switches), not decorate. When `prefers-reduced-motion` is active, all animated transitions become instant.
 
