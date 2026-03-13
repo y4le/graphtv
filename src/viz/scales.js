@@ -4,6 +4,7 @@ import { getAverageRating, linearRegressionFromPoints } from '../data/stats.js'
 
 const MIN_RATING = 0
 const MAX_RATING = 10
+const X_EDGE_INSET = 6
 
 export function buildChartModel(seasons) {
   const points = []
@@ -169,7 +170,7 @@ export function getMacroTrendline(model, viewport) {
 
 export function createSparklineScales(model, dimensions) {
   return {
-    xScale: scaleLinear().domain([1, model.xMax]).range([0, dimensions.width]),
+    xScale: scaleLinear().domain([1, model.xMax]).range(resolveXRange(dimensions.width)),
     yScale: scaleLinear()
       .domain(resolveRatingDomain(model.ratedPoints))
       .range([dimensions.height, 0])
@@ -183,7 +184,7 @@ export function createMainScales(model, viewport, dimensions) {
   return {
     xScale: scaleLinear()
       .domain([viewport.start, viewport.end])
-      .range([0, dimensions.width]),
+      .range(resolveXRange(dimensions.width)),
     yScale: scaleLinear().domain(domain).range([dimensions.height, 0]),
     yDomain: domain
   }
@@ -193,10 +194,18 @@ export function createFullSeriesScales(model, dimensions) {
   const domain = resolveRatingDomain(model.ratedPoints)
 
   return {
-    xScale: scaleLinear().domain([1, model.xMax]).range([0, dimensions.width]),
+    xScale: scaleLinear().domain([1, model.xMax]).range(resolveXRange(dimensions.width)),
     yScale: scaleLinear().domain(domain).range([dimensions.height, 0]),
     yDomain: domain
   }
+}
+
+function resolveXRange(width) {
+  if (width <= X_EDGE_INSET * 2) {
+    return [0, width]
+  }
+
+  return [X_EDGE_INSET, width - X_EDGE_INSET]
 }
 
 function resolveRatingDomain(points) {

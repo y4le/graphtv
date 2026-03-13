@@ -1,6 +1,7 @@
 import { format, line } from 'd3'
 
 const formatRating = format('.1f')
+const Y_LABEL_INSET = 8
 
 export function renderRangeFrame(svg, scales, dimensions, theme) {
   const [minRating, maxRating] = scales.yDomain
@@ -28,7 +29,7 @@ export function renderRangeFrame(svg, scales, dimensions, theme) {
   ticks
     .select('text')
     .attr('x', dimensions.width - 8)
-    .attr('y', (tick) => scales.yScale(tick))
+    .attr('y', (tick) => clamp(scales.yScale(tick), Y_LABEL_INSET, dimensions.height - Y_LABEL_INSET))
     .attr('fill', theme.textSecondary)
     .attr('text-anchor', 'end')
     .attr('dominant-baseline', 'middle')
