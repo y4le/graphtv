@@ -30,6 +30,9 @@ export async function renderResultsPage(container, showRef) {
       <main class="document-shell results-document">
         <header class="masthead">
           <a class="back-link" href="${buildBackHref()}">Back to search</a>
+          <div class="masthead-actions" aria-label="Page actions">
+            <button type="button" class="masthead-action" data-ui-action="view-options">Options</button>
+          </div>
           <p class="masthead-hint">Press <kbd>?</kbd> for help, <kbd>v</kbd> for view options, <kbd>q</kbd> to return.</p>
         </header>
         <section class="results-layout">

@@ -56,6 +56,24 @@ export function createKeyboardController({ page, overlayController }) {
     }
   }
 
+  function onClick(event) {
+    const action = event.target.closest('[data-ui-action]')?.dataset.uiAction
+    if (!action) {
+      return
+    }
+
+    if (action === 'help') {
+      event.preventDefault()
+      openHelpOverlay(overlayController, page)
+      return
+    }
+
+    if (action === 'view-options') {
+      event.preventDefault()
+      openViewOptionsOverlay(overlayController)
+    }
+  }
+
   function handleGlobalAction(key, event) {
     if (key === '?') {
       event.preventDefault()
@@ -169,10 +187,12 @@ export function createKeyboardController({ page, overlayController }) {
   }
 
   document.addEventListener('keydown', onKeyDown)
+  document.addEventListener('click', onClick)
 
   return {
     destroy() {
       document.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('click', onClick)
     }
   }
 }

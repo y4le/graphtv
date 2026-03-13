@@ -93,6 +93,22 @@ button {
   margin-bottom: 3.5rem;
 }
 
+.masthead-actions {
+  display: none;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.masthead-action {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--lineSoft);
+  background: transparent;
+  color: var(--textSecondary);
+  font-family: var(--font-sans);
+  font-size: 0.84rem;
+  line-height: 1.2;
+}
+
 .masthead-mark,
 .document-kicker,
 .eyebrow {
@@ -205,6 +221,8 @@ kbd {
 
 .search-row button:hover,
 .search-row button:focus-visible,
+.masthead-action:hover,
+.masthead-action:focus-visible,
 .search-result-link:hover .search-result-title,
 .search-result-link:focus-visible .search-result-title,
 .back-link:hover,
@@ -820,6 +838,26 @@ kbd {
   .search-row {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .masthead {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.85rem;
+    margin-bottom: 1rem;
+  }
+
+  .masthead-actions {
+    display: flex;
+    margin-left: auto;
+  }
+
+  .masthead-hint {
+    display: none;
+  }
+
+  .back-link {
+    margin-bottom: 0;
   }
 
   .search-row {

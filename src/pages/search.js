@@ -18,6 +18,9 @@ export function renderSearchPage(container) {
     <main class="document-shell document-shell-search">
       <header class="masthead">
         <p class="masthead-mark">GraphTV</p>
+        <div class="masthead-actions" aria-label="Page actions">
+          <button type="button" class="masthead-action" data-ui-action="view-options">Options</button>
+        </div>
         <p class="masthead-hint">Press <kbd>/</kbd> to search, <kbd>?</kbd> for help, <kbd>v</kbd> for view options.</p>
       </header>
       <section class="search-document ${query ? '' : 'search-document-empty'}">
