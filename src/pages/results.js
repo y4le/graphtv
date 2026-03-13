@@ -43,9 +43,11 @@ export async function renderResultsPage(container, showRef) {
                     : `<div class="poster-fallback large">No art</div>`
                 }
               </div>
-              <div class="show-copy">
+              <div class="show-title-lockup">
                 <p class="document-kicker">${getProviderLabel(bundle.primarySource)}</p>
                 <h1 tabindex="-1" class="results-title">${escapeHtml(bundle.show.title)}</h1>
+              </div>
+              <div class="show-copy">
                 <p class="show-meta">${escapeHtml([bundle.show.year, ...bundle.show.genres].filter(Boolean).join(' · '))}</p>
                 <p class="show-metrics">${bundle.show.ratings.map((rating) => `<span class="rating-badge">${formatRatingBadge(rating)}</span>`).join(' · ')}</p>
                 <p class="show-plot">${escapeHtml(bundle.show.plot ?? 'No synopsis available.')}</p>
@@ -75,15 +77,11 @@ export async function renderResultsPage(container, showRef) {
     const chart = createChart(container.querySelector('.chart-root'), bundle.seasons, {
       detailRoot: null
     })
-    const title = container.querySelector('.results-title')
-
     return {
       kind: 'results',
       debugEnabled,
       chart,
-      focusInitial() {
-        title.focus({ preventScroll: true })
-      },
+      focusInitial() {},
       focusSearch() {
         requestSearchFocusOnNextPage()
         window.location.href = buildBackHref()

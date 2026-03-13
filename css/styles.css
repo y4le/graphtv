@@ -75,9 +75,10 @@ button {
 
 .document-shell,
 .page-shell {
-  width: min(calc(100% - 2.5rem), var(--pageMaxWidth));
-  margin: 0 auto;
-  padding: 1.25rem 0 4rem;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 1.25rem 1.25rem 4rem;
 }
 
 .document-shell-search {
@@ -337,6 +338,14 @@ kbd {
   align-items: start;
 }
 
+.show-title-lockup {
+  align-self: center;
+}
+
+.show-copy {
+  grid-column: 1 / -1;
+}
+
 .back-link {
   display: inline-block;
   margin-bottom: 1.25rem;
@@ -354,13 +363,14 @@ kbd {
   object-fit: cover;
 }
 
+.show-title-lockup h1,
 .show-copy h1 {
   font-size: clamp(1.9rem, 3vw, 3rem);
   margin-top: 0.1rem;
 }
 
 .show-meta {
-  margin: 0.45rem 0 0;
+  margin: 0;
 }
 
 .show-metrics,
@@ -702,8 +712,7 @@ kbd {
 @media (max-width: 860px) {
   .document-shell,
   .page-shell {
-    width: min(calc(100% - 1.5rem), var(--pageMaxWidth));
-    padding-top: 1rem;
+    padding: 1rem 1rem 4rem;
   }
 
   .masthead,
