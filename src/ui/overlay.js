@@ -135,12 +135,12 @@ export function openHelpOverlay(overlayController, page) {
     onKeyDown(event, { content }) {
       if (event.key === 'j' || event.key === 'ArrowDown') {
         event.preventDefault()
-        content.scrollBy({ top: 56, behavior: 'smooth' })
+        content.scrollBy({ top: 56, behavior: getMotionBehavior() })
       }
 
       if (event.key === 'k' || event.key === 'ArrowUp') {
         event.preventDefault()
-        content.scrollBy({ top: -56, behavior: 'smooth' })
+        content.scrollBy({ top: -56, behavior: getMotionBehavior() })
       }
     }
   })
@@ -173,12 +173,12 @@ export function openDebugOverlay(overlayController, page) {
     onKeyDown(event, { content }) {
       if (event.key === 'j' || event.key === 'ArrowDown') {
         event.preventDefault()
-        content.scrollBy({ top: 56, behavior: 'smooth' })
+        content.scrollBy({ top: 56, behavior: getMotionBehavior() })
       }
 
       if (event.key === 'k' || event.key === 'ArrowUp') {
         event.preventDefault()
-        content.scrollBy({ top: -56, behavior: 'smooth' })
+        content.scrollBy({ top: -56, behavior: getMotionBehavior() })
       }
     }
   })
@@ -379,4 +379,8 @@ function escapeHtml(value) {
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
+}
+
+function getMotionBehavior() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
 }

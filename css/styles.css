@@ -11,8 +11,6 @@
   --trendMicro: #a3a3a3;
   --spotColor: #a63a28;
   --spotColorMuted: #c47a6f;
-  --controlFill: rgba(245, 243, 238, 0.92);
-  --debugBg: rgba(245, 243, 238, 0.95);
   --font-serif: "Iowan Old Style", "Palatino Linotype", "URW Palladio L", P052, serif;
   --font-sans: Inter, Roboto, "Helvetica Neue", "Arial Nova", "Nimbus Sans", Arial, sans-serif;
   --pageMaxWidth: 75rem;
@@ -126,7 +124,6 @@ kbd {
 }
 
 .document-title,
-.hero h1,
 .show-copy h1 {
   margin: 0.4rem 0 0;
   font-family: var(--font-serif);
@@ -137,9 +134,7 @@ kbd {
 }
 
 .document-lede,
-.lede,
-.show-plot,
-.result-copy p {
+.show-plot {
   margin: 1.4rem 0 0;
   color: var(--textSecondary);
   font-size: 1.07rem;
@@ -151,7 +146,6 @@ kbd {
 }
 
 .search-label,
-.display-label,
 .show-meta,
 .back-link,
 .provider-note,
@@ -192,8 +186,7 @@ kbd {
   border-color: var(--spotColor);
 }
 
-.search-row button,
-.display-option {
+.search-row button {
   padding: 0.35rem 0;
   border: 0;
   border-bottom: 1px solid transparent;
@@ -207,8 +200,6 @@ kbd {
 
 .search-row button:hover,
 .search-row button:focus-visible,
-.display-option:hover,
-.display-option:focus-visible,
 .search-result-link:hover .search-result-title,
 .search-result-link:focus-visible .search-result-title,
 .back-link:hover,
@@ -319,10 +310,6 @@ kbd {
   font-size: 1.26rem;
 }
 
-.results-shell {
-  padding-bottom: 4rem;
-}
-
 .results-document {
   padding-bottom: 3rem;
 }
@@ -364,43 +351,13 @@ kbd {
   font-size: 1rem;
 }
 
-.panel,
-.hero,
-.search-hero,
-.results-panel,
-.show-panel,
-.chart-panel,
-.result-card {
-  border: 0;
-  border-radius: 0;
-  background: none;
-  box-shadow: none;
-  backdrop-filter: none;
-}
-
-.show-panel {
-  padding-bottom: 1.5rem;
-}
-
-.chart-panel {
-  padding-top: 1rem;
-}
-
 .back-link {
   display: inline-block;
   margin-bottom: 1.25rem;
   text-decoration: none;
 }
 
-.show-grid {
-  display: grid;
-  grid-template-columns: minmax(13rem, 18rem) minmax(0, 1fr);
-  gap: var(--columnGap);
-  align-items: start;
-}
-
-.show-poster-shell,
-.result-poster-shell {
+.show-poster-shell {
   background: var(--canvasSubtle);
 }
 
@@ -425,36 +382,10 @@ kbd {
   margin-top: 1rem;
 }
 
-.rating-badge,
-.provider-pill {
+.rating-badge {
   color: var(--textSecondary);
   font-family: var(--font-sans);
   font-size: 0.9rem;
-}
-
-.provider-pill.configured {
-  color: var(--textPrimary);
-}
-
-.provider-pill.disabled {
-  color: var(--textMuted);
-}
-
-.chart-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--lineSoft);
-  margin-bottom: 1.5rem;
-}
-
-.chart-header h2,
-.result-copy h2 {
-  margin: 0;
-  font-size: 1.6rem;
-  font-weight: 400;
 }
 
 .chart-root,
@@ -503,11 +434,6 @@ kbd {
 .sparkline-chart {
   width: 100%;
   height: auto;
-}
-
-.chart-tooltip,
-.chart-tooltip-card {
-  display: none;
 }
 
 .sidenote-root,
@@ -573,10 +499,6 @@ kbd {
   border-top: 1px solid var(--lineSoft);
 }
 
-.chart-background {
-  pointer-events: none;
-}
-
 .point-layer .episode-point {
   cursor: pointer;
 }
@@ -600,22 +522,6 @@ kbd {
 .viewport-brush .selection {
   stroke: var(--spotColor);
   stroke-opacity: 0.4;
-}
-
-.debug-root {
-  width: min(calc(100% - 2.5rem), var(--pageMaxWidth));
-  margin: 2rem auto 3rem;
-}
-
-.debug-panel {
-  border: 1px solid var(--lineSoft);
-  background: var(--debugBg);
-  padding: 1rem 1.1rem;
-}
-
-.debug-panel summary {
-  cursor: pointer;
-  font-family: var(--font-sans);
 }
 
 .debug-section + .debug-section {
@@ -776,13 +682,6 @@ kbd {
   color: var(--spotColor);
 }
 
-.search-results,
-.provider-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
 @media (max-width: 860px) {
   .document-shell,
   .page-shell {
@@ -791,7 +690,6 @@ kbd {
   }
 
   .masthead,
-  .chart-header,
   .search-row {
     flex-direction: column;
     align-items: flex-start;
@@ -799,11 +697,6 @@ kbd {
 
   .search-row {
     display: flex;
-  }
-
-  .show-grid {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
   }
 
   .show-poster-shell {

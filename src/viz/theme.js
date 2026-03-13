@@ -16,9 +16,7 @@ const THEME_TOKENS = {
     trendMacro: '#D1D1D1',
     trendMicro: '#A3A3A3',
     spotColor: '#A63A28',
-    spotColorMuted: '#C47A6F',
-    controlFill: 'rgba(245, 243, 238, 0.92)',
-    debugBg: 'rgba(245, 243, 238, 0.95)'
+    spotColorMuted: '#C47A6F'
   },
   dark: {
     canvas: '#1A1A1A',
@@ -31,9 +29,7 @@ const THEME_TOKENS = {
     trendMacro: '#3D3D3D',
     trendMicro: '#5C5C5C',
     spotColor: '#D4594A',
-    spotColorMuted: '#A6534A',
-    controlFill: 'rgba(36, 36, 36, 0.92)',
-    debugBg: 'rgba(24, 24, 24, 0.95)'
+    spotColorMuted: '#A6534A'
   }
 }
 
