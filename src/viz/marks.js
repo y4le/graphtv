@@ -101,13 +101,6 @@ export function renderCrosshair(svg, point, scales, dimensions, theme) {
           x2: scales.xScale(point.x),
           y1: 0,
           y2: dimensions.height
-        },
-        {
-          key: 'horizontal',
-          x1: 0,
-          x2: dimensions.width,
-          y1: scales.yScale(point.rating),
-          y2: scales.yScale(point.rating)
         }
       ]
     : []

@@ -38,6 +38,10 @@ export function createChart(container, seasons, options = {}) {
         <svg class="ratings-chart" role="img" aria-label="Episode ratings chart"></svg>
       </div>
     </div>
+    <div class="reading-pane-shell">
+      <div class="reading-pane-axis-spacer" aria-hidden="true"></div>
+      <div class="reading-pane" data-reading-pane></div>
+    </div>
   `
   container.appendChild(shell)
 
@@ -45,6 +49,7 @@ export function createChart(container, seasons, options = {}) {
   const axisSvg = select(shell.querySelector('.chart-axis'))
   const mainSvg = select(shell.querySelector('.ratings-chart'))
   const bodyShell = shell.querySelector('.chart-body-shell')
+  const readingPane = shell.querySelector('[data-reading-pane]')
   const mediaQuery = window.matchMedia(MOBILE_QUERY)
 
   const model = buildChartModel(seasons)
@@ -55,8 +60,8 @@ export function createChart(container, seasons, options = {}) {
   let suppressScrollSync = false
 
   const sidenote = createSidenote({
-    desktopRoot: options.desktopDetailRoot,
-    mobileRoot: options.mobileDetailRoot
+    desktopRoot: options.detailRoot ?? readingPane,
+    mobileRoot: options.detailRoot ?? readingPane
   })
 
   function isMobile() {
@@ -82,6 +87,7 @@ export function createChart(container, seasons, options = {}) {
   function updateDetail(point) {
     if (!point) {
       sidenote.renderPlaceholder()
+      shell.style.removeProperty('--reading-pane-marker')
       return
     }
 
@@ -391,6 +397,20 @@ export function createChart(container, seasons, options = {}) {
       renderScrollableMobileChart(chartTheme, axisWidth, chartWidth, chartHeight, sparklineHeight)
     } else {
       renderDesktopChart(chartTheme, axisWidth, chartWidth, chartHeight, sparklineHeight)
+    }
+
+    const activePoint = getActivePoint()
+    if (activePoint) {
+      const scale = usesScrollableBody()
+        ? createFullSeriesScales(model, {
+            width: getScrollableBodyWidth(chartWidth),
+            height: chartHeight
+          }).xScale
+        : createMainScales(model, viewport, { width: chartWidth, height: chartHeight }).xScale
+      shell.style.setProperty('--reading-pane-marker', `${scale(activePoint.x)}px`)
+      updateDetail(activePoint)
+    } else {
+      updateDetail(null)
     }
   }
 

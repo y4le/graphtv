@@ -316,7 +316,7 @@ kbd {
 
 .results-layout {
   display: grid;
-  grid-template-columns: minmax(17rem, 30%) minmax(0, 1fr);
+  grid-template-columns: minmax(14rem, 24%) minmax(0, 1fr);
   gap: var(--columnGap);
   align-items: start;
 }
@@ -332,23 +332,9 @@ kbd {
 
 .show-header {
   display: grid;
-  gap: 1.4rem;
-}
-
-.context-notes {
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--lineSoft);
-}
-
-.chart-intro {
-  margin-bottom: 1.25rem;
-}
-
-.chart-lede {
-  margin-top: 0.6rem;
-  max-width: 36rem;
-  font-size: 1rem;
+  grid-template-columns: minmax(5rem, 6.75rem) minmax(0, 1fr);
+  gap: 0.85rem 1rem;
+  align-items: start;
 }
 
 .back-link {
@@ -359,6 +345,7 @@ kbd {
 
 .show-poster-shell {
   background: var(--canvasSubtle);
+  width: min(6.75rem, 100%);
 }
 
 .show-poster {
@@ -368,24 +355,36 @@ kbd {
 }
 
 .show-copy h1 {
-  font-size: clamp(2rem, 4.4vw, 4rem);
+  font-size: clamp(1.9rem, 3vw, 3rem);
+  margin-top: 0.1rem;
 }
 
 .show-meta {
-  margin: 0.9rem 0 0;
+  margin: 0.45rem 0 0;
 }
 
-.rating-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 0.8rem;
-  margin-top: 1rem;
-}
-
+.show-metrics,
 .rating-badge {
   color: var(--textSecondary);
   font-family: var(--font-sans);
   font-size: 0.9rem;
+}
+
+.show-metrics {
+  margin: 0.3rem 0 0;
+}
+
+.show-plot {
+  margin-top: 0.85rem;
+  font-size: 1rem;
+}
+
+.context-sources {
+  margin-top: 0.9rem;
+}
+
+.chart-kicker {
+  margin-bottom: 0.65rem;
 }
 
 .chart-root,
@@ -395,7 +394,7 @@ kbd {
 
 .chart-shell {
   display: grid;
-  gap: 0.85rem;
+  gap: 0.75rem;
 }
 
 .sparkline-shell {
@@ -436,17 +435,31 @@ kbd {
   height: auto;
 }
 
-.sidenote-root,
-.mobile-detail-root {
-  min-height: 6rem;
+.reading-pane-shell {
+  display: grid;
+  grid-template-columns: var(--axis-width, 56px) minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: start;
 }
 
-.sidenote-card {
-  padding-top: 0.25rem;
+.reading-pane {
+  position: relative;
+  min-height: 6.5rem;
+  padding-top: 0.85rem;
 }
 
-.sidenote-card.placeholder {
-  color: var(--textSecondary);
+.reading-pane:empty {
+  min-height: 5.5rem;
+}
+
+.reading-pane:not(:empty)::before {
+  content: '';
+  position: absolute;
+  left: var(--reading-pane-marker);
+  top: -0.9rem;
+  width: 1px;
+  height: 1rem;
+  background: var(--lineStrong);
 }
 
 .sidenote-kicker {
@@ -458,45 +471,49 @@ kbd {
   text-transform: uppercase;
 }
 
+.sidenote-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.45rem 1rem;
+  align-items: baseline;
+}
+
 .sidenote-title {
-  margin: 0.55rem 0 0;
-  font-size: 1.45rem;
+  margin: 0;
+  font-size: 1.12rem;
   font-weight: 400;
   line-height: 1.15;
 }
 
 .sidenote-rating {
-  margin: 0.7rem 0 0;
+  margin: 0;
   color: var(--spotColor);
   font-family: var(--font-sans);
-  font-size: 1.35rem;
+  font-size: 1.1rem;
   font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .sidenote-meta {
-  margin: 0.35rem 0 0;
+  margin: 0;
   color: var(--textSecondary);
   font-family: var(--font-sans);
   font-size: 0.92rem;
 }
 
 .sidenote-ratings {
-  margin: 0.85rem 0 0;
+  margin: 0.55rem 0 0;
   padding-left: 1rem;
   color: var(--textSecondary);
   font-family: var(--font-sans);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.2rem;
 }
 
 .sidenote-body {
-  margin: 0.85rem 0 0;
+  margin: 0.55rem 0 0;
   color: var(--textSecondary);
-}
-
-.mobile-detail-root {
-  display: none;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--lineSoft);
 }
 
 .point-layer .episode-point {
@@ -700,7 +717,7 @@ kbd {
   }
 
   .show-poster-shell {
-    max-width: 9rem;
+    max-width: 6rem;
   }
 
   .results-layout {
@@ -715,12 +732,21 @@ kbd {
     gap: 0.5rem;
   }
 
-  .mobile-detail-root {
-    display: block;
+  .show-header {
+    grid-template-columns: 5rem 1fr;
   }
 
-  .sidenote-root {
-    display: none;
+  .reading-pane-shell,
+  .main-chart-shell {
+    gap: 0.5rem;
+  }
+
+  .sidenote-header {
+    grid-template-columns: 1fr;
+  }
+
+  .sidenote-rating {
+    text-align: left;
   }
 
   .overlay-panel {

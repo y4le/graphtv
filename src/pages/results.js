@@ -47,9 +47,7 @@ export async function renderResultsPage(container, showRef) {
                 <p class="document-kicker">${getProviderLabel(bundle.primarySource)}</p>
                 <h1 tabindex="-1" class="results-title">${escapeHtml(bundle.show.title)}</h1>
                 <p class="show-meta">${escapeHtml([bundle.show.year, ...bundle.show.genres].filter(Boolean).join(' · '))}</p>
-                <div class="rating-badges">
-                  ${bundle.show.ratings.map((rating) => `<span class="rating-badge">${formatRatingBadge(rating)}</span>`).join('')}
-                </div>
+                <p class="show-metrics">${bundle.show.ratings.map((rating) => `<span class="rating-badge">${formatRatingBadge(rating)}</span>`).join(' · ')}</p>
                 <p class="show-plot">${escapeHtml(bundle.show.plot ?? 'No synopsis available.')}</p>
                 ${
                   bundle.mismatches.length
@@ -58,36 +56,24 @@ export async function renderResultsPage(container, showRef) {
                 }
               </div>
             </div>
-            <section class="context-notes">
-              <div class="chart-meta">
-                <p class="document-kicker">Sources in play</p>
-                <p class="provider-note compact">
-                  ${getProviderCatalog()
-                    .filter((item) => item.configured)
-                    .map((item) => `<span class="provider-inline configured">${item.label}</span>`)
-                    .join('')}
-                </p>
-              </div>
-              <div class="sidenote-root"></div>
-            </section>
+            <p class="provider-note compact context-sources">
+              Sources:
+              ${getProviderCatalog()
+                .filter((item) => item.configured)
+                .map((item) => `<span class="provider-inline configured">${item.label}</span>`)
+                .join('')}
+            </p>
           </aside>
           <section class="results-data">
-            <div class="chart-intro">
-              <p class="document-kicker">Episode trajectory</p>
-              <p class="document-lede chart-lede">
-                The sparkline gives the whole-series silhouette; the main chart keeps the current viewport readable.
-              </p>
-            </div>
+            <p class="document-kicker chart-kicker">Episode trajectory</p>
             <div class="chart-root"></div>
-            <div class="mobile-detail-root"></div>
           </section>
         </section>
       </main>
     `
 
     const chart = createChart(container.querySelector('.chart-root'), bundle.seasons, {
-      desktopDetailRoot: container.querySelector('.sidenote-root'),
-      mobileDetailRoot: container.querySelector('.mobile-detail-root')
+      detailRoot: null
     })
     const title = container.querySelector('.results-title')
 

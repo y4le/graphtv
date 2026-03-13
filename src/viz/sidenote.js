@@ -14,12 +14,7 @@ function formatRatingList(point) {
 export function createSidenote({ desktopRoot, mobileRoot }) {
   function renderPlaceholder() {
     if (desktopRoot) {
-      desktopRoot.innerHTML = `
-        <div class="sidenote-card placeholder">
-          <p class="sidenote-kicker">Episode detail</p>
-          <p class="sidenote-body">Hover, focus, or tap an episode to inspect its title, date, synopsis, and source ratings.</p>
-        </div>
-      `
+      desktopRoot.innerHTML = ''
     }
 
     if (mobileRoot) {
@@ -31,14 +26,16 @@ export function createSidenote({ desktopRoot, mobileRoot }) {
     const markup = point
       ? `
           <div class="sidenote-card">
-            <p class="sidenote-kicker">S${String(point.season).padStart(2, '0')}E${String(point.episode).padStart(2, '0')}</p>
-            <h3 class="sidenote-title">${escapeHtml(point.title)}</h3>
-            ${
-              typeof point.rating === 'number'
-                ? `<p class="sidenote-rating">${point.rating.toFixed(1)}</p>`
-                : '<p class="sidenote-rating">n/a</p>'
-            }
-            <p class="sidenote-meta">${escapeHtml(point.date ?? 'Unknown air date')}</p>
+            <div class="sidenote-header">
+              <p class="sidenote-kicker">S${String(point.season).padStart(2, '0')}E${String(point.episode).padStart(2, '0')}</p>
+              <h3 class="sidenote-title">${escapeHtml(point.title)}</h3>
+              <p class="sidenote-meta">${escapeHtml(point.date ?? 'Unknown air date')}</p>
+              ${
+                typeof point.rating === 'number'
+                  ? `<p class="sidenote-rating">${point.rating.toFixed(1)}</p>`
+                  : '<p class="sidenote-rating">n/a</p>'
+              }
+            </div>
             <ul class="sidenote-ratings">${formatRatingList(point)}</ul>
             ${
               point.plot
