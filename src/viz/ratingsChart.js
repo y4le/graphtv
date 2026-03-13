@@ -15,7 +15,7 @@ import {
 import { renderCrosshair, renderPoints, renderRangeFrame, renderSeasonLabels, renderTrendlines } from './marks.js'
 import { createSidenote } from './sidenote.js'
 import { createSparkline } from './sparkline.js'
-import { getChartTheme } from './theme.js'
+import { getChartTheme, getUiSettings } from './theme.js'
 
 const MOBILE_QUERY = '(max-width: 767px)'
 const MOBILE_POINT_SPACING = 18
@@ -228,6 +228,7 @@ export function createChart(container, seasons, options = {}) {
 
   function renderDesktopChart(chartTheme, axisWidth, chartWidth, chartHeight, sparklineHeight) {
     ensureViewport(chartWidth)
+    const uiSettings = getUiSettings()
 
     const mainScales = createMainScales(model, viewport, {
       width: chartWidth,
@@ -250,8 +251,8 @@ export function createChart(container, seasons, options = {}) {
     renderRangeFrame(axisSvg, mainScales, { width: axisWidth, height: chartHeight }, chartTheme)
     renderTrendlines(
       mainSvg,
-      getVisibleSeasonTrendlines(model, viewport),
-      getMacroTrendline(model, viewport),
+      uiSettings.seasonTrendlines ? getVisibleSeasonTrendlines(model, viewport) : [],
+      uiSettings.fullShowTrendline ? getMacroTrendline(model, viewport) : null,
       mainScales,
       chartTheme
     )
@@ -289,6 +290,7 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function renderScrollableMobileChart(chartTheme, axisWidth, chartWidth, chartHeight, sparklineHeight) {
+    const uiSettings = getUiSettings()
     const contentWidth = getScrollableBodyWidth(chartWidth)
     const fullScales = createFullSeriesScales(model, {
       width: contentWidth,
@@ -309,13 +311,21 @@ export function createChart(container, seasons, options = {}) {
 
     axisSvg.selectAll('*').remove()
     renderRangeFrame(axisSvg, fullScales, { width: axisWidth, height: chartHeight }, chartTheme)
-    renderTrendlines(mainSvg, model.seasonTrendlines.map((trendline) => ({
-      ...trendline,
-      points: [
-        { x: trendline.startX, y: trendline.regression.slope * trendline.startX + trendline.regression.intercept },
-        { x: trendline.endX, y: trendline.regression.slope * trendline.endX + trendline.regression.intercept }
-      ]
-    })), getMacroTrendline(model, { start: 1, end: model.xMax }), fullScales, chartTheme)
+    renderTrendlines(
+      mainSvg,
+      uiSettings.seasonTrendlines
+        ? model.seasonTrendlines.map((trendline) => ({
+            ...trendline,
+            points: [
+              { x: trendline.startX, y: trendline.regression.slope * trendline.startX + trendline.regression.intercept },
+              { x: trendline.endX, y: trendline.regression.slope * trendline.endX + trendline.regression.intercept }
+            ]
+          }))
+        : [],
+      uiSettings.fullShowTrendline ? getMacroTrendline(model, { start: 1, end: model.xMax }) : null,
+      fullScales,
+      chartTheme
+    )
     renderSeasonLabels(
       mainSvg,
       model.seasonSpans,
@@ -472,7 +482,8 @@ export function createChart(container, seasons, options = {}) {
         selectedPointId,
         hoverPointId,
         viewport,
-        mobileScrollable: usesScrollableBody()
+        mobileScrollable: usesScrollableBody(),
+        uiSettings: getUiSettings()
       }
     },
     destroy() {

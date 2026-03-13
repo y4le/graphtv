@@ -218,6 +218,12 @@ export function openViewOptionsOverlay(overlayController) {
         if (row?.dataset.option === 'palette') {
           cyclePalette()
         }
+        if (row?.dataset.option === 'season-trendlines') {
+          toggleSetting('seasonTrendlines')
+        }
+        if (row?.dataset.option === 'full-show-trendline') {
+          toggleSetting('fullShowTrendline')
+        }
         syncViewOptions(content)
       }
 
@@ -230,6 +236,18 @@ export function openViewOptionsOverlay(overlayController) {
       if (event.key === 'c') {
         event.preventDefault()
         cyclePalette()
+        syncViewOptions(content)
+      }
+
+      if (event.key === 's') {
+        event.preventDefault()
+        toggleSetting('seasonTrendlines')
+        syncViewOptions(content)
+      }
+
+      if (event.key === 'f') {
+        event.preventDefault()
+        toggleSetting('fullShowTrendline')
         syncViewOptions(content)
       }
     }
@@ -255,6 +273,20 @@ function renderViewOptionsContent() {
         </span>
         <span class="view-option-hint">c</span>
       </div>
+      <div class="view-option-row" data-option="season-trendlines" tabindex="0">
+        <span class="view-option-label">Season trendlines</span>
+        <span class="view-option-values">
+          ${renderToggleButtons('season-trendlines', settings.seasonTrendlines)}
+        </span>
+        <span class="view-option-hint">s</span>
+      </div>
+      <div class="view-option-row" data-option="full-show-trendline" tabindex="0">
+        <span class="view-option-label">Full-show trendline</span>
+        <span class="view-option-values">
+          ${renderToggleButtons('full-show-trendline', settings.fullShowTrendline)}
+        </span>
+        <span class="view-option-hint">f</span>
+      </div>
     </div>
   `
 }
@@ -275,6 +307,16 @@ function bindViewOptions(content) {
       syncViewOptions(content)
     })
   })
+
+  content.querySelectorAll('[data-view-toggle]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.stopPropagation()
+      const key = button.dataset.viewToggle
+      const value = button.dataset.viewToggleValue === 'true'
+      updateUiSettings({ [key]: value })
+      syncViewOptions(content)
+    })
+  })
 }
 
 function syncViewOptions(content) {
@@ -285,12 +327,34 @@ function syncViewOptions(content) {
   content.querySelectorAll('[data-view-palette]').forEach((button) => {
     button.setAttribute('aria-pressed', String(button.dataset.viewPalette === settings.palette))
   })
+  content.querySelectorAll('[data-view-toggle]').forEach((button) => {
+    const key = button.dataset.viewToggle
+    const value = button.dataset.viewToggleValue === 'true'
+    button.setAttribute('aria-pressed', String(Boolean(settings[key]) === value))
+  })
 }
 
 function renderValueButton(kind, value, isActive) {
   const dataAttribute = kind === 'theme' ? `data-view-theme="${value}"` : `data-view-palette="${value}"`
   const label = value === 'monotone' ? 'Mono' : value.charAt(0).toUpperCase() + value.slice(1)
   return `<button type="button" class="view-value" ${dataAttribute} aria-pressed="${String(isActive)}">${label}</button>`
+}
+
+function renderToggleButtons(kind, isEnabled) {
+  const settingKey = kind === 'season-trendlines' ? 'seasonTrendlines' : 'fullShowTrendline'
+  return [
+    renderToggleButton(settingKey, true, isEnabled),
+    renderToggleButton(settingKey, false, !isEnabled)
+  ].join('')
+}
+
+function renderToggleButton(settingKey, value, isActive) {
+  return `<button type="button" class="view-value" data-view-toggle="${settingKey}" data-view-toggle-value="${String(value)}" aria-pressed="${String(isActive)}">${value ? 'On' : 'Off'}</button>`
+}
+
+function toggleSetting(key) {
+  const settings = getUiSettings()
+  updateUiSettings({ [key]: !settings[key] })
 }
 
 function resultsHelpSections() {

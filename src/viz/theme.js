@@ -35,7 +35,9 @@ const THEME_TOKENS = {
 
 const SETTINGS_DEFAULTS = {
   theme: 'light',
-  palette: 'subtle'
+  palette: 'subtle',
+  seasonTrendlines: true,
+  fullShowTrendline: false
 }
 
 const TYPOGRAPHY_TOKENS = {
@@ -69,7 +71,15 @@ function getSystemTheme() {
 function sanitizeSettings(candidate = {}) {
   return {
     theme: THEMES.includes(candidate.theme) ? candidate.theme : getSystemTheme(),
-    palette: PALETTES.includes(candidate.palette) ? candidate.palette : SETTINGS_DEFAULTS.palette
+    palette: PALETTES.includes(candidate.palette) ? candidate.palette : SETTINGS_DEFAULTS.palette,
+    seasonTrendlines:
+      typeof candidate.seasonTrendlines === 'boolean'
+        ? candidate.seasonTrendlines
+        : SETTINGS_DEFAULTS.seasonTrendlines,
+    fullShowTrendline:
+      typeof candidate.fullShowTrendline === 'boolean'
+        ? candidate.fullShowTrendline
+        : SETTINGS_DEFAULTS.fullShowTrendline
   }
 }
 
