@@ -24,7 +24,9 @@ export function createSparkline(svgNode, config) {
 
   brushLayer.call(brush)
   svgNode.addEventListener('dblclick', handleViewportReset)
-  svgNode.addEventListener('touchend', handleTouchEnd)
+  svgNode.addEventListener('touchstart', handleTouchGesture, { passive: false })
+  svgNode.addEventListener('touchmove', handleTouchGesture, { passive: false })
+  svgNode.addEventListener('touchend', handleTouchEnd, { passive: false })
 
   function render(nextConfig) {
     config = nextConfig
@@ -84,9 +86,32 @@ export function createSparkline(svgNode, config) {
     render,
     destroy() {
       svgNode.removeEventListener('dblclick', handleViewportReset)
+      svgNode.removeEventListener('touchstart', handleTouchGesture)
+      svgNode.removeEventListener('touchmove', handleTouchGesture)
       svgNode.removeEventListener('touchend', handleTouchEnd)
       svg.selectAll('*').remove()
     }
+  }
+
+  function handleTouchGesture(event) {
+    if (event.touches.length === 0 || !config.dimensions.width) {
+      return
+    }
+
+    event.preventDefault()
+
+    if (event.touches.length === 1) {
+      const touchX = getTouchX(event.touches[0])
+      centerViewportAt(touchX)
+      return
+    }
+
+    const touchPoints = Array.from(event.touches)
+      .slice(0, 2)
+      .map((touch) => clampX(getTouchX(touch)))
+      .sort((left, right) => left - right)
+
+    setViewportBounds(touchPoints[0], touchPoints[1])
   }
 
   function handleViewportReset(event) {
@@ -95,6 +120,10 @@ export function createSparkline(svgNode, config) {
   }
 
   function handleTouchEnd(event) {
+    if (event.touches.length > 0) {
+      return
+    }
+
     const now = Date.now()
     if (now - lastTouchEndAt <= 320) {
       handleViewportReset(event)
@@ -103,5 +132,36 @@ export function createSparkline(svgNode, config) {
     }
 
     lastTouchEndAt = now
+  }
+
+  function centerViewportAt(touchX) {
+    const center = config.scales.xScale.invert(clampX(touchX))
+    const width = config.viewport.end - config.viewport.start
+    config.onViewportChange?.(
+      {
+        start: center - width / 2,
+        end: center + width / 2
+      },
+      'touch-center'
+    )
+  }
+
+  function setViewportBounds(leftX, rightX) {
+    config.onViewportChange?.(
+      {
+        start: config.scales.xScale.invert(leftX),
+        end: config.scales.xScale.invert(rightX)
+      },
+      'touch-bounds'
+    )
+  }
+
+  function getTouchX(touch) {
+    const rect = svgNode.getBoundingClientRect()
+    return touch.clientX - rect.left
+  }
+
+  function clampX(value) {
+    return Math.max(0, Math.min(config.dimensions.width, value))
   }
 }

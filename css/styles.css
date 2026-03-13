@@ -421,6 +421,10 @@ kbd {
   display: block;
 }
 
+.sparkline-chart {
+  touch-action: none;
+}
+
 .main-chart-shell {
   display: grid;
   grid-template-columns: var(--axis-width, 56px) minmax(0, 1fr);
