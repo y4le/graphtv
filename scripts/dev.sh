@@ -9,6 +9,14 @@ TAILNET_PATH="${TAILNET_PATH:-/graphtv}"
 TAILNET_EXPOSE="${TAILNET_EXPOSE:-1}"
 TAILSCALE_DNS_NAME=""
 
+prepare_client_secrets() {
+  echo "[dev] preparing client-side provider credentials."
+  (
+    cd "$REPO_ROOT"
+    npm run prepare:client-secrets
+  )
+}
+
 detect_tailscale_dns_name() {
   if ! command -v tailscale >/dev/null 2>&1; then
     return 1
@@ -76,6 +84,7 @@ if [[ "$TAILNET_PATH" != /* || "$TAILNET_PATH" == "/" || "$TAILNET_PATH" == */ ]
   exit 1
 fi
 
+prepare_client_secrets
 configure_vite_allowed_hosts
 expose_on_tailnet
 

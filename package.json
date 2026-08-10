@@ -11,7 +11,6 @@
     "prepare:client-secrets": "node scripts/generate-client-secrets.mjs",
     "predev": "npm run prepare:client-secrets",
     "dev": "vite",
-    "predev:tailnet": "npm run prepare:client-secrets",
     "dev:tailnet": "bash scripts/dev.sh",
     "prebuild": "npm run prepare:client-secrets",
     "build": "vite build",
