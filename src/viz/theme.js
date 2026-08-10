@@ -16,7 +16,7 @@ const THEME_TOKENS = {
     trendMacro: '#D1D1D1',
     trendMicro: '#A3A3A3',
     spotColor: '#C1432E',
-    spotColorMuted: '#C47A6F',
+    spotColorMuted: '#C1432E',
     publisherAccent: '#C1432E'
   },
   dark: {
@@ -29,9 +29,9 @@ const THEME_TOKENS = {
     lineStrong: '#403E39',
     trendMacro: '#56534D',
     trendMicro: '#777269',
-    spotColor: '#D4594A',
-    spotColorMuted: '#A6534A',
-    publisherAccent: '#D4594A'
+    spotColor: '#C1432E',
+    spotColorMuted: '#C1432E',
+    publisherAccent: '#C1432E'
   }
 }
 
