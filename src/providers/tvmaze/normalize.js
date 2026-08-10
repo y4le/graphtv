@@ -57,7 +57,8 @@ export function normalizeTvmazeEpisodes(episodes = []) {
         episode: episode.number,
         date: episode.airdate ?? null,
         ratings: createRatings('tvmaze', episode.rating?.average),
-        poster: getPoster(episode.image)
+        poster: getPoster(episode.image),
+        sourceIds: { tvmaze: String(episode.id) }
       })
     )
   }

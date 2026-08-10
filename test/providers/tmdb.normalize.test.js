@@ -59,7 +59,8 @@ describe('tmdb normalization', () => {
           episode: 1,
           date: '2002-06-02',
           ratings: [{ source: 'tmdb', rating: 8.4, votes: 120 }],
-          poster: 'https://image.tmdb.org/t/p/w780/tmdb-target.jpg'
+          poster: 'https://image.tmdb.org/t/p/w780/tmdb-target.jpg',
+          sourceIds: { tmdb: '66452' }
         },
         {
           id: 'tmdb:episode:66453',
@@ -69,7 +70,8 @@ describe('tmdb normalization', () => {
           episode: 2,
           date: '2002-06-09',
           ratings: [{ source: 'tmdb', rating: 8.0, votes: 110 }],
-          poster: 'https://image.tmdb.org/t/p/w780/tmdb-detail.jpg'
+          poster: 'https://image.tmdb.org/t/p/w780/tmdb-detail.jpg',
+          sourceIds: { tmdb: '66453' }
         },
         {
           id: 'tmdb:episode:66454',
@@ -79,7 +81,8 @@ describe('tmdb normalization', () => {
           episode: 3,
           date: '2002-06-16',
           ratings: [{ source: 'tmdb', rating: 8.5, votes: 100 }],
-          poster: 'https://image.tmdb.org/t/p/w780/tmdb-buys.jpg'
+          poster: 'https://image.tmdb.org/t/p/w780/tmdb-buys.jpg',
+          sourceIds: { tmdb: '66454' }
         }
       ]
     })

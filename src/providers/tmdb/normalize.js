@@ -50,7 +50,8 @@ export function normalizeTmdbSeason(season) {
         episode: episode.episode_number,
         date: episode.air_date ?? null,
         ratings: createRatings('tmdb', episode.vote_average, episode.vote_count),
-        poster: buildImageUrl(episode.still_path, IMAGE_ROOT)
+        poster: buildImageUrl(episode.still_path, IMAGE_ROOT),
+        sourceIds: { tmdb: String(episode.id) }
       })
     )
   })

@@ -81,7 +81,8 @@ const supplementalRecord = {
           episode: 1,
           date: '2002-06-02',
           ratings: [{ source: 'tmdb', rating: 8.4, votes: 120 }],
-          poster: 'tmdb-1.jpg'
+          poster: 'tmdb-1.jpg',
+          sourceIds: { tmdb: '66452' }
         },
         {
           id: 'tmdb:episode:66453',
@@ -91,7 +92,8 @@ const supplementalRecord = {
           episode: 2,
           date: '2002-06-09',
           ratings: [{ source: 'tmdb', rating: 8.0, votes: 110 }],
-          poster: 'tmdb-2.jpg'
+          poster: 'tmdb-2.jpg',
+          sourceIds: { tmdb: '66453' }
         },
         {
           id: 'tmdb:episode:66454',
@@ -101,7 +103,8 @@ const supplementalRecord = {
           episode: 3,
           date: '2002-06-16',
           ratings: [{ source: 'tmdb', rating: 8.5, votes: 100 }],
-          poster: 'tmdb-3.jpg'
+          poster: 'tmdb-3.jpg',
+          sourceIds: { tmdb: '66454' }
         },
         {
           id: 'tmdb:episode:66455',
@@ -111,7 +114,8 @@ const supplementalRecord = {
           episode: 4,
           date: '2002-06-23',
           ratings: [{ source: 'tmdb', rating: 7.9, votes: 90 }],
-          poster: 'tmdb-4.jpg'
+          poster: 'tmdb-4.jpg',
+          sourceIds: { tmdb: '66455' }
         }
       ]
     }
@@ -128,9 +132,54 @@ describe('data/merge', () => {
     ])
     expect(merged.seasons[0].episodes[2].ratings).toEqual([
       { source: 'tvmaze', rating: null, votes: null },
-      { source: 'tmdb', rating: 8.5, votes: 100 }
+      {
+        source: 'tmdb',
+        rating: 8.5,
+        votes: 100,
+        provenance: {
+          providerEpisodeId: 'tmdb:episode:66454',
+          strategy: 'title-date',
+          confidence: 'strong',
+          relation: 'one-to-one'
+        }
+      }
     ])
     expect(merged.seasons[0].episodes[2].poster).toBe('tmdb-3.jpg')
+    expect(merged.seasons[0].episodes[2].sourceIds).toEqual({
+      tmdb: '66454'
+    })
+  })
+
+  it('merges shifted provider numbering by episode identity evidence', () => {
+    const shiftedRecord = {
+      ...supplementalRecord,
+      seasons: [
+        {
+          ...supplementalRecord.seasons[0],
+          episodes: supplementalRecord.seasons[0].episodes.slice(0, 3).map((episode) => ({
+            ...episode,
+            episode: episode.episode + 1
+          }))
+        }
+      ]
+    }
+
+    const merged = mergeShowRecords(primaryRecord, [shiftedRecord])
+
+    expect(
+      merged.seasons[0].episodes.map((episode) =>
+        episode.ratings.find((rating) => rating.source === 'tmdb')?.provenance.providerEpisodeId
+      )
+    ).toEqual(['tmdb:episode:66452', 'tmdb:episode:66453', 'tmdb:episode:66454'])
+    expect(merged.alignment[0].entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'matched',
+          primary: expect.objectContaining({ episode: 1 }),
+          supplemental: expect.objectContaining({ episode: 2 })
+        })
+      ])
+    )
   })
 
   it('captures episode mismatches for debug mode', () => {
@@ -139,11 +188,38 @@ describe('data/merge', () => {
     expect(merged.mismatches).toEqual([
       {
         source: 'tmdb',
-        type: 'extra_episode',
-        season: 1,
-        episode: 4,
-        title: 'Old Cases'
+        type: 'unmatched_supplemental',
+        supplemental: {
+          id: 'tmdb:episode:66455',
+          season: 1,
+          episode: 4,
+          title: 'Old Cases',
+          date: '2002-06-23'
+        }
       }
     ])
+    expect(merged.alignmentIssues).toEqual([])
+  })
+
+  it('does not present ordinary provider coverage gaps as ambiguous alignment issues', () => {
+    const missingSeasonRecord = {
+      ...supplementalRecord,
+      seasons: []
+    }
+
+    const merged = mergeShowRecords(primaryRecord, [missingSeasonRecord])
+
+    expect(merged.mismatches).toHaveLength(3)
+    expect(merged.mismatches.every((entry) => entry.type === 'unmatched_primary')).toBe(true)
+    expect(merged.alignmentIssues).toEqual([])
+  })
+
+  it('omits a supplemental source ID when no provider-native ID is available', () => {
+    const recordWithoutNativeId = structuredClone(supplementalRecord)
+    delete recordWithoutNativeId.seasons[0].episodes[0].sourceIds
+
+    const merged = mergeShowRecords(primaryRecord, [recordWithoutNativeId])
+
+    expect(merged.seasons[0].episodes[0].sourceIds).toEqual({})
   })
 })

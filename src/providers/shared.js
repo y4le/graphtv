@@ -25,8 +25,15 @@ export function parseNumericValue(value) {
   return Number.isFinite(parsed) ? parsed : null
 }
 
-export function createRatings(source, rating, votes = null) {
-  return [createProviderRating(source, parseNumericValue(rating), parseNumericValue(votes))]
+export function createRatings(source, rating, votes = null, metadata = {}) {
+  return [
+    createProviderRating(
+      source,
+      parseNumericValue(rating),
+      parseNumericValue(votes),
+      metadata
+    )
+  ]
 }
 
 export function buildImageUrl(path, baseUrl) {

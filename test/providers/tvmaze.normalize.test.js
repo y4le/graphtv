@@ -56,7 +56,8 @@ describe('tvmaze normalization', () => {
             episode: 1,
             date: '2002-06-02',
             ratings: [{ source: 'tvmaze', rating: 8.3, votes: null }],
-            poster: 'https://static.tvmaze.com/uploads/images/original_untouched/1/1111.jpg'
+            poster: 'https://static.tvmaze.com/uploads/images/original_untouched/1/1111.jpg',
+            sourceIds: { tvmaze: '1001' }
           },
           {
             id: 'tvmaze:episode:1002',
@@ -66,7 +67,8 @@ describe('tvmaze normalization', () => {
             episode: 2,
             date: '2002-06-09',
             ratings: [{ source: 'tvmaze', rating: 8.1, votes: null }],
-            poster: 'https://static.tvmaze.com/uploads/images/original_untouched/1/1112.jpg'
+            poster: 'https://static.tvmaze.com/uploads/images/original_untouched/1/1112.jpg',
+            sourceIds: { tvmaze: '1002' }
           },
           {
             id: 'tvmaze:episode:1003',
@@ -76,7 +78,8 @@ describe('tvmaze normalization', () => {
             episode: 3,
             date: '2002-06-16',
             ratings: [{ source: 'tvmaze', rating: null, votes: null }],
-            poster: null
+            poster: null,
+            sourceIds: { tvmaze: '1003' }
           }
         ]
       }

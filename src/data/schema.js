@@ -8,8 +8,9 @@ function dedupeRatings(ratings = []) {
   return Array.from(seen.values())
 }
 
-export function createProviderRating(source, rating, votes = null) {
+export function createProviderRating(source, rating, votes = null, metadata = {}) {
   return {
+    ...metadata,
     source,
     rating: typeof rating === 'number' ? rating : null,
     votes: typeof votes === 'number' ? votes : null
@@ -48,7 +49,8 @@ export function createEpisode({
   episode,
   date = null,
   ratings = [],
-  poster = null
+  poster = null,
+  sourceIds = {}
 }) {
   return {
     id,
@@ -58,7 +60,8 @@ export function createEpisode({
     episode,
     date,
     ratings: dedupeRatings(ratings),
-    poster
+    poster,
+    sourceIds
   }
 }
 

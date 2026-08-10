@@ -1,3 +1,4 @@
+import { alignSupplementalRecord } from './align.js'
 import { createEpisode, createSeason, createShow, sortEpisodes, sortSeasons } from './schema.js'
 
 function mergeRatings(...ratingSets) {
@@ -16,45 +17,44 @@ function pickValue(primaryValue, fallbackValue) {
   return primaryValue ?? fallbackValue ?? null
 }
 
-function episodeKey(episode) {
-  return `${episode.season}:${episode.episode}`
-}
+function mergeEpisode(primaryEpisode, alignmentMatch, provider) {
+  if (!alignmentMatch) {
+    return createEpisode(primaryEpisode)
+  }
 
-function mergeEpisode(primaryEpisode, fallbackEpisode) {
+  const { supplementalEpisode, strategy, confidence } = alignmentMatch
+  const supplementalRatings = supplementalEpisode.ratings.map((rating) => ({
+    ...rating,
+    provenance: {
+      providerEpisodeId: supplementalEpisode.id,
+      strategy,
+      confidence,
+      relation: 'one-to-one'
+    }
+  }))
+
+  const sourceIds = {
+    ...primaryEpisode.sourceIds,
+    ...supplementalEpisode.sourceIds
+  }
+  const nativeProviderId = supplementalEpisode.sourceIds?.[provider]
+  if (nativeProviderId) {
+    sourceIds[provider] = nativeProviderId
+  } else {
+    delete sourceIds[provider]
+  }
+
   return createEpisode({
     id: primaryEpisode.id,
     title: primaryEpisode.title,
-    plot: pickValue(primaryEpisode.plot, fallbackEpisode?.plot),
+    plot: pickValue(primaryEpisode.plot, supplementalEpisode.plot),
     season: primaryEpisode.season,
     episode: primaryEpisode.episode,
-    date: pickValue(primaryEpisode.date, fallbackEpisode?.date),
-    ratings: mergeRatings(primaryEpisode.ratings, fallbackEpisode?.ratings),
-    poster: pickValue(primaryEpisode.poster, fallbackEpisode?.poster)
+    date: pickValue(primaryEpisode.date, supplementalEpisode.date),
+    ratings: mergeRatings(primaryEpisode.ratings, supplementalRatings),
+    poster: pickValue(primaryEpisode.poster, supplementalEpisode.poster),
+    sourceIds
   })
-}
-
-function findExtraEpisodes(primarySeasons, supplementalRecord) {
-  const primaryEpisodeKeys = new Set(
-    primarySeasons.flatMap((season) => season.episodes.map((episode) => episodeKey(episode)))
-  )
-
-  const mismatches = []
-
-  for (const season of supplementalRecord.seasons) {
-    for (const episode of season.episodes) {
-      if (!primaryEpisodeKeys.has(episodeKey(episode))) {
-        mismatches.push({
-          source: supplementalRecord.provider,
-          type: 'extra_episode',
-          season: episode.season,
-          episode: episode.episode,
-          title: episode.title
-        })
-      }
-    }
-  }
-
-  return mismatches
 }
 
 export function mergeShowRecords(primaryRecord, supplementalRecords = []) {
@@ -80,15 +80,10 @@ export function mergeShowRecords(primaryRecord, supplementalRecords = []) {
     )
   })
 
-  const supplementalEpisodeMaps = supplementalRecords.map((record) => ({
+  const alignments = supplementalRecords.map((record) => ({
     provider: record.provider,
-    episodes: new Map(
-      record.seasons.flatMap((season) =>
-        season.episodes.map((episode) => [episodeKey(episode), episode])
-      )
-    )
+    ...alignSupplementalRecord(primaryRecord.seasons, record)
   }))
-
   const mergedSeasons = sortSeasons(
     primaryRecord.seasons.map((season) =>
       createSeason({
@@ -96,12 +91,13 @@ export function mergeShowRecords(primaryRecord, supplementalRecords = []) {
         title: season.title,
         episodes: sortEpisodes(
           season.episodes.map((episode) => {
-            let mergedEpisode = episode
+            let mergedEpisode = createEpisode(episode)
 
-            for (const supplementalMap of supplementalEpisodeMaps) {
+            for (const alignment of alignments) {
               mergedEpisode = mergeEpisode(
                 mergedEpisode,
-                supplementalMap.episodes.get(episodeKey(episode))
+                alignment.matches.get(episode.id),
+                alignment.provider
               )
             }
 
@@ -111,12 +107,19 @@ export function mergeShowRecords(primaryRecord, supplementalRecords = []) {
       })
     )
   )
+  const alignmentReports = alignments.map((alignment) => alignment.report)
+  const mismatches = alignmentReports.flatMap((report) =>
+    report.entries.filter((entry) => entry.type !== 'matched')
+  )
+  const alignmentIssues = mismatches.filter((entry) => entry.type === 'ambiguous')
 
   return {
     primarySource: primaryRecord.provider,
     show: mergedShow,
     seasons: mergedSeasons,
     sourceRecords: [primaryRecord, ...supplementalRecords],
-    mismatches: supplementalRecords.flatMap((record) => findExtraEpisodes(primaryRecord.seasons, record))
+    alignment: alignmentReports,
+    alignmentIssues,
+    mismatches
   }
 }

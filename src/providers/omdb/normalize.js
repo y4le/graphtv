@@ -1,6 +1,27 @@
 import { createEpisode, createSeason, createShow } from '../../data/schema.js'
 import { createRatings, getYear } from '../shared.js'
 
+const MONTHS = new Map(
+  ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(
+    (month, index) => [month.toLowerCase(), String(index + 1).padStart(2, '0')]
+  )
+)
+
+export function parseOmdbReleased(value) {
+  if (!value || value === 'N/A') {
+    return null
+  }
+
+  const match = String(value).trim().match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})$/u)
+  const month = match ? MONTHS.get(match[2].toLowerCase()) : null
+
+  if (!match || !month) {
+    return null
+  }
+
+  return `${match[3]}-${month}-${match[1].padStart(2, '0')}`
+}
+
 export function normalizeOmdbSearch(data) {
   return (data?.Search ?? []).map((show) =>
     createShow({
@@ -37,8 +58,18 @@ export function normalizeOmdbSeason(season) {
         title: episode.Title,
         season: Number(season.Season),
         episode: Number(episode.Episode),
-        date: new Date(episode.Released).toISOString().slice(0, 10),
-        ratings: createRatings('omdb', episode.imdbRating, episode.imdbVotes)
+        date: parseOmdbReleased(episode.Released),
+        ratings: createRatings('omdb', episode.imdbRating, episode.imdbVotes, {
+          ratingStatus: episode.imdbRating === 'N/A' ? 'unrated' : 'rated',
+          votesStatus:
+            episode.imdbVotes === 'N/A'
+              ? 'unavailable'
+              : episode.imdbVotes
+                ? 'loaded'
+                : 'unknown'
+        }),
+        sourceIds:
+          episode.imdbID && episode.imdbID !== 'N/A' ? { omdb: episode.imdbID } : {}
       })
     )
   })
