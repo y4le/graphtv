@@ -500,10 +500,6 @@ kbd,
   gap: 0.75rem;
 }
 
-.sparkline-shell {
-  padding-bottom: 0.35rem;
-}
-
 .sparkline-chart,
 .chart-axis,
 .ratings-chart {
@@ -514,11 +510,21 @@ kbd,
   touch-action: none;
 }
 
-.main-chart-shell {
+.sparkline-shell,
+.main-chart-shell,
+.reading-pane-shell {
   display: grid;
   grid-template-columns: var(--axis-width, 56px) minmax(0, 1fr);
   gap: 0.9rem;
   align-items: start;
+}
+
+.sparkline-shell {
+  padding-bottom: 0.35rem;
+}
+
+.sparkline-shell .sparkline-chart {
+  grid-column: 2;
 }
 
 .chart-axis-shell {
@@ -540,13 +546,6 @@ kbd,
 .sparkline-chart {
   width: 100%;
   height: auto;
-}
-
-.reading-pane-shell {
-  display: grid;
-  grid-template-columns: var(--axis-width, 56px) minmax(0, 1fr);
-  gap: 0.9rem;
-  align-items: start;
 }
 
 .reading-pane {
@@ -646,13 +645,44 @@ kbd,
   pointer-events: none;
 }
 
+.viewport-brush {
+  --brush-handle-rest: 0.45;
+  --brush-handle-hover: 0.72;
+  --brush-handle-active: 0.92;
+  --brush-selection-tint: 0.08;
+}
+
+:root[data-theme='dark'] .viewport-brush {
+  --brush-handle-rest: 0.55;
+  --brush-handle-hover: 0.82;
+  --brush-handle-active: 1;
+  --brush-selection-tint: 0.1;
+}
+
 .viewport-brush .overlay {
   fill: transparent;
 }
 
 .viewport-brush .selection {
+  fill: var(--spotColor);
+  fill-opacity: var(--brush-selection-tint);
   stroke: var(--spotColor);
-  stroke-opacity: 0.4;
+  stroke-opacity: 0.34;
+}
+
+.viewport-brush .handle {
+  fill: var(--spotColor);
+  fill-opacity: var(--brush-handle-rest);
+  shape-rendering: crispEdges;
+  transition: fill-opacity var(--transition-fast);
+}
+
+.viewport-brush .handle:hover {
+  fill-opacity: var(--brush-handle-hover);
+}
+
+.viewport-brush.is-brushing .handle {
+  fill-opacity: var(--brush-handle-active);
 }
 
 .debug-section + .debug-section {
@@ -973,14 +1003,11 @@ kbd,
     padding-inline: 1rem;
   }
 
-  .main-chart-shell {
-    gap: 0.35rem;
-  }
-
   .show-header {
     grid-template-columns: 5rem 1fr;
   }
 
+  .sparkline-shell,
   .reading-pane-shell,
   .main-chart-shell {
     gap: 0.35rem;

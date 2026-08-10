@@ -336,7 +336,7 @@ export function createChart(container, seasons, options = {}) {
       height: chartHeight
     })
     const sparklineScales = createSparklineScales(model, {
-      width: chartWidth + axisWidth,
+      width: chartWidth,
       height: sparklineHeight
     })
 
@@ -389,7 +389,7 @@ export function createChart(container, seasons, options = {}) {
     renderSparkline(
       chartTheme,
       sparklineScales,
-      chartWidth + axisWidth,
+      chartWidth,
       sparklineHeight,
       (nextViewport) => {
         viewport = clampViewport(nextViewport, model)
@@ -408,7 +408,7 @@ export function createChart(container, seasons, options = {}) {
     })
     updateViewportFromScroll()
     const sparklineScales = createSparklineScales(model, {
-      width: chartWidth + axisWidth,
+      width: chartWidth,
       height: sparklineHeight
     })
 
@@ -467,7 +467,7 @@ export function createChart(container, seasons, options = {}) {
     renderSparkline(
       chartTheme,
       sparklineScales,
-      chartWidth + axisWidth,
+      chartWidth,
       sparklineHeight,
       (nextViewport) => {
         viewport = clampViewport(nextViewport, model)
@@ -552,7 +552,7 @@ export function createChart(container, seasons, options = {}) {
     const chartWidth = Math.max(container.clientWidth - axisWidth - 16, 240)
     const { sparklineHeight } = getChartDimensions()
     const sparklineScales = createSparklineScales(model, {
-      width: chartWidth + axisWidth,
+      width: chartWidth,
       height: sparklineHeight
     })
 
@@ -560,7 +560,7 @@ export function createChart(container, seasons, options = {}) {
       model,
       viewport,
       theme: chartTheme,
-      dimensions: { width: chartWidth + axisWidth, height: sparklineHeight },
+      dimensions: { width: chartWidth, height: sparklineHeight },
       scales: sparklineScales,
       onViewportChange(nextViewport) {
         viewport = clampViewport(nextViewport, model)

@@ -4,11 +4,19 @@ import { createSparklineScales, viewportToBrushSelection } from './scales.js'
 
 const DOUBLE_TAP_DELAY = 320
 const TAP_MOVE_TOLERANCE = 10
+const INACTIVE_INK_OPACITY = 0.3
+const ACTIVE_POINT_RADIUS = 1.7
+const INACTIVE_POINT_RADIUS = 1.2
+
+let sparklineInstances = 0
 
 export function createSparkline(svgNode, config) {
   const svg = select(svgNode)
+  const clipId = `sparkline-window-${++sparklineInstances}`
+  const windowClipRect = svg.append('defs').append('clipPath').attr('id', clipId).append('rect')
   const brushLayer = svg.append('g').attr('class', 'viewport-brush')
   const viewportIndicator = svg.append('rect').attr('class', 'mobile-viewport-indicator').attr('pointer-events', 'none')
+  const marks = svg.append('g').attr('class', 'sparkline-marks').attr('pointer-events', 'none')
   const touchSurface = svg.append('rect').attr('class', 'sparkline-touch-surface')
 
   let suppressBrushEvents = false
@@ -18,8 +26,19 @@ export function createSparkline(svgNode, config) {
   let hadMultiTouch = false
 
   const brush = brushX()
+    .handleSize(8)
     .filter((event) => !config.mobileInteraction && !isTouchBrushEvent(event))
+    .on('start', (event) => {
+      // D3 uses handle mode for both edge drags and drawing a new selection.
+      if (event.mode === 'handle') {
+        brushLayer.classed('is-brushing', true)
+      }
+    })
     .on('brush end', (event) => {
+      if (event.type === 'end') {
+        brushLayer.classed('is-brushing', false)
+      }
+
       if (suppressBrushEvents || !event.selection || !config.dimensions.width) {
         return
       }
@@ -48,29 +67,53 @@ export function createSparkline(svgNode, config) {
       .y((point) => config.scales.yScale(point.rating))
 
     svg.attr('viewBox', `0 0 ${config.dimensions.width} ${config.dimensions.height}`)
+    const [windowX1, windowX2] = viewportToBrushSelection(config.viewport, config.scales.xScale)
+    const isInWindow = (point) => point.x >= config.viewport.start && point.x <= config.viewport.end
+    const pathData =
+      config.model.ratedPoints.length > 1 ? generator(config.model.ratedPoints) : null
 
-    svg
+    windowClipRect
+      .attr('x', windowX1)
+      .attr('y', -2)
+      .attr('width', Math.max(0, windowX2 - windowX1))
+      .attr('height', config.dimensions.height + 4)
+
+    marks
       .selectAll('.sparkline-path')
-      .data(config.model.ratedPoints.length > 1 ? [config.model.ratedPoints] : [])
+      .data(pathData ? [pathData] : [])
       .join('path')
       .attr('class', 'sparkline-path')
       .attr('fill', 'none')
-      .attr('stroke', config.theme.trendMicro)
+      .attr('stroke', config.theme.text)
+      .attr('stroke-opacity', INACTIVE_INK_OPACITY)
       .attr('stroke-width', 1)
-      .attr('d', (points) => generator(points))
+      .attr('stroke-linejoin', 'round')
+      .attr('d', (path) => path)
 
-    svg
+    marks
+      .selectAll('.sparkline-path-active')
+      .data(pathData ? [pathData] : [])
+      .join('path')
+      .attr('class', 'sparkline-path-active')
+      .attr('fill', 'none')
+      .attr('stroke', config.theme.text)
+      .attr('stroke-opacity', 1)
+      .attr('stroke-width', 1.5)
+      .attr('stroke-linejoin', 'round')
+      .attr('stroke-linecap', 'round')
+      .attr('clip-path', `url(#${clipId})`)
+      .attr('d', (path) => path)
+
+    marks
       .selectAll('.sparkline-point')
       .data(config.model.ratedPoints, (point) => point.id)
       .join('circle')
       .attr('class', 'sparkline-point')
       .attr('cx', (point) => config.scales.xScale(point.x))
       .attr('cy', (point) => config.scales.yScale(point.rating))
-      .attr('r', 1.5)
+      .attr('r', (point) => (isInWindow(point) ? ACTIVE_POINT_RADIUS : INACTIVE_POINT_RADIUS))
       .attr('fill', config.theme.text)
-      .attr('opacity', (point) =>
-        point.x >= config.viewport.start && point.x <= config.viewport.end ? 1 : 0.48
-      )
+      .attr('opacity', (point) => (isInWindow(point) ? 1 : INACTIVE_INK_OPACITY))
 
     touchSurface
       .attr('width', config.dimensions.width)
@@ -80,11 +123,10 @@ export function createSparkline(svgNode, config) {
 
     if (config.mobileInteraction) {
       brushLayer.style('display', 'none')
-      const [x1, x2] = viewportToBrushSelection(config.viewport, config.scales.xScale)
       viewportIndicator
-        .attr('x', x1)
+        .attr('x', windowX1)
         .attr('y', 0)
-        .attr('width', Math.max(0, x2 - x1))
+        .attr('width', Math.max(0, windowX2 - windowX1))
         .attr('height', config.dimensions.height)
         .attr('fill', config.theme.spotColor)
         .attr('fill-opacity', 0.12)
@@ -104,15 +146,8 @@ export function createSparkline(svgNode, config) {
     brushLayer.call(brush)
 
     suppressBrushEvents = true
-    brushLayer.call(brush.move, viewportToBrushSelection(config.viewport, config.scales.xScale))
+    brushLayer.call(brush.move, [windowX1, windowX2])
     suppressBrushEvents = false
-
-    brushLayer.selectAll('.overlay').attr('cursor', 'crosshair')
-    brushLayer.selectAll('.selection').attr('fill', config.theme.spotColor).attr('fill-opacity', 0.12)
-    brushLayer
-      .selectAll('.handle')
-      .attr('fill', config.theme.spotColor)
-      .attr('fill-opacity', 0.34)
   }
 
   render({
