@@ -419,6 +419,9 @@ export function openViewOptionsOverlay(overlayController) {
         if (row?.dataset.option === 'full-show-trendline') {
           toggleSetting('fullShowTrendline')
         }
+        if (row?.dataset.option === 'absolute-y-axis') {
+          toggleSetting('absoluteYAxis')
+        }
         syncViewOptions(content)
       }
 
@@ -443,6 +446,12 @@ export function openViewOptionsOverlay(overlayController) {
       if (event.key === 'f') {
         event.preventDefault()
         toggleSetting('fullShowTrendline')
+        syncViewOptions(content)
+      }
+
+      if (event.key === 'y') {
+        event.preventDefault()
+        toggleSetting('absoluteYAxis')
         syncViewOptions(content)
       }
     }
@@ -471,16 +480,23 @@ function renderViewOptionsContent() {
       <div class="view-option-row" data-option="season-trendlines" tabindex="0">
         <span class="view-option-label">Season trendlines</span>
         <span class="view-option-values">
-          ${renderToggleButtons('season-trendlines', settings.seasonTrendlines)}
+          ${renderToggleButtons('seasonTrendlines', settings.seasonTrendlines)}
         </span>
         <span class="view-option-hint">s</span>
       </div>
       <div class="view-option-row" data-option="full-show-trendline" tabindex="0">
         <span class="view-option-label">Full-show trendline</span>
         <span class="view-option-values">
-          ${renderToggleButtons('full-show-trendline', settings.fullShowTrendline)}
+          ${renderToggleButtons('fullShowTrendline', settings.fullShowTrendline)}
         </span>
         <span class="view-option-hint">f</span>
+      </div>
+      <div class="view-option-row" data-option="absolute-y-axis" tabindex="0">
+        <span class="view-option-label">Absolute y-axis (0–10)</span>
+        <span class="view-option-values">
+          ${renderToggleButtons('absoluteYAxis', settings.absoluteYAxis)}
+        </span>
+        <span class="view-option-hint">y</span>
       </div>
     </div>
   `
@@ -535,8 +551,7 @@ function renderValueButton(kind, value, isActive) {
   return `<button type="button" class="view-value" ${dataAttribute} aria-pressed="${String(isActive)}">${label}</button>`
 }
 
-function renderToggleButtons(kind, isEnabled) {
-  const settingKey = kind === 'season-trendlines' ? 'seasonTrendlines' : 'fullShowTrendline'
+function renderToggleButtons(settingKey, isEnabled) {
   return [
     renderToggleButton(settingKey, true, isEnabled),
     renderToggleButton(settingKey, false, !isEnabled)

@@ -168,18 +168,22 @@ export function getMacroTrendline(model, viewport) {
   ]
 }
 
-export function createSparklineScales(model, dimensions) {
+export function createSparklineScales(model, dimensions, options = {}) {
+  const domain = resolveRatingDomain(model.ratedPoints, options)
+
   return {
     xScale: scaleLinear().domain([1, model.xMax]).range(resolveXRange(dimensions.width)),
-    yScale: scaleLinear()
-      .domain(resolveRatingDomain(model.ratedPoints))
-      .range([dimensions.height, 0])
+    yScale: scaleLinear().domain(domain).range([dimensions.height, 0]),
+    yDomain: domain
   }
 }
 
-export function createMainScales(model, viewport, dimensions) {
+export function createMainScales(model, viewport, dimensions, options = {}) {
   const visibleRatedPoints = getVisibleRatedPoints(model, viewport)
-  const domain = resolveRatingDomain(visibleRatedPoints.length ? visibleRatedPoints : model.ratedPoints)
+  const domain = resolveRatingDomain(
+    visibleRatedPoints.length ? visibleRatedPoints : model.ratedPoints,
+    options
+  )
 
   return {
     xScale: scaleLinear()
@@ -190,8 +194,8 @@ export function createMainScales(model, viewport, dimensions) {
   }
 }
 
-export function createFullSeriesScales(model, dimensions) {
-  const domain = resolveRatingDomain(model.ratedPoints)
+export function createFullSeriesScales(model, dimensions, options = {}) {
+  const domain = resolveRatingDomain(model.ratedPoints, options)
 
   return {
     xScale: scaleLinear().domain([1, model.xMax]).range(resolveXRange(dimensions.width)),
@@ -208,7 +212,11 @@ function resolveXRange(width) {
   return [X_EDGE_INSET, width - X_EDGE_INSET]
 }
 
-function resolveRatingDomain(points) {
+function resolveRatingDomain(points, { absoluteYAxis = false } = {}) {
+  if (absoluteYAxis) {
+    return [MIN_RATING, MAX_RATING]
+  }
+
   const ratings = points.map((point) => point.rating).filter(isUsableRating)
 
   if (ratings.length === 0) {

@@ -41,7 +41,8 @@ const SETTINGS_DEFAULTS = {
   theme: 'light',
   palette: 'monotone',
   seasonTrendlines: true,
-  fullShowTrendline: false
+  fullShowTrendline: false,
+  absoluteYAxis: false
 }
 
 const TYPOGRAPHY_TOKENS = {
@@ -85,7 +86,11 @@ function sanitizeSettings(candidate = {}) {
     fullShowTrendline:
       typeof candidate.fullShowTrendline === 'boolean'
         ? candidate.fullShowTrendline
-        : SETTINGS_DEFAULTS.fullShowTrendline
+        : SETTINGS_DEFAULTS.fullShowTrendline,
+    absoluteYAxis:
+      typeof candidate.absoluteYAxis === 'boolean'
+        ? candidate.absoluteYAxis
+        : SETTINGS_DEFAULTS.absoluteYAxis
   }
 }
 

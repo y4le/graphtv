@@ -9,6 +9,7 @@ import {
 
 beforeEach(() => {
   window.localStorage.clear()
+  initializeTheme()
 })
 
 describe('theme defaults', () => {
@@ -17,6 +18,15 @@ describe('theme defaults', () => {
 
     expect(settings.palette).toBe('monotone')
     expect(document.documentElement.dataset.palette).toBe('monotone')
+  })
+
+  it('defaults to an adaptive y-axis and persists the absolute-scale option', () => {
+    expect(initializeTheme().absoluteYAxis).toBe(false)
+
+    updateUiSettings({ absoluteYAxis: true })
+
+    expect(JSON.parse(window.localStorage.getItem('graphtv-ui-settings')).absoluteYAxis).toBe(true)
+    expect(initializeTheme().absoluteYAxis).toBe(true)
   })
 })
 

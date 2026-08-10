@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createChart } from '../../src/viz/ratingsChart.js'
+import { updateUiSettings } from '../../src/viz/theme.js'
 
 let chart
 
@@ -12,6 +13,7 @@ beforeEach(() => {
       disconnect() {}
     }
   )
+  updateUiSettings({ absoluteYAxis: false })
   vi.stubGlobal(
     'matchMedia',
     vi.fn((query) => ({
@@ -50,6 +52,22 @@ describe('createChart', () => {
     )
 
     expect(sparklineWidth).toBe(mainPlotWidth)
+  })
+
+  it('rerenders the graph and sparkline on an absolute 0–10 y-axis', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    expect(getAxisLabels(container)).not.toContain('0.0')
+
+    updateUiSettings({ absoluteYAxis: true })
+
+    expect(getAxisLabels(container)).toEqual(expect.arrayContaining(['0.0', '10.0']))
   })
 
   it('renders episode details outside the chart when given a detail root', () => {
@@ -151,6 +169,10 @@ describe('createChart', () => {
 
 function getViewBoxWidth(svg) {
   return Number(svg.getAttribute('viewBox').split(/\s+/)[2])
+}
+
+function getAxisLabels(container) {
+  return Array.from(container.querySelectorAll('.range-tick text'), (node) => node.textContent)
 }
 
 function createSeasons() {

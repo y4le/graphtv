@@ -383,14 +383,24 @@ export function createChart(container, seasons, options = {}) {
     ensureViewport(chartWidth)
     const uiSettings = getUiSettings()
 
-    const mainScales = createMainScales(model, viewport, {
-      width: chartWidth,
-      height: chartHeight
-    })
-    const sparklineScales = createSparklineScales(model, {
-      width: chartWidth,
-      height: sparklineHeight
-    })
+    const scaleOptions = { absoluteYAxis: uiSettings.absoluteYAxis }
+    const mainScales = createMainScales(
+      model,
+      viewport,
+      {
+        width: chartWidth,
+        height: chartHeight
+      },
+      scaleOptions
+    )
+    const sparklineScales = createSparklineScales(
+      model,
+      {
+        width: chartWidth,
+        height: sparklineHeight
+      },
+      scaleOptions
+    )
 
     shell.dataset.scrollable = 'false'
     bodyShell.style.overflowX = 'hidden'
@@ -453,16 +463,25 @@ export function createChart(container, seasons, options = {}) {
 
   function renderScrollableMobileChart(chartTheme, axisWidth, chartWidth, chartHeight, sparklineHeight) {
     const uiSettings = getUiSettings()
+    const scaleOptions = { absoluteYAxis: uiSettings.absoluteYAxis }
     const contentWidth = getScrollableBodyWidth(chartWidth)
-    const fullScales = createFullSeriesScales(model, {
-      width: contentWidth,
-      height: chartHeight
-    })
+    const fullScales = createFullSeriesScales(
+      model,
+      {
+        width: contentWidth,
+        height: chartHeight
+      },
+      scaleOptions
+    )
     updateViewportFromScroll()
-    const sparklineScales = createSparklineScales(model, {
-      width: chartWidth,
-      height: sparklineHeight
-    })
+    const sparklineScales = createSparklineScales(
+      model,
+      {
+        width: chartWidth,
+        height: sparklineHeight
+      },
+      scaleOptions
+    )
 
     shell.dataset.scrollable = 'true'
     bodyShell.style.overflowX = 'auto'
@@ -603,10 +622,14 @@ export function createChart(container, seasons, options = {}) {
     const axisWidth = isMobile() ? 40 : 56
     const chartWidth = Math.max(container.clientWidth - axisWidth - 16, 240)
     const { sparklineHeight } = getChartDimensions()
-    const sparklineScales = createSparklineScales(model, {
-      width: chartWidth,
-      height: sparklineHeight
-    })
+    const sparklineScales = createSparklineScales(
+      model,
+      {
+        width: chartWidth,
+        height: sparklineHeight
+      },
+      { absoluteYAxis: getUiSettings().absoluteYAxis }
+    )
 
     sparkline?.render({
       model,
