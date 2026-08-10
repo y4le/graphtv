@@ -7,12 +7,34 @@ import {
 } from '../data/provider.js'
 import { getUrlParams } from '../lib/url.js'
 import { createChart } from '../viz/ratingsChart.js'
-import { formatRatingBadge, renderError, renderLoading } from './shared.js'
+import { formatRatingBadge, renderError, renderLoading, renderPublisherBrand } from './shared.js'
 import { requestSearchFocusOnNextPage } from './search.js'
+
+export function renderResultsMasthead({ interactive = false } = {}) {
+  return `
+    <header class="masthead">
+      <div class="masthead-navigation">
+        ${renderPublisherBrand()}
+        <a class="back-link" href="${buildBackHref()}">Back to search</a>
+      </div>
+      ${
+        interactive
+          ? `<div class="masthead-meta">
+              <div class="masthead-actions" aria-label="Page actions">
+                <button type="button" class="masthead-action" data-ui-action="view-options">Options</button>
+              </div>
+              <p class="masthead-hint">Press <kbd>?</kbd> for help, <kbd>v</kbd> for view options, <kbd>q</kbd> to return.</p>
+            </div>`
+          : ''
+      }
+    </header>
+  `
+}
 
 export async function renderResultsPage(container, showRef) {
   container.innerHTML = `
     <main class="document-shell">
+      ${renderResultsMasthead()}
       ${renderLoading('Loading show details…')}
     </main>
   `
@@ -24,17 +46,11 @@ export async function renderResultsPage(container, showRef) {
       compareProviders: getComparisonProviders(provider)
     })
 
-    document.title = `${bundle.show.title} · GraphTV`
+    document.title = `${bundle.show.title} · graphtv`
 
     container.innerHTML = `
       <main class="document-shell results-document">
-        <header class="masthead">
-          <a class="back-link" href="${buildBackHref()}">Back to search</a>
-          <div class="masthead-actions" aria-label="Page actions">
-            <button type="button" class="masthead-action" data-ui-action="view-options">Options</button>
-          </div>
-          <p class="masthead-hint">Press <kbd>?</kbd> for help, <kbd>v</kbd> for view options, <kbd>q</kbd> to return.</p>
-        </header>
+        ${renderResultsMasthead({ interactive: true })}
         <section class="results-layout">
           <aside class="results-context">
             <div class="show-header">
@@ -118,6 +134,7 @@ export async function renderResultsPage(container, showRef) {
   } catch (error) {
     container.innerHTML = `
       <main class="document-shell">
+        ${renderResultsMasthead()}
         ${renderError(error.message)}
       </main>
     `

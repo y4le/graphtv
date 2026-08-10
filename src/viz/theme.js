@@ -15,21 +15,23 @@ const THEME_TOKENS = {
     lineStrong: 'rgba(26, 26, 26, 0.24)',
     trendMacro: '#D1D1D1',
     trendMicro: '#A3A3A3',
-    spotColor: '#A63A28',
-    spotColorMuted: '#C47A6F'
+    spotColor: '#C1432E',
+    spotColorMuted: '#C47A6F',
+    publisherAccent: '#C1432E'
   },
   dark: {
-    canvas: '#1A1A1A',
-    canvasSubtle: '#242424',
-    textPrimary: '#E8E6E1',
-    textSecondary: '#8C8C8C',
-    textMuted: '#666666',
-    lineSoft: 'rgba(232, 230, 225, 0.12)',
-    lineStrong: 'rgba(232, 230, 225, 0.22)',
-    trendMacro: '#3D3D3D',
-    trendMicro: '#5C5C5C',
+    canvas: '#0E0E0D',
+    canvasSubtle: '#181816',
+    textPrimary: '#E8E3D5',
+    textSecondary: '#8A857A',
+    textMuted: '#66625A',
+    lineSoft: '#2A2926',
+    lineStrong: '#403E39',
+    trendMacro: '#56534D',
+    trendMicro: '#777269',
     spotColor: '#D4594A',
-    spotColorMuted: '#A6534A'
+    spotColorMuted: '#A6534A',
+    publisherAccent: '#D4594A'
   }
 }
 
@@ -42,7 +44,8 @@ const SETTINGS_DEFAULTS = {
 
 const TYPOGRAPHY_TOKENS = {
   serif: '"Iowan Old Style", "Palatino Linotype", "URW Palladio L", P052, serif',
-  sans: 'Inter, Roboto, "Helvetica Neue", "Arial Nova", "Nimbus Sans", Arial, sans-serif'
+  sans: 'Geist, Inter, Roboto, "Helvetica Neue", "Arial Nova", "Nimbus Sans", Arial, sans-serif',
+  mono: '"Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace'
 }
 
 const SPACING_TOKENS = {
@@ -123,6 +126,7 @@ function applyCssTokens(settings) {
   Object.entries(TYPOGRAPHY_TOKENS).forEach(([token, value]) => setCssVar(root, `font-${token}`, value))
   Object.entries(SPACING_TOKENS).forEach(([token, value]) => setCssVar(root, token, value))
   Object.entries(CHART_TOKENS).forEach(([token, value]) => setCssVar(root, token, value))
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeTokens.canvas)
 }
 
 let uiSettings = SETTINGS_DEFAULTS

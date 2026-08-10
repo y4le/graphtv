@@ -1,8 +1,22 @@
 import { getActiveProvider, getProviderCatalog, getProviderLabel, searchShows } from '../data/provider.js'
 import { buildUrl, getUrlParams, preserveDebugParams } from '../lib/url.js'
-import { renderEmpty, renderError, renderLoading } from './shared.js'
+import { renderEmpty, renderError, renderLoading, renderPublisherBrand } from './shared.js'
 
 const SEARCH_FOCUS_KEY = 'graphtv-focus-search'
+
+export function renderSearchMasthead() {
+  return `
+    <header class="masthead">
+      ${renderPublisherBrand()}
+      <div class="masthead-meta">
+        <div class="masthead-actions" aria-label="Page actions">
+          <button type="button" class="masthead-action" data-ui-action="view-options">Options</button>
+        </div>
+        <p class="masthead-hint">Press <kbd>/</kbd> to search, <kbd>?</kbd> for help, <kbd>v</kbd> for view options.</p>
+      </div>
+    </header>
+  `
+}
 
 export function renderSearchPage(container) {
   const params = getUrlParams()
@@ -16,13 +30,7 @@ export function renderSearchPage(container) {
 
   container.innerHTML = `
     <main class="document-shell document-shell-search">
-      <header class="masthead">
-        <p class="masthead-mark">GraphTV</p>
-        <div class="masthead-actions" aria-label="Page actions">
-          <button type="button" class="masthead-action" data-ui-action="view-options">Options</button>
-        </div>
-        <p class="masthead-hint">Press <kbd>/</kbd> to search, <kbd>?</kbd> for help, <kbd>v</kbd> for view options.</p>
-      </header>
+      ${renderSearchMasthead()}
       <section class="search-document ${query ? '' : 'search-document-empty'}">
         <form class="search-form" aria-label="Search shows">
           <div class="search-row">
