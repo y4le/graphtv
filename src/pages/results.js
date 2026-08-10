@@ -91,13 +91,6 @@ export async function renderResultsPage(container, showRef) {
                 }
               </div>
             </div>
-            <p class="provider-note compact context-sources">
-              Sources:
-              ${getProviderCatalog()
-                .filter((item) => item.configured && item.provider !== 'testdb')
-                .map((item) => `<span class="provider-inline configured">${item.label}</span>`)
-                .join('')}
-            </p>
           </aside>
         </section>
       </main>
