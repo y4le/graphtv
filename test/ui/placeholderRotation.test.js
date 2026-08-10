@@ -199,6 +199,24 @@ describe('createPlaceholderRotation', () => {
     controller.destroy()
   })
 
+  it('restarts its motion budget after an explicit reset', () => {
+    const input = createInput()
+    const controller = createPlaceholderRotation(input, {
+      titles: TITLES,
+      startIndex: 0,
+      maxCycles: 1
+    })
+
+    advanceOneCycle()
+    expect(vi.getTimerCount()).toBe(0)
+
+    controller.restart()
+    advanceOneCycle()
+    expect(input.placeholder).toBe('Charlie')
+
+    controller.destroy()
+  })
+
   it('cleans up timers, listeners, transition state, and its custom property', () => {
     const motionQuery = installMotionPreference(false)
     const input = createInput()

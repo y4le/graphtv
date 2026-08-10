@@ -28,5 +28,10 @@ describe('renderResultsMasthead', () => {
       'view-options',
       'return-search'
     ])
+    expect(
+      Array.from(container.querySelectorAll('.masthead-actions .masthead-action')).map(
+        (action) => action.dataset.uiAction
+      )
+    ).toEqual(['help', 'view-options'])
   })
 })

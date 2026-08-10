@@ -55,6 +55,52 @@ describe('createKeyboardController', () => {
     pressKey('q')
     expect(page.goBack).toHaveBeenCalledTimes(2)
   })
+
+  it('keeps help and search shortcuts available from native controls', () => {
+    document.body.innerHTML = '<button type="button">Focused action</button>'
+    const overlayController = {
+      open: vi.fn(),
+      close: vi.fn(),
+      isOpen: () => false,
+      getActiveId: () => null
+    }
+    const page = {
+      kind: 'search',
+      focusSearch: vi.fn()
+    }
+    keyboardController = createKeyboardController({ page, overlayController })
+    document.querySelector('button').focus()
+
+    pressKey('?')
+    expect(overlayController.open).toHaveBeenCalledWith(expect.objectContaining({ id: 'help' }))
+
+    pressKey('/')
+    expect(page.focusSearch).toHaveBeenCalledOnce()
+  })
+
+  it('routes result navigation keys while a result link has focus', () => {
+    document.body.innerHTML = `
+      <ol data-focus-zone="search-results">
+        <li><a href="#result">Result</a></li>
+      </ol>
+    `
+    const overlayController = {
+      open: vi.fn(),
+      close: vi.fn(),
+      isOpen: () => false,
+      getActiveId: () => null
+    }
+    const page = {
+      kind: 'search',
+      moveSelection: vi.fn()
+    }
+    keyboardController = createKeyboardController({ page, overlayController })
+    document.querySelector('a').focus()
+
+    pressKey('j')
+
+    expect(page.moveSelection).toHaveBeenCalledWith(1)
+  })
 })
 
 function pressKey(key) {
