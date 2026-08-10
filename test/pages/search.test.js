@@ -76,13 +76,13 @@ describe('renderSearchPage', () => {
     expect(vi.getTimerCount()).toBe(0)
   })
 
-  it('focuses the empty landing search on load', () => {
+  it('leaves the empty landing search unfocused so its placeholder can rotate', () => {
     vi.useFakeTimers()
     const { input, page } = renderPage()
 
-    expect(input.hasAttribute('autofocus')).toBe(true)
+    expect(input.hasAttribute('autofocus')).toBe(false)
     page.focusInitial()
-    expect(document.activeElement).toBe(input)
+    expect(document.activeElement).toBe(document.body)
 
     page.destroy()
   })

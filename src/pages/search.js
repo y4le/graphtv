@@ -47,7 +47,6 @@ export function renderSearchPage(container) {
               aria-label="Show title"
               placeholder="The Americans"
               autocomplete="off"
-              ${query ? '' : 'autofocus'}
               required
             />
             <button type="submit">Search</button>
@@ -124,7 +123,7 @@ export function renderSearchPage(container) {
     kind: 'search',
     debugEnabled,
     focusInitial() {
-      if (!query || window.sessionStorage.getItem(SEARCH_FOCUS_KEY) === '1') {
+      if (window.sessionStorage.getItem(SEARCH_FOCUS_KEY) === '1') {
         window.sessionStorage.removeItem(SEARCH_FOCUS_KEY)
         input.focus({ preventScroll: true })
       }
