@@ -54,6 +54,7 @@ export function createOverlayController() {
     panel.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' || event.key === 'q') {
         event.preventDefault()
+        event.stopPropagation()
         close()
         return
       }
@@ -64,6 +65,7 @@ export function createOverlayController() {
         (config.id === 'debug' && (event.key === 'd' || event.key === 'D'))
       ) {
         event.preventDefault()
+        event.stopPropagation()
         close()
         return
       }

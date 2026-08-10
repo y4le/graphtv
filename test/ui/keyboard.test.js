@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createKeyboardController } from '../../src/ui/keyboard.js'
+import { createOverlayController } from '../../src/ui/overlay.js'
 
 let keyboardController
 
@@ -100,6 +101,27 @@ describe('createKeyboardController', () => {
     pressKey('j')
 
     expect(page.moveSelection).toHaveBeenCalledWith(1)
+  })
+
+  it('closes view options with v without reopening it as the event bubbles', () => {
+    const overlayController = createOverlayController()
+    keyboardController = createKeyboardController({
+      page: { kind: 'search' },
+      overlayController
+    })
+
+    pressKey('v')
+    expect(overlayController.getActiveId()).toBe('view-options')
+
+    document.activeElement.dispatchEvent(
+      new window.KeyboardEvent('keydown', {
+        key: 'v',
+        bubbles: true,
+        cancelable: true
+      })
+    )
+
+    expect(overlayController.isOpen()).toBe(false)
   })
 })
 
