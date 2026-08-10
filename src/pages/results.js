@@ -21,6 +21,7 @@ export function renderResultsMasthead({ interactive = false } = {}) {
         interactive
           ? `<div class="masthead-meta">
               <div class="masthead-actions" aria-label="Page actions">
+                <button type="button" class="masthead-action" data-ui-action="help">Help</button>
                 <button type="button" class="masthead-action" data-ui-action="view-options">Options</button>
               </div>
               <p class="masthead-hint">

@@ -36,8 +36,13 @@ Some vim bindings use multi-key sequences (e.g., `gg`). The implementation shoul
 
 | Action | Keys | Notes |
 |---|---|---|
-| Submit search | `Enter` | |
+| Submit search | `Enter` | A blank or whitespace-only submission clears committed results and returns to the landing state. |
 | Exit to normal mode | `Escape` | Blurs input, text persists |
+
+Editing the field changes a draft. Existing results remain tied to the last submitted query,
+even if the draft is deleted completely. The visible trailing “Clear search and results”
+control is the explicit reset action; it clears the draft, committed results, status, selection,
+and query URL, then returns focus to the input. Escape remains a mode-exit key and does not clear.
 
 ### Search results (normal mode, search page)
 
@@ -124,7 +129,7 @@ The help overlay is context-sensitive: it shows bindings relevant to the current
 
 `Tab` moves between major focus zones in document order:
 
-**Search page:** search input → results list
+**Search page:** search input → clear control (when present) → Search button → selected result
 
 **Results page:** search input (if visible) → show info region → overlay triggers and controls
 
@@ -180,7 +185,8 @@ Normal ──[? pressed]──→ Overlay (help)
 Normal ──[v pressed]──→ Overlay (view options)
 Normal ──[D pressed]──→ Overlay (debug)
 Insert ──[Escape]──→ Normal (input blurred)
-Insert ──[Enter]──→ Normal (search submitted, results appear)
+Insert ──[non-empty Enter]──→ Normal (search submitted, results appear)
+Insert ──[empty Enter]──→ Insert (search state reset, input remains focused)
 Overlay ──[Escape, q, toggle key, or outside click]──→ Normal (focus restored)
 ```
 

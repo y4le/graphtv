@@ -14,6 +14,9 @@ export function createKeyboardController({ page, overlayController }) {
     }
 
     const activeElement = document.activeElement
+    const isSearchResultTarget = Boolean(
+      page.kind === 'search' && activeElement?.closest?.('[data-focus-zone="search-results"]')
+    )
 
     if (isEditableElement(activeElement)) {
       chordTracker.reset()
@@ -24,8 +27,12 @@ export function createKeyboardController({ page, overlayController }) {
       return
     }
 
-    if (isSuppressedInteractiveElement(activeElement)) {
+    if (isSuppressedInteractiveElement(activeElement) && !isSearchResultTarget) {
       chordTracker.reset()
+
+      if (keyWorksFromInteractiveControl(event.key)) {
+        handleGlobalAction(event.key, event)
+      }
       return
     }
 
@@ -54,6 +61,10 @@ export function createKeyboardController({ page, overlayController }) {
     if (page.kind === 'results') {
       handleResultsAction(actionKey, event)
     }
+  }
+
+  function keyWorksFromInteractiveControl(key) {
+    return key === '/' || key === '?' || key === 'F1'
   }
 
   function onClick(event) {
