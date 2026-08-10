@@ -13,6 +13,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers()
   window.history.replaceState({}, '', originalPath)
+  document.body.replaceChildren()
 })
 
 describe('renderSearchMasthead', () => {
@@ -32,13 +33,18 @@ describe('renderSearchPage', () => {
     vi.useFakeTimers()
     window.history.replaceState({}, '', '/')
     const container = document.createElement('div')
+    document.body.replaceChildren(container)
     const page = renderSearchPage(container)
     const input = container.querySelector('#search-query')
 
     expect(input.getAttribute('aria-label')).toBe('Show title')
+    expect(input.hasAttribute('autofocus')).toBe(true)
     expect(POPULAR_SHOW_TITLES).toContain(input.placeholder)
     expect(container.querySelector('.results-status').textContent).toBe('')
     expect(vi.getTimerCount()).toBe(1)
+
+    page.focusInitial()
+    expect(document.activeElement).toBe(input)
 
     vi.advanceTimersByTime(PLACEHOLDER_ROTATION_MS + PLACEHOLDER_FADE_MS)
     expect(input.getAttribute('aria-label')).toBe('Show title')
