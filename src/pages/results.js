@@ -1,4 +1,5 @@
 import {
+  createEpisodeDetailLoader,
   getComparisonProviders,
   getProviderCatalog,
   getShowBundle,
@@ -85,8 +86,8 @@ export async function renderResultsPage(container, showRef) {
               <div class="show-copy">
                 <p class="show-plot">${escapeHtml(bundle.show.plot ?? 'No synopsis available.')}</p>
                 ${
-                  bundle.mismatches.length
-                    ? `<p class="mismatch-note">Provider mismatches detected: ${bundle.mismatches.length}. Use debug mode for the raw comparison.</p>`
+                  bundle.alignmentIssues.length
+                    ? `<p class="mismatch-note">Ambiguous provider episode matches: ${bundle.alignmentIssues.length}. Use debug mode for details.</p>`
                     : ''
                 }
               </div>
@@ -103,8 +104,13 @@ export async function renderResultsPage(container, showRef) {
       </main>
     `
 
+    const episodeDetailLoader = createEpisodeDetailLoader({
+      expectedSeriesId: bundle.show.externalIds.imdb,
+      primarySource: bundle.primarySource
+    })
     const chart = createChart(container.querySelector('.chart-root'), bundle.seasons, {
-      detailRoot: container.querySelector('.results-episode')
+      detailRoot: container.querySelector('.results-episode'),
+      loadEpisodeDetails: episodeDetailLoader
     })
     return {
       kind: 'results',
@@ -128,6 +134,10 @@ export async function renderResultsPage(container, showRef) {
           {
             title: 'Provider diagnostics',
             data: bundle.providerDiagnostics
+          },
+          {
+            title: 'Episode alignment',
+            data: bundle.alignment
           },
           {
             title: 'Merged bundle',

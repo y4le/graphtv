@@ -1,4 +1,5 @@
 import { mergeShowRecords } from './merge.js'
+import { createEpisodeDetailLoader as createDetailLoader } from './episodeDetails.js'
 import { CLIENT_SECRET_KEYS, hasClientSecret } from '../config/clientSecrets.js'
 
 const PROVIDER_LOADERS = {
@@ -94,25 +95,45 @@ export async function searchShows(query, providerName = DEFAULT_PROVIDER, option
   return provider.search(query, options)
 }
 
-async function loadProviderRecord(showRef) {
-  const { provider, id } = parseShowRef(showRef)
-  const transport = await loadProvider(provider)
-  const show = await transport.getShow(id)
-  const seasons = await transport.getSeasons(id, show.totalSeasons)
-  return { provider, show, seasons }
+export function createEpisodeDetailLoader(options = {}) {
+  return createDetailLoader({
+    ...options,
+    loadProvider
+  })
 }
 
-async function loadSupplementalRecord(primaryRecord, providerName) {
+function unpackSeasons(result) {
+  if (Array.isArray(result)) {
+    return { seasons: result, seasonDiagnostics: null }
+  }
+  if (!result || !Array.isArray(result.seasons)) {
+    throw new Error('Provider returned invalid season data.')
+  }
+
+  return { seasons: result.seasons, seasonDiagnostics: result.diagnostics ?? null }
+}
+
+async function loadProviderRecord(showRef, providerLoader) {
+  const { provider, id } = parseShowRef(showRef)
+  const transport = await providerLoader(provider)
+  const show = await transport.getShow(id)
+  const seasonResult = unpackSeasons(await transport.getSeasons(id, show.totalSeasons))
+  return { provider, show, ...seasonResult }
+}
+
+async function loadSupplementalRecord(primaryRecord, providerName, providerLoader) {
   if (providerName === primaryRecord.provider) {
     return {
       provider: providerName,
+      role: 'supplemental',
       status: 'skipped',
-      reason: 'same-as-primary'
+      reason: 'same-as-primary',
+      seasonDiagnostics: null
     }
   }
 
   try {
-    const provider = await loadProvider(providerName)
+    const provider = await providerLoader(providerName)
     const resolvedRef = await provider.resolveShowRef({
       externalIds: primaryRecord.show.externalIds,
       show: primaryRecord.show
@@ -121,43 +142,67 @@ async function loadSupplementalRecord(primaryRecord, providerName) {
     if (!resolvedRef) {
       return {
         provider: providerName,
+        role: 'supplemental',
         status: 'unresolved',
-        reason: 'no-cross-provider-match'
+        reason: 'no-cross-provider-match',
+        seasonDiagnostics: null
       }
     }
 
     const { id } = parseShowRef(resolvedRef)
     const show = await provider.getShow(id)
-    const seasons = await provider.getSeasons(id, show.totalSeasons)
+    const seasonResult = unpackSeasons(await provider.getSeasons(id, show.totalSeasons))
 
     return {
       provider: providerName,
+      role: 'supplemental',
       status: 'loaded',
+      seasonDiagnostics: seasonResult.seasonDiagnostics,
       record: {
         provider: providerName,
         show,
-        seasons
+        seasons: seasonResult.seasons
       }
     }
   } catch (error) {
     return {
       provider: providerName,
+      role: 'supplemental',
       status: 'failed',
-      reason: error.message
+      reason: error.message,
+      seasonDiagnostics: error.seasonDiagnostics ?? null
     }
   }
 }
 
 export async function getShowBundle(showRef, options = {}) {
   const { provider: primaryProvider } = parseShowRef(showRef)
-  const { compareProviders = getComparisonProviders(primaryProvider) } = options
-  const primaryRecord = await loadProviderRecord(showRef)
-  const providerDiagnostics = await Promise.all(
-    compareProviders.map((providerName) => loadSupplementalRecord(primaryRecord, providerName))
+  const {
+    compareProviders = getComparisonProviders(primaryProvider),
+    providerLoader = loadProvider
+  } = options
+  const primaryRecord = await loadProviderRecord(showRef, providerLoader)
+  const supplementalDiagnostics = await Promise.all(
+    compareProviders.map((providerName) =>
+      loadSupplementalRecord(primaryRecord, providerName, providerLoader)
+    )
   )
-  const supplementalRecords = providerDiagnostics
+  const supplementalRecords = supplementalDiagnostics
     .filter((item) => item.status === 'loaded')
     .map((item) => item.record)
+  const providerDiagnostics = [
+    ...(primaryRecord.seasonDiagnostics
+      ? [
+          {
+            provider: primaryRecord.provider,
+            role: 'primary',
+            status: 'loaded',
+            seasonDiagnostics: primaryRecord.seasonDiagnostics
+          }
+        ]
+      : []),
+    ...supplementalDiagnostics
+  ]
 
   return {
     ...mergeShowRecords(primaryRecord, supplementalRecords),

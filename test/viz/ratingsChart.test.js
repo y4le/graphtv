@@ -26,6 +26,7 @@ beforeEach(() => {
 afterEach(() => {
   chart?.destroy()
   chart = undefined
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   document.body.replaceChildren()
 })
@@ -66,6 +67,85 @@ describe('createChart', () => {
     expect(container.querySelector('.reading-pane-shell')).toBeNull()
     expect(detailRoot.querySelector('.sidenote-card')).not.toBeNull()
     expect(detailRoot.textContent).toContain('Episode 2')
+  })
+
+  it('debounces selection-only episode detail loading', async () => {
+    vi.useFakeTimers()
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    const loadEpisodeDetails = vi.fn(async (point) => ({
+      ...point,
+      ratings: [...point.ratings, { source: 'omdb', rating: null, votes: 3379 }]
+    }))
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+
+    chart = createChart(container, createSeasons(), {
+      detailRoot,
+      loadEpisodeDetails
+    })
+    chart.moveEpisode(1)
+    chart.moveEpisode(1)
+
+    await vi.advanceTimersByTimeAsync(249)
+    expect(loadEpisodeDetails).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(loadEpisodeDetails).toHaveBeenCalledTimes(1)
+    expect(loadEpisodeDetails.mock.calls[0][0].title).toBe('Episode 3')
+    expect(detailRoot.textContent).toContain('OMDB: n/a · 3,379 votes')
+  })
+
+  it('does not load episode details from hover', async () => {
+    vi.useFakeTimers()
+    const container = document.createElement('div')
+    const loadEpisodeDetails = vi.fn()
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons(), { loadEpisodeDetails })
+    container.querySelector('.episode-point').dispatchEvent(new MouseEvent('mouseenter'))
+    await vi.advanceTimersByTimeAsync(300)
+
+    expect(loadEpisodeDetails).not.toHaveBeenCalled()
+  })
+
+  it('destroys the detail loader and suppresses abort errors from an in-flight request', async () => {
+    vi.useFakeTimers()
+    const container = document.createElement('div')
+    let rejectLoad
+    const loadEpisodeDetails = vi.fn(
+      () =>
+        new Promise((resolve, reject) => {
+          rejectLoad = reject
+        })
+    )
+    loadEpisodeDetails.destroy = vi.fn(() => {
+      rejectLoad?.(new DOMException('Aborted', 'AbortError'))
+    })
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons(), { loadEpisodeDetails })
+    chart.moveEpisode(1)
+    await vi.advanceTimersByTimeAsync(250)
+    expect(loadEpisodeDetails).toHaveBeenCalledTimes(1)
+
+    chart.destroy()
+    await Promise.resolve()
+
+    expect(loadEpisodeDetails.destroy).toHaveBeenCalledTimes(1)
+    expect(chart.getDebugState().episodeDetails.errors).toEqual([])
+    chart = undefined
   })
 })
 

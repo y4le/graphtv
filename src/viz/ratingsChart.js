@@ -20,6 +20,8 @@ import { getChartTheme, getUiSettings } from './theme.js'
 const MOBILE_QUERY = '(max-width: 767px)'
 const MOBILE_LANDSCAPE_QUERY = '(max-width: 767px) and (orientation: landscape)'
 const MOBILE_POINT_SPACING = 18
+const DETAIL_LOAD_DELAY_MS = 250
+const MAX_DETAIL_ERRORS = 25
 
 export function createChart(container, seasons, options = {}) {
   container.innerHTML = ''
@@ -66,6 +68,10 @@ export function createChart(container, seasons, options = {}) {
   let sparkline = null
   let suppressScrollSync = false
   let suppressScrollSyncFrame = null
+  let detailLoadTimer = null
+  let destroyed = false
+  const detailCache = new Map()
+  const detailErrors = []
 
   function setScrollLeftSuppressed(scrollLeft) {
     suppressScrollSync = true
@@ -136,14 +142,55 @@ export function createChart(container, seasons, options = {}) {
     return getPointById(hoverPointId) || getPointById(selectedPointId)
   }
 
-  function updateDetail(point) {
+  function scheduleDetailLoad(point) {
+    if (detailLoadTimer) {
+      clearTimeout(detailLoadTimer)
+      detailLoadTimer = null
+    }
+
+    if (!options.loadEpisodeDetails || detailCache.has(point.id)) {
+      return
+    }
+
+    detailLoadTimer = setTimeout(async () => {
+      detailLoadTimer = null
+
+      try {
+        const enrichedPoint = await options.loadEpisodeDetails(point)
+        if (destroyed) {
+          return
+        }
+
+        detailCache.set(point.id, enrichedPoint)
+        if (getActivePoint()?.id === point.id) {
+          sidenote.renderPoint(enrichedPoint)
+        }
+      } catch (error) {
+        if (error?.name !== 'AbortError') {
+          detailErrors.push({ episodeId: point.id, reason: error.message })
+          if (detailErrors.length > MAX_DETAIL_ERRORS) {
+            detailErrors.shift()
+          }
+        }
+      }
+    }, DETAIL_LOAD_DELAY_MS)
+  }
+
+  function updateDetail(point, { load = false } = {}) {
     if (!point) {
+      if (detailLoadTimer) {
+        clearTimeout(detailLoadTimer)
+        detailLoadTimer = null
+      }
       sidenote.renderPlaceholder()
       shell.style.removeProperty('--reading-pane-marker')
       return
     }
 
-    sidenote.renderPoint(point)
+    sidenote.renderPoint(detailCache.get(point.id) ?? point)
+    if (load) {
+      scheduleDetailLoad(point)
+    }
   }
 
   function ensureSelectedPoint() {
@@ -175,7 +222,7 @@ export function createChart(container, seasons, options = {}) {
     }
 
     selectedPointId = point.id
-    updateDetail(point)
+    updateDetail(point, { load: true })
 
     if (usesScrollableBody()) {
       syncScrollableViewportToPoint(point, source === 'keyboard')
@@ -795,13 +842,23 @@ export function createChart(container, seasons, options = {}) {
         hoverPointId,
         viewport,
         mobileScrollable: usesScrollableBody(),
+        episodeDetails: {
+          loaded: detailCache.size,
+          errors: detailErrors,
+          loader: options.loadEpisodeDetails?.getDebugState?.() ?? null
+        },
         uiSettings: getUiSettings()
       }
     },
     destroy() {
+      destroyed = true
+      if (detailLoadTimer) {
+        clearTimeout(detailLoadTimer)
+      }
       resizeObserver.disconnect()
       document.removeEventListener('graphtv:settings-change', settingsListener)
       sparkline?.destroy()
+      options.loadEpisodeDetails?.destroy?.()
       container.innerHTML = ''
     }
   }

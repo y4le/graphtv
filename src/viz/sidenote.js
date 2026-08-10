@@ -1,11 +1,15 @@
 function formatRatingList(point) {
   return point.ratings
     .map((rating) => {
+      const votes =
+        typeof rating.votes === 'number'
+          ? ` · ${rating.votes.toLocaleString('en-US')} votes`
+          : ''
+
       if (typeof rating.rating !== 'number') {
-        return `<li>${rating.source.toUpperCase()}: n/a</li>`
+        return `<li>${rating.source.toUpperCase()}: n/a${votes}</li>`
       }
 
-      const votes = typeof rating.votes === 'number' ? ` · ${rating.votes.toLocaleString()} votes` : ''
       return `<li>${rating.source.toUpperCase()}: ${rating.rating.toFixed(1)}${votes}</li>`
     })
     .join('')
