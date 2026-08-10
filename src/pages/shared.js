@@ -1,5 +1,5 @@
-export function renderLoading(message = 'Loading...') {
-  return `<p class="state-copy" role="status">${message}</p>`
+export function renderLoading(message = 'Loading...', { announce = true } = {}) {
+  return `<p class="state-copy"${announce ? ' role="status"' : ''}>${message}</p>`
 }
 
 export function renderPublisherBrand() {

@@ -97,6 +97,11 @@ export function createPlaceholderRotation(input, options = {}) {
     input.style.removeProperty('--placeholderFadeDuration')
   }
 
+  function restart() {
+    completedCycles = 0
+    sync()
+  }
+
   if (titleCount) {
     input.placeholder = titles[index]
   }
@@ -107,5 +112,5 @@ export function createPlaceholderRotation(input, options = {}) {
   motionQuery?.addEventListener('change', sync)
   sync()
 
-  return { destroy }
+  return { destroy, restart }
 }

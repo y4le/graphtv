@@ -250,17 +250,30 @@ kbd,
   margin-top: 0.6rem;
 }
 
-.search-row input {
+.search-field {
+  position: relative;
   min-width: 0;
-  padding: 0.88rem 0.1rem 0.7rem;
+}
+
+.search-row input {
+  width: 100%;
+  min-width: 0;
+  padding: 0.88rem 3rem 0.7rem 0.1rem;
   border: 0;
   border-bottom: 1px solid var(--lineStrong);
   border-radius: 0;
+  appearance: none;
+  -webkit-appearance: none;
   background: transparent;
   color: var(--textPrimary);
   font-family: var(--font-serif);
   font-size: 1.15rem;
   transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.search-row input::-webkit-search-cancel-button {
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .search-row input::placeholder {
@@ -288,6 +301,26 @@ kbd,
   font-size: 0.94rem;
   cursor: pointer;
   transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.search-row .search-clear {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  display: grid;
+  width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  place-items: center;
+  transform: translateY(-50%);
+  color: var(--textSecondary);
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.search-row .search-clear[hidden] {
+  display: none;
 }
 
 .search-row button:hover,
@@ -336,6 +369,10 @@ kbd,
 
 .results-status:empty {
   display: none;
+}
+
+.results-status:not(:empty) + .search-results-list {
+  margin-top: 1rem;
 }
 
 .state-copy {
@@ -980,6 +1017,17 @@ kbd,
 
   .search-row {
     display: flex;
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .search-field,
+  .search-row input {
+    width: 100%;
+  }
+
+  .search-submit {
+    align-self: flex-start;
   }
 
   .show-poster-shell {
