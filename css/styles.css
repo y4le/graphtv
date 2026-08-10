@@ -242,7 +242,13 @@ kbd {
 }
 
 .search-row input::placeholder {
-  color: var(--textMuted);
+  color: var(--textSecondary);
+  opacity: 1;
+  transition: opacity var(--placeholderFadeDuration, 220ms) ease;
+}
+
+.search-row input.is-placeholder-swapping::placeholder {
+  opacity: 0;
 }
 
 .search-row input:focus-visible {
@@ -978,5 +984,9 @@ kbd {
     scroll-behavior: auto !important;
     transition-duration: 1ms !important;
     animation-duration: 1ms !important;
+  }
+
+  *::placeholder {
+    transition-duration: 1ms !important;
   }
 }

@@ -1,5 +1,6 @@
 import { getActiveProvider, getProviderCatalog, getProviderLabel, searchShows } from '../data/provider.js'
 import { buildUrl, getUrlParams, preserveDebugParams } from '../lib/url.js'
+import { createPlaceholderRotation } from '../ui/placeholderRotation.js'
 import { renderEmpty, renderError, renderLoading, renderPublisherBrand } from './shared.js'
 
 const SEARCH_FOCUS_KEY = 'graphtv-focus-search'
@@ -39,6 +40,7 @@ export function renderSearchPage(container) {
               name="q"
               type="search"
               value="${escapeAttribute(query)}"
+              aria-label="Show title"
               placeholder="The Americans"
               autocomplete="off"
               required
@@ -65,6 +67,7 @@ export function renderSearchPage(container) {
   const resultsStatus = container.querySelector('.results-status')
   const resultsRoot = container.querySelector('.search-results-list')
   const searchDocument = container.querySelector('.search-document')
+  const placeholderRotation = createPlaceholderRotation(input)
 
   function syncEmptyLayout(isEmpty) {
     searchDocument.classList.toggle('search-document-empty', isEmpty)
@@ -165,6 +168,9 @@ export function renderSearchPage(container) {
           }
         }
       ]
+    },
+    destroy() {
+      placeholderRotation.destroy()
     }
   }
 }
