@@ -3,6 +3,8 @@ const MEDIA_QUERY = '(prefers-color-scheme: dark)'
 
 export const THEMES = ['light', 'dark']
 export const PALETTES = ['monotone', 'subtle', 'vivid']
+export const APP_FONT_STACK =
+  '"Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace'
 
 const THEME_TOKENS = {
   light: {
@@ -43,9 +45,10 @@ const SETTINGS_DEFAULTS = {
 }
 
 const TYPOGRAPHY_TOKENS = {
-  serif: '"Iowan Old Style", "Palatino Linotype", "URW Palladio L", P052, serif',
-  sans: 'Geist, Inter, Roboto, "Helvetica Neue", "Arial Nova", "Nimbus Sans", Arial, sans-serif',
-  mono: '"Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace'
+  app: APP_FONT_STACK,
+  serif: 'var(--font-app)',
+  sans: 'var(--font-app)',
+  mono: 'var(--font-app)'
 }
 
 const SPACING_TOKENS = {

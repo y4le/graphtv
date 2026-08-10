@@ -100,16 +100,21 @@ Typography should carry most of the visual identity.
 
 Rules:
 - Use system fonts only.
-- Use a serif stack for narrative material: titles, synopsis, annotations, season labels, episode titles.
-- Use a sans-serif stack for quantitative and interface material: ratings, dates, episode numbers, controls, debug labels.
+- Use the publisher signature's Geist Mono hierarchy for every text surface,
+  including narrative material, controls, metadata, debug output, and chart
+  labels.
+- Express hierarchy through position, scale, weight, case, spacing, and color
+  rather than switching font families.
 - Keep heading hierarchy shallow. If content needs many heading levels, the layout is probably wrong.
 - Use tabular numerals for ratings, years, counts, and aligned metadata.
 
-Recommended stacks:
+Canonical stack and compatibility aliases:
 
 ```css
---font-serif: "Iowan Old Style", "Palatino Linotype", "URW Palladio L", P052, serif;
---font-sans: Inter, Roboto, "Helvetica Neue", "Arial Nova", "Nimbus Sans", Arial, sans-serif;
+--font-app: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+--font-serif: var(--font-app);
+--font-sans: var(--font-app);
+--font-mono: var(--font-app);
 ```
 
 ### Color
@@ -174,7 +179,7 @@ Rules:
 Loading and empty states are editorial content, not UI widgets. They should match the typographic and tonal quality of the rest of the app.
 
 Rules:
-- Prefer text-based loading indicators over animated spinners. State the action in progress: "Searching..." or "Loading seasons..." in serif, secondary color.
+- Prefer text-based loading indicators over animated spinners. State the action in progress: "Searching..." or "Loading seasons..." in the shared app face and secondary color.
 - Add a subtle pulse or shimmer to loading text so the interface does not appear frozen. The effect should be gentle — the page breathing, not blinking. A slow opacity oscillation or a soft luminance sweep across the text.
 - Empty states should be specific: "No shows found for 'query'" rather than a generic empty illustration.
 - Error states should say what failed, what data is still available, and what the user can do next.
@@ -206,7 +211,7 @@ Rules:
 Debug mode is a first-class feature, not an afterthought. It may be denser and more utilitarian than the product surface, but it should not feel like a different app.
 
 Rules:
-- Use monospace type for data dumps, identifiers, and raw values.
+- Preserve the shared monospaced alignment for data dumps, identifiers, and raw values.
 - Use flat structure — dense, scannable, and copy-pasteable. No collapsible trees or nested modals.
 - Debug UI should be visually distinct enough that it's clearly not part of the product surface — a gated overlay or panel with a subtle background tint.
 - Keep the same Tufte restraint: no decorative chrome, no gratuitous styling. Factual and inspectable.

@@ -12,9 +12,10 @@
   --spotColor: #c1432e;
   --spotColorMuted: #c1432e;
   --publisherAccent: #c1432e;
-  --font-serif: "Iowan Old Style", "Palatino Linotype", "URW Palladio L", P052, serif;
-  --font-sans: Geist, Inter, Roboto, "Helvetica Neue", "Arial Nova", "Nimbus Sans", Arial, sans-serif;
-  --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-app: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-serif: var(--font-app);
+  --font-sans: var(--font-app);
+  --font-mono: var(--font-app);
   --pageMaxWidth: 75rem;
   --searchMaxWidth: 39rem;
   --columnGap: clamp(2rem, 4vw, 4rem);
