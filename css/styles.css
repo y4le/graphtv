@@ -90,7 +90,7 @@ button {
 
 .masthead {
   display: flex;
-  align-items: flex-start;
+  align-items: baseline;
   justify-content: space-between;
   gap: 1.5rem;
   margin-bottom: 3.5rem;
@@ -134,7 +134,7 @@ button {
 
 .masthead-navigation {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 1.25rem;
 }
 
@@ -920,7 +920,7 @@ kbd,
 
   .masthead {
     flex-direction: row;
-    align-items: flex-start;
+    align-items: baseline;
     gap: 0.85rem;
     margin-bottom: 1rem;
   }
