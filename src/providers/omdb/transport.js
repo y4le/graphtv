@@ -14,8 +14,8 @@ function getKey() {
   return key
 }
 
-async function omdbFetch(params) {
-  const data = await fetchJson(`${API_ROOT}?${params}&apikey=${getKey()}`)
+async function omdbFetch(params, options = {}) {
+  const data = await fetchJson(`${API_ROOT}?${params}&apikey=${getKey()}`, options)
 
   if (data.Response === 'False') {
     throw new Error(data.Error || 'OMDb request failed')
@@ -24,8 +24,8 @@ async function omdbFetch(params) {
   return data
 }
 
-export async function search(query) {
-  const data = await omdbFetch(`s=${encodeURIComponent(query)}&type=series`)
+export async function search(query, options = {}) {
+  const data = await omdbFetch(`s=${encodeURIComponent(query)}&type=series`, options)
   return normalizeOmdbSearch(data)
 }
 

@@ -39,7 +39,7 @@ const supplementalRecords = [
   }
 ]
 
-export async function search(query) {
+export async function search(query, _options = {}) {
   const normalizedSearch = normalizeTvmazeSearch(tvmazeSearchFixture).map((show) => ({
     ...show,
     id: 'testdb:the-wire'

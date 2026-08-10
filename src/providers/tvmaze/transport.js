@@ -3,8 +3,8 @@ import { normalizeTvmazeEpisodes, normalizeTvmazeSearch, normalizeTvmazeShow } f
 
 const API_ROOT = 'https://api.tvmaze.com'
 
-export async function search(query) {
-  const data = await fetchJson(`${API_ROOT}/search/shows?q=${encodeURIComponent(query)}`)
+export async function search(query, options = {}) {
+  const data = await fetchJson(`${API_ROOT}/search/shows?q=${encodeURIComponent(query)}`, options)
   return normalizeTvmazeSearch(data)
 }
 
@@ -23,6 +23,8 @@ export async function resolveShowRef({ externalIds }) {
     return null
   }
 
-  const data = await fetchJson(`${API_ROOT}/lookup/shows?imdb=${encodeURIComponent(externalIds.imdb)}`)
+  const data = await fetchJson(
+    `${API_ROOT}/lookup/shows?imdb=${encodeURIComponent(externalIds.imdb)}`
+  )
   return `tvmaze:${data.id}`
 }

@@ -22,12 +22,18 @@ function getHeaders() {
   }
 }
 
-function tmdbFetch(path) {
-  return fetchJson(`${API_ROOT}${path}`, { headers: getHeaders() })
+function tmdbFetch(path, options = {}) {
+  return fetchJson(`${API_ROOT}${path}`, {
+    ...options,
+    headers: {
+      ...getHeaders(),
+      ...options.headers
+    }
+  })
 }
 
-export async function search(query) {
-  const data = await tmdbFetch(`/search/tv?query=${encodeURIComponent(query)}`)
+export async function search(query, options = {}) {
+  const data = await tmdbFetch(`/search/tv?query=${encodeURIComponent(query)}`, options)
   return normalizeTmdbSearch(data)
 }
 

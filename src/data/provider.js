@@ -89,9 +89,9 @@ export async function loadProvider(providerName) {
   return loader()
 }
 
-export async function searchShows(query, providerName = DEFAULT_PROVIDER) {
+export async function searchShows(query, providerName = DEFAULT_PROVIDER, options = {}) {
   const provider = await loadProvider(providerName)
-  return provider.search(query)
+  return provider.search(query, options)
 }
 
 async function loadProviderRecord(showRef) {
