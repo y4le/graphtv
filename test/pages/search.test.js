@@ -33,6 +33,21 @@ describe('renderSearchMasthead', () => {
     expect(masthead.firstElementChild.classList.contains('publisher-brand')).toBe(true)
     expect(masthead.querySelector('.masthead-meta .publisher-brand')).toBeNull()
   })
+
+  it('renders help and view shortcuts as actions while leaving search as a key hint', () => {
+    const container = document.createElement('div')
+    container.innerHTML = renderSearchMasthead()
+
+    const actions = Array.from(
+      container.querySelectorAll('.masthead-hint .shortcut-action')
+    )
+
+    expect(actions.map((action) => action.dataset.uiAction)).toEqual([
+      'help',
+      'view-options'
+    ])
+    expect(container.querySelector('.masthead-hint kbd').textContent).toBe('/')
+  })
 })
 
 describe('renderSearchPage', () => {

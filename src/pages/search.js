@@ -13,7 +13,11 @@ export function renderSearchMasthead() {
         <div class="masthead-actions" aria-label="Page actions">
           <button type="button" class="masthead-action" data-ui-action="view-options">Options</button>
         </div>
-        <p class="masthead-hint">Press <kbd>/</kbd> to search, <kbd>?</kbd> for help, <kbd>v</kbd> for view options.</p>
+        <p class="masthead-hint">
+          Press <kbd>/</kbd> to search,
+          <button type="button" class="shortcut-action" data-ui-action="help" aria-label="? shortcut: Open help">?</button> for help,
+          <button type="button" class="shortcut-action" data-ui-action="view-options" aria-label="v shortcut: Open view options">v</button> for view options.
+        </p>
       </div>
     </header>
   `

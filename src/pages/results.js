@@ -23,7 +23,11 @@ export function renderResultsMasthead({ interactive = false } = {}) {
               <div class="masthead-actions" aria-label="Page actions">
                 <button type="button" class="masthead-action" data-ui-action="view-options">Options</button>
               </div>
-              <p class="masthead-hint">Press <kbd>?</kbd> for help, <kbd>v</kbd> for view options, <kbd>q</kbd> to return.</p>
+              <p class="masthead-hint">
+                Press <button type="button" class="shortcut-action" data-ui-action="help" aria-label="? shortcut: Open help">?</button> for help,
+                <button type="button" class="shortcut-action" data-ui-action="view-options" aria-label="v shortcut: Open view options">v</button> for view options,
+                <button type="button" class="shortcut-action" data-ui-action="return-search" aria-label="q shortcut: Return to search">q</button> to return.
+              </p>
             </div>`
           : ''
       }

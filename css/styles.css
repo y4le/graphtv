@@ -171,12 +171,33 @@ button {
   font-size: 0.88rem;
 }
 
-kbd {
+kbd,
+.shortcut-action {
   padding: 0.08rem 0.35rem;
   border: 1px solid var(--lineStrong);
   border-radius: 999px;
   font-family: var(--font-sans);
   font-size: 0.78rem;
+}
+
+.shortcut-action {
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  line-height: inherit;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.shortcut-action:hover,
+.shortcut-action:focus-visible {
+  border-color: var(--spotColor);
+  color: var(--spotColor);
+  outline: none;
+}
+
+.shortcut-action:focus-visible {
+  outline: 2px solid var(--spotColor);
+  outline-offset: 2px;
 }
 
 .search-document {

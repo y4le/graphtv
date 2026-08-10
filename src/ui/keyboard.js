@@ -57,39 +57,51 @@ export function createKeyboardController({ page, overlayController }) {
   }
 
   function onClick(event) {
-    const action = event.target.closest('[data-ui-action]')?.dataset.uiAction
+    const action = event.target.closest?.('[data-ui-action]')?.dataset.uiAction
     if (!action) {
       return
     }
 
-    if (action === 'help') {
+    if (runUiAction(action)) {
       event.preventDefault()
+    }
+  }
+
+  function runUiAction(action) {
+    if (action === 'help') {
       openHelpOverlay(overlayController, page)
-      return
+      return true
     }
 
     if (action === 'view-options') {
-      event.preventDefault()
       openViewOptionsOverlay(overlayController)
+      return true
     }
+
+    if (action === 'return-search' && page.kind === 'results') {
+      page.goBack()
+      return true
+    }
+
+    return false
   }
 
   function handleGlobalAction(key, event) {
     if (key === '?') {
       event.preventDefault()
-      openHelpOverlay(overlayController, page)
+      runUiAction('help')
       return true
     }
 
     if (key === 'F1') {
       event.preventDefault()
-      openHelpOverlay(overlayController, page)
+      runUiAction('help')
       return true
     }
 
     if (key === 'v') {
       event.preventDefault()
-      openViewOptionsOverlay(overlayController)
+      runUiAction('view-options')
       return true
     }
 
@@ -142,7 +154,7 @@ export function createKeyboardController({ page, overlayController }) {
   function handleResultsAction(key, event) {
     if (key === 'q') {
       event.preventDefault()
-      page.goBack()
+      runUiAction('return-search')
       return
     }
 

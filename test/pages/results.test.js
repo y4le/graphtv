@@ -14,4 +14,19 @@ describe('renderResultsMasthead', () => {
     expect(navigation.firstElementChild.classList.contains('publisher-brand')).toBe(true)
     expect(masthead.querySelector('.masthead-meta .publisher-brand')).toBeNull()
   })
+
+  it('renders help, view, and return shortcuts as actions on the interactive page', () => {
+    const container = document.createElement('div')
+    container.innerHTML = renderResultsMasthead({ interactive: true })
+
+    const actions = Array.from(
+      container.querySelectorAll('.masthead-hint .shortcut-action')
+    )
+
+    expect(actions.map((action) => action.dataset.uiAction)).toEqual([
+      'help',
+      'view-options',
+      'return-search'
+    ])
+  })
 })
