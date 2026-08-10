@@ -37,6 +37,7 @@ describe('renderSearchPage', () => {
 
     expect(input.getAttribute('aria-label')).toBe('Show title')
     expect(POPULAR_SHOW_TITLES).toContain(input.placeholder)
+    expect(container.querySelector('.results-status').textContent).toBe('')
     expect(vi.getTimerCount()).toBe(1)
 
     vi.advanceTimersByTime(PLACEHOLDER_ROTATION_MS + PLACEHOLDER_FADE_MS)

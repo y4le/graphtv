@@ -55,7 +55,7 @@ export function renderSearchPage(container) {
             .join('')}
         </p>
         <section class="search-results-section" aria-live="polite">
-          <div class="results-status">${query ? renderLoading('Searching…') : renderEmpty('Search for a series title to begin.')}</div>
+          <div class="results-status">${query ? renderLoading('Searching…') : ''}</div>
           <ol class="search-results-list" data-focus-zone="search-results"></ol>
         </section>
       </section>
