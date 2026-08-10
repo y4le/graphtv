@@ -1,0 +1,17 @@
+schema: 1
+title: graphtv
+description: Explore television episode ratings across seasons, trends, and multiple data providers.
+bullets:
+  - Compares episode ratings on a navigable season timeline with overview and detail views.
+  - Aligns TVMaze, TMDB, and OMDb metadata while exposing provider mismatches.
+  - Runs entirely in the browser with keyboard, pointer, and touch interaction.
+date:
+  start: '2018-01'
+  end: 'present'
+link: https://yalethom.as/graphtv/
+type: visualization
+tags:
+  - television
+  - data visualization
+  - D3
+svg: .yalethomas/card.svg

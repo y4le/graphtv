@@ -1,0 +1,51 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 1618 1000"
+  role="img"
+  aria-labelledby="graphtv-card-title graphtv-card-description"
+>
+  <title id="graphtv-card-title">graphtv</title>
+  <desc id="graphtv-card-description">
+    The graphtv wordmark crossed by a scrolling episode-rating trendline.
+  </desc>
+  <style>
+    .word {
+      fill: #e8e3d5;
+      font-family: Geist, Inter, 'Helvetica Neue', Arial, sans-serif;
+      font-size: 318px;
+      font-weight: 720;
+      letter-spacing: -0.06em;
+    }
+
+    .trend {
+      fill: none;
+      stroke: #c1432e;
+      stroke-linecap: square;
+      stroke-linejoin: miter;
+      stroke-width: 12;
+    }
+
+    .rolling-trend {
+      animation: roll 10s linear infinite;
+    }
+
+    @keyframes roll {
+      to {
+        transform: translateX(-1370px);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .rolling-trend {
+        animation: none;
+      }
+    }
+  </style>
+  <text class="word" x="809" y="602" text-anchor="middle">graphtv</text>
+  <g class="rolling-trend">
+    <path
+      class="trend"
+      d="M-1370 508 L-1258 472 L-1150 533 L-1042 382 L-928 427 L-820 346 L-710 501 L-604 462 L-492 560 L-382 486 L-272 526 L-162 399 L-60 438 L0 508 L112 472 L220 533 L328 382 L442 427 L550 346 L660 501 L766 462 L878 560 L988 486 L1098 526 L1208 399 L1310 438 L1370 508 L1482 472 L1590 533 L1698 382 L1812 427 L1920 346 L2030 501 L2136 462 L2248 560 L2358 486 L2468 526 L2578 399 L2680 438 L2740 508 L2852 472 L2960 533 L3068 382 L3182 427 L3290 346 L3400 501 L3506 462 L3618 560 L3728 486 L3838 526 L3948 399 L4050 438 L4110 508"
+    />
+  </g>
+</svg>
