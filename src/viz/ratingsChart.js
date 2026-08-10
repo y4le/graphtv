@@ -24,6 +24,7 @@ const MOBILE_POINT_SPACING = 18
 export function createChart(container, seasons, options = {}) {
   container.innerHTML = ''
   container.classList.add('chart-root')
+  const usesExternalDetailRoot = Boolean(options.detailRoot)
 
   const shell = document.createElement('div')
   shell.className = 'chart-shell'
@@ -39,10 +40,14 @@ export function createChart(container, seasons, options = {}) {
         <svg class="ratings-chart" role="img" aria-label="Episode ratings chart"></svg>
       </div>
     </div>
-    <div class="reading-pane-shell">
-      <div class="reading-pane-axis-spacer" aria-hidden="true"></div>
-      <div class="reading-pane" data-reading-pane></div>
-    </div>
+    ${
+      usesExternalDetailRoot
+        ? ''
+        : `<div class="reading-pane-shell">
+            <div class="reading-pane-axis-spacer" aria-hidden="true"></div>
+            <div class="reading-pane" data-reading-pane></div>
+          </div>`
+    }
   `
   container.appendChild(shell)
 

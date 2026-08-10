@@ -50,6 +50,23 @@ describe('createChart', () => {
 
     expect(sparklineWidth).toBe(mainPlotWidth)
   })
+
+  it('renders episode details outside the chart when given a detail root', () => {
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+
+    chart = createChart(container, createSeasons(), { detailRoot })
+    chart.moveEpisode(1)
+
+    expect(container.querySelector('.reading-pane-shell')).toBeNull()
+    expect(detailRoot.querySelector('.sidenote-card')).not.toBeNull()
+    expect(detailRoot.textContent).toContain('Episode 2')
+  })
 })
 
 function getViewBoxWidth(svg) {

@@ -16,6 +16,7 @@
   --font-serif: var(--font-app);
   --font-sans: var(--font-app);
   --font-mono: var(--font-app);
+  --font-editorial-serif: Georgia, "Times New Roman", "Liberation Serif", serif;
   --pageMaxWidth: 75rem;
   --searchMaxWidth: 39rem;
   --columnGap: clamp(2rem, 4vw, 4rem);
@@ -445,20 +446,56 @@ kbd,
   padding-bottom: 3rem;
 }
 
+.results-heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.8rem;
+  align-items: baseline;
+  margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
+}
+
+.results-title {
+  margin: 0;
+  font-family: var(--font-editorial-serif);
+  font-size: clamp(1.75rem, 6vw, 3.5rem);
+  font-weight: 400;
+  letter-spacing: -0.035em;
+  line-height: 0.94;
+}
+
+.results-year {
+  margin: 0;
+  color: var(--textSecondary);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+}
+
 .results-layout {
   display: grid;
   grid-template-columns: minmax(14rem, 24%) minmax(0, 1fr);
-  gap: var(--columnGap);
+  column-gap: var(--columnGap);
+  row-gap: 1.5rem;
   align-items: start;
 }
 
 .results-context {
-  position: sticky;
-  top: 1rem;
+  grid-column: 1;
+  grid-row: 2;
 }
 
 .results-data {
+  grid-column: 1 / -1;
+  grid-row: 1;
   min-width: 0;
+  width: calc(100% + 2.5rem);
+  margin-inline: -1.25rem;
+}
+
+.results-episode {
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+  min-height: 5.5rem;
 }
 
 .show-header {
@@ -468,7 +505,7 @@ kbd,
   align-items: start;
 }
 
-.show-title-lockup {
+.show-facts {
   align-self: center;
 }
 
@@ -493,12 +530,6 @@ kbd,
   object-fit: cover;
 }
 
-.show-title-lockup h1,
-.show-copy h1 {
-  font-size: clamp(1.9rem, 3vw, 3rem);
-  margin-top: 0.1rem;
-}
-
 .show-meta {
   margin: 0;
 }
@@ -511,11 +542,16 @@ kbd,
 }
 
 .show-metrics {
+  display: grid;
+  gap: 0.15rem;
   margin: 0.3rem 0 0;
+  padding: 0;
+  list-style: none;
 }
 
 .show-plot {
   margin-top: 0.85rem;
+  font-family: var(--font-editorial-serif);
   font-size: 1rem;
 }
 
@@ -631,9 +667,10 @@ kbd,
 
 .sidenote-title {
   margin: 0;
-  font-size: 1.08rem;
+  font-family: var(--font-editorial-serif);
+  font-size: 1.2rem;
   font-weight: 400;
-  line-height: 1.15;
+  line-height: 1.2;
 }
 
 .sidenote-rating {
@@ -664,6 +701,7 @@ kbd,
 .sidenote-body {
   margin: 0.55rem 0 0;
   color: var(--textSecondary);
+  font-family: var(--font-editorial-serif);
 }
 
 .point-layer .episode-point {
@@ -903,6 +941,12 @@ kbd,
   display: grid;
 }
 
+@media (min-width: 861px) {
+  .results-document > .masthead {
+    margin-bottom: 0;
+  }
+}
+
 .help-grid {
   display: grid;
   grid-template-columns: minmax(8rem, 12rem) 1fr;
@@ -1038,13 +1082,19 @@ kbd,
     grid-template-columns: 1fr;
   }
 
-  .results-context {
-    position: static;
+  .results-context,
+  .results-episode {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .results-episode:empty {
+    display: none;
   }
 
   .results-data {
-    margin-left: -1rem;
-    margin-right: -0.5rem;
+    width: calc(100% + 2rem);
+    margin-inline: -1rem;
   }
 
   .chart-kicker {

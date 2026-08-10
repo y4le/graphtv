@@ -1,7 +1,6 @@
 import {
   getComparisonProviders,
   getProviderCatalog,
-  getProviderLabel,
   getShowBundle,
   parseShowRef
 } from '../data/provider.js'
@@ -56,7 +55,18 @@ export async function renderResultsPage(container, showRef) {
     container.innerHTML = `
       <main class="document-shell results-document">
         ${renderResultsMasthead({ interactive: true })}
+        <header class="results-heading">
+          <h1 tabindex="-1" class="results-title">${escapeHtml(bundle.show.title)}</h1>
+          ${bundle.show.year ? `<p class="results-year">${escapeHtml(bundle.show.year)}</p>` : ''}
+        </header>
         <section class="results-layout">
+          <section class="results-data">
+            <div class="chart-root"></div>
+          </section>
+          <section
+            class="results-episode"
+            aria-label="Selected episode details"
+          ></section>
           <aside class="results-context">
             <div class="show-header">
               <div class="show-poster-shell">
@@ -66,13 +76,13 @@ export async function renderResultsPage(container, showRef) {
                     : `<div class="poster-fallback large">No art</div>`
                 }
               </div>
-              <div class="show-title-lockup">
-                <p class="document-kicker">${getProviderLabel(bundle.primarySource)}</p>
-                <h1 tabindex="-1" class="results-title">${escapeHtml(bundle.show.title)}</h1>
+              <div class="show-facts">
+                <p class="show-meta">${escapeHtml(bundle.show.genres.join(' · '))}</p>
+                <ul class="show-metrics">
+                  ${bundle.show.ratings.map((rating) => `<li class="rating-badge">${formatRatingBadge(rating)}</li>`).join('')}
+                </ul>
               </div>
               <div class="show-copy">
-                <p class="show-meta">${escapeHtml([bundle.show.year, ...bundle.show.genres].filter(Boolean).join(' · '))}</p>
-                <p class="show-metrics">${bundle.show.ratings.map((rating) => `<span class="rating-badge">${formatRatingBadge(rating)}</span>`).join(' · ')}</p>
                 <p class="show-plot">${escapeHtml(bundle.show.plot ?? 'No synopsis available.')}</p>
                 ${
                   bundle.mismatches.length
@@ -84,20 +94,17 @@ export async function renderResultsPage(container, showRef) {
             <p class="provider-note compact context-sources">
               Sources:
               ${getProviderCatalog()
-                .filter((item) => item.configured)
+                .filter((item) => item.configured && item.provider !== 'testdb')
                 .map((item) => `<span class="provider-inline configured">${item.label}</span>`)
                 .join('')}
             </p>
           </aside>
-          <section class="results-data">
-            <div class="chart-root"></div>
-          </section>
         </section>
       </main>
     `
 
     const chart = createChart(container.querySelector('.chart-root'), bundle.seasons, {
-      detailRoot: null
+      detailRoot: container.querySelector('.results-episode')
     })
     return {
       kind: 'results',
