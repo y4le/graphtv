@@ -1,3 +1,5 @@
+import { isUsableRating } from './stats.js'
+
 function dedupeRatings(ratings = []) {
   const seen = new Map()
 
@@ -12,7 +14,7 @@ export function createProviderRating(source, rating, votes = null, metadata = {}
   return {
     ...metadata,
     source,
-    rating: typeof rating === 'number' ? rating : null,
+    rating: isUsableRating(rating) ? rating : null,
     votes: typeof votes === 'number' ? votes : null
   }
 }

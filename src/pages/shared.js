@@ -1,3 +1,5 @@
+import { isUsableRating } from '../data/stats.js'
+
 export function renderLoading(message = 'Loading...', { announce = true } = {}) {
   return `<p class="state-copy"${announce ? ' role="status"' : ''}>${message}</p>`
 }
@@ -19,7 +21,7 @@ export function renderError(message) {
 }
 
 export function formatRatingBadge(rating) {
-  if (typeof rating.rating !== 'number') {
+  if (!isUsableRating(rating.rating)) {
     return `${rating.source.toUpperCase()}: n/a`
   }
 

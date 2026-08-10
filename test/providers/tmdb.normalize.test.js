@@ -87,4 +87,24 @@ describe('tmdb normalization', () => {
       ]
     })
   })
+
+  it('normalizes TMDB zero-rating sentinels as missing ratings', () => {
+    const season = normalizeTmdbSeason({
+      season_number: 1,
+      episodes: [
+        {
+          id: 99,
+          name: 'Unrated episode',
+          season_number: 1,
+          episode_number: 1,
+          vote_average: 0,
+          vote_count: 0
+        }
+      ]
+    })
+
+    expect(season.episodes[0].ratings).toEqual([
+      { source: 'tmdb', rating: null, votes: 0 }
+    ])
+  })
 })

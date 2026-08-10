@@ -1,3 +1,5 @@
+import { isUsableRating } from '../data/stats.js'
+
 function formatRatingList(point) {
   return point.ratings
     .map((rating) => {
@@ -6,7 +8,7 @@ function formatRatingList(point) {
           ? ` · ${rating.votes.toLocaleString('en-US')} votes`
           : ''
 
-      if (typeof rating.rating !== 'number') {
+      if (!isUsableRating(rating.rating)) {
         return `<li>${rating.source.toUpperCase()}: n/a${votes}</li>`
       }
 
@@ -35,7 +37,7 @@ export function createSidenote({ desktopRoot, mobileRoot }) {
                 <span class="sidenote-kicker">S${String(point.season).padStart(2, '0')}E${String(point.episode).padStart(2, '0')}</span>
                 <span class="sidenote-title">${escapeHtml(point.title)}</span>
                 ${
-                  typeof point.rating === 'number'
+                  isUsableRating(point.rating)
                     ? `<span class="sidenote-rating">${point.rating.toFixed(1)}</span>`
                     : '<span class="sidenote-rating">n/a</span>'
                 }

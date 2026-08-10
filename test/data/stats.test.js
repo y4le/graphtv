@@ -70,4 +70,15 @@ describe('data/stats', () => {
       ])
     ).toBeCloseTo(8.4, 6)
   })
+
+  it('treats zero and non-finite provider ratings as missing', () => {
+    expect(
+      getAverageRating([
+        { source: 'tvmaze', rating: 8.2, votes: null },
+        { source: 'tmdb', rating: 0, votes: 0 },
+        { source: 'omdb', rating: Number.NaN, votes: null }
+      ])
+    ).toBe(8.2)
+    expect(getAverageRating([{ source: 'tmdb', rating: 0, votes: 0 }])).toBeNull()
+  })
 })

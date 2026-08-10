@@ -88,10 +88,14 @@ export function trendlineFromPoints(values) {
   ]
 }
 
+export function isUsableRating(value) {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 && value <= 10
+}
+
 export function getAverageRating(ratings = []) {
   const numericRatings = ratings
     .map((rating) => rating.rating)
-    .filter((rating) => typeof rating === 'number')
+    .filter(isUsableRating)
 
   if (numericRatings.length === 0) {
     return null

@@ -1,5 +1,7 @@
 import { format, line } from 'd3'
 
+import { isUsableRating } from '../data/stats.js'
+
 const formatRating = format('.1f')
 const Y_LABEL_INSET = 8
 
@@ -122,7 +124,7 @@ export function renderCrosshair(svg, point, scales, dimensions, theme) {
 
 export function renderPoints(svg, points, scales, theme, interactions) {
   const pointLayer = svg.selectAll('.point-layer').data([null]).join('g').attr('class', 'point-layer')
-  const plottedPoints = points.filter((point) => typeof point.rating === 'number')
+  const plottedPoints = points.filter((point) => isUsableRating(point.rating))
 
   pointLayer
     .selectAll('.episode-point')

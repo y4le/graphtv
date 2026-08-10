@@ -1,6 +1,6 @@
 import { scaleLinear } from 'd3'
 
-import { getAverageRating, linearRegressionFromPoints } from '../data/stats.js'
+import { getAverageRating, isUsableRating, linearRegressionFromPoints } from '../data/stats.js'
 
 const MIN_RATING = 0
 const MAX_RATING = 10
@@ -40,7 +40,7 @@ export function buildChartModel(seasons) {
       midpoint: start + (end - start) / 2
     })
 
-    const ratedSeasonPoints = seasonPoints.filter((point) => typeof point.rating === 'number')
+    const ratedSeasonPoints = seasonPoints.filter((point) => isUsableRating(point.rating))
     const regression = linearRegressionFromPoints(
       ratedSeasonPoints.map((point) => ({
         x: point.x,
@@ -59,7 +59,7 @@ export function buildChartModel(seasons) {
     }
   })
 
-  const ratedPoints = points.filter((point) => typeof point.rating === 'number')
+  const ratedPoints = points.filter((point) => isUsableRating(point.rating))
   const macroRegression = linearRegressionFromPoints(
     ratedPoints.map((point) => ({
       x: point.x,
@@ -209,7 +209,7 @@ function resolveXRange(width) {
 }
 
 function resolveRatingDomain(points) {
-  const ratings = points.map((point) => point.rating).filter((rating) => typeof rating === 'number')
+  const ratings = points.map((point) => point.rating).filter(isUsableRating)
 
   if (ratings.length === 0) {
     return [MIN_RATING, MAX_RATING]
