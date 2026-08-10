@@ -1,6 +1,15 @@
-import { fetchJson, parseNumericValue } from '../shared.js'
+import { parseNumericValue } from '../shared.js'
 import { getClientSecret } from '../../config/clientSecrets.js'
-import { normalizeOmdbSearch, normalizeOmdbSeason, normalizeOmdbShow } from './normalize.js'
+import {
+  API_CACHE_TTL,
+  getFetchInit,
+  requestJson
+} from '../../data/apiCache.js'
+import {
+  normalizeOmdbSearch,
+  normalizeOmdbSeason,
+  normalizeOmdbShow
+} from './normalize.js'
 
 const API_ROOT = 'https://www.omdbapi.com/'
 
@@ -14,36 +23,87 @@ function getKey() {
   return key
 }
 
-async function omdbFetch(params, options = {}) {
-  const data = await fetchJson(`${API_ROOT}?${params}&apikey=${getKey()}`, options)
+function classifyOmdbPayload(data) {
+  if (data.Response !== 'False') {
+    return { cache: true }
+  }
+
+  const error = createOmdbError(data)
+
+  if (/not found|incorrect imdb id/iu.test(error.message)) {
+    return { cache: true, ttlMs: API_CACHE_TTL.negative }
+  }
+
+  throw error
+}
+
+function createOmdbError(data) {
+  const error = new Error(data.Error || 'OMDb request failed')
+  error.provider = 'omdb'
+  if (/^request limit reached[.!]?$/iu.test(error.message)) {
+    error.code = 'quota'
+  } else if (
+    /^(invalid api key|no api key provided|api key not activated)[.!]?$/iu.test(
+      error.message
+    )
+  ) {
+    error.code = 'auth'
+  }
+  return error
+}
+
+async function omdbFetch(params, descriptor, options = {}) {
+  const data = await requestJson(
+    { provider: 'omdb', classify: classifyOmdbPayload, ...descriptor },
+    () => {
+      const searchParams = new URLSearchParams({ ...params, apikey: getKey() })
+      return { url: `${API_ROOT}?${searchParams}`, init: getFetchInit(options) }
+    },
+    options
+  )
 
   if (data.Response === 'False') {
-    const error = new Error(data.Error || 'OMDb request failed')
-    error.provider = 'omdb'
-    if (/^request limit reached[.!]?$/iu.test(error.message)) {
-      error.code = 'quota'
-    } else if (/^(invalid api key|no api key provided|api key not activated)[.!]?$/iu.test(error.message)) {
-      error.code = 'auth'
-    }
-    throw error
+    throw createOmdbError(data)
   }
 
   return data
 }
 
 export async function search(query, options = {}) {
-  const data = await omdbFetch(`s=${encodeURIComponent(query)}&type=series`, options)
+  const data = await omdbFetch(
+    { s: query, type: 'series' },
+    {
+      kind: 'search',
+      id: query,
+      params: { type: 'series' },
+      ttlMs: API_CACHE_TTL.search
+    },
+    options
+  )
   return normalizeOmdbSearch(data)
 }
 
-export async function getShow(imdbId) {
-  const data = await omdbFetch(`i=${encodeURIComponent(imdbId)}`)
+export async function getShow(imdbId, options = {}) {
+  const data = await omdbFetch(
+    { i: imdbId },
+    { kind: 'title', id: imdbId, ttlMs: API_CACHE_TTL.omdbTitle },
+    options
+  )
   return normalizeOmdbShow(data)
 }
 
-export async function getSeasons(imdbId, totalSeasons) {
+export async function getSeasons(imdbId, totalSeasons, options = {}) {
   const requests = Array.from({ length: totalSeasons }, (_, index) =>
-    omdbFetch(`i=${encodeURIComponent(imdbId)}&season=${index + 1}`)
+    omdbFetch(
+      { i: imdbId, season: index + 1 },
+      {
+        kind: 'season',
+        id: imdbId,
+        params: { season: index + 1 },
+        ttlMs: API_CACHE_TTL.season
+      },
+      options
+    )
   )
   const results = await Promise.allSettled(requests)
   const seasons = []
@@ -76,12 +136,18 @@ export async function getSeasons(imdbId, totalSeasons) {
 }
 
 export async function getEpisodeVoteCount(imdbId, options = {}) {
-  const { expectedSeriesId, ...fetchOptions } = options
+  const { expectedSeriesId, ...requestOptions } = options
   if (!expectedSeriesId) {
-    throw new Error('An expected IMDb series ID is required for OMDb episode details.')
+    throw new Error(
+      'An expected IMDb series ID is required for OMDb episode details.'
+    )
   }
 
-  const data = await omdbFetch(`i=${encodeURIComponent(imdbId)}`, fetchOptions)
+  const data = await omdbFetch(
+    { i: imdbId },
+    { kind: 'title', id: imdbId, ttlMs: API_CACHE_TTL.omdbTitle },
+    requestOptions
+  )
 
   if (data.seriesID !== expectedSeriesId) {
     throw new Error(`OMDb episode ${imdbId} belongs to an unexpected series.`)

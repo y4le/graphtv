@@ -5,6 +5,10 @@ import { createEpisodeDetailLoader } from '../../src/data/episodeDetails.js'
 function createStorage({ throws = false } = {}) {
   const values = new Map()
   return {
+    get length() {
+      return values.size
+    },
+    key: vi.fn((index) => Array.from(values.keys())[index] ?? null),
     getItem: vi.fn((key) => {
       if (throws) throw new Error('storage unavailable')
       return values.get(key) ?? null
@@ -15,6 +19,26 @@ function createStorage({ throws = false } = {}) {
     }),
     removeItem: vi.fn((key) => values.delete(key))
   }
+}
+
+function createCachedVoteGetter(votes) {
+  let cached = false
+  return vi.fn(async (_imdbId, options) => {
+    if (cached) {
+      options.onCacheHit?.()
+    } else {
+      await options.beforeNetwork?.()
+      cached = true
+    }
+    return votes
+  })
+}
+
+function createNetworkVoteGetter(network) {
+  return vi.fn(async (_imdbId, options) => {
+    await options.beforeNetwork?.()
+    return network()
+  })
 }
 
 function createEpisode() {
@@ -39,8 +63,8 @@ function createEpisode() {
 }
 
 describe('episode detail loading', () => {
-  it('loads and caches OMDb votes by the matched episode IMDb ID', async () => {
-    const getEpisodeVoteCount = vi.fn().mockResolvedValue(3379)
+  it('delegates caching to the transport without charging cache hits to the budget', async () => {
+    const getEpisodeVoteCount = createCachedVoteGetter(3379)
     const loadProvider = vi.fn().mockResolvedValue({ getEpisodeVoteCount })
     const loader = createEpisodeDetailLoader({
       loadProvider,
@@ -52,18 +76,29 @@ describe('episode detail loading', () => {
     const first = await loader(createEpisode())
     const second = await loader(createEpisode())
 
-    expect(getEpisodeVoteCount).toHaveBeenCalledTimes(1)
+    expect(getEpisodeVoteCount).toHaveBeenCalledTimes(2)
     expect(getEpisodeVoteCount).toHaveBeenCalledWith(
       'tt5884092',
-      expect.objectContaining({ expectedSeriesId: 'tt4955642' })
+      expect.objectContaining({
+        expectedSeriesId: 'tt4955642',
+        beforeNetwork: expect.any(Function),
+        onCacheHit: expect.any(Function)
+      })
     )
-    expect(first.ratings[1]).toMatchObject({ votes: 3379, votesStatus: 'loaded' })
-    expect(second.ratings[1]).toMatchObject({ votes: 3379, votesStatus: 'loaded' })
+    expect(first.ratings[1]).toMatchObject({
+      votes: 3379,
+      votesStatus: 'loaded'
+    })
+    expect(second.ratings[1]).toMatchObject({
+      votes: 3379,
+      votesStatus: 'loaded'
+    })
     expect(loader.getDebugState()).toMatchObject({ requests: 1, cacheHits: 1 })
   })
 
   it('enforces its request budget before issuing a network request', async () => {
-    const getEpisodeVoteCount = vi.fn()
+    const network = vi.fn()
+    const getEpisodeVoteCount = createNetworkVoteGetter(network)
     const loader = createEpisodeDetailLoader({
       loadProvider: vi.fn().mockResolvedValue({ getEpisodeVoteCount }),
       expectedSeriesId: 'tt4955642',
@@ -72,7 +107,8 @@ describe('episode detail loading', () => {
     })
 
     await expect(loader(createEpisode())).rejects.toThrow('request limit')
-    expect(getEpisodeVoteCount).not.toHaveBeenCalled()
+    expect(getEpisodeVoteCount).toHaveBeenCalledTimes(1)
+    expect(network).not.toHaveBeenCalled()
   })
 
   it('enforces the persisted daily budget before issuing a request', async () => {
@@ -81,7 +117,8 @@ describe('episode detail loading', () => {
       'graphtv:v1:omdb:request-ledger',
       JSON.stringify({ day: '2026-08-10', count: 2 })
     )
-    const getEpisodeVoteCount = vi.fn()
+    const network = vi.fn()
+    const getEpisodeVoteCount = createNetworkVoteGetter(network)
     const loader = createEpisodeDetailLoader({
       loadProvider: vi.fn().mockResolvedValue({ getEpisodeVoteCount }),
       expectedSeriesId: 'tt4955642',
@@ -90,12 +127,15 @@ describe('episode detail loading', () => {
       dailyLimit: 2
     })
 
-    await expect(loader(createEpisode())).rejects.toThrow('daily request budget')
-    expect(getEpisodeVoteCount).not.toHaveBeenCalled()
+    await expect(loader(createEpisode())).rejects.toThrow(
+      'daily request budget'
+    )
+    expect(getEpisodeVoteCount).toHaveBeenCalledTimes(1)
+    expect(network).not.toHaveBeenCalled()
   })
 
-  it('falls back to memory when browser storage is unavailable', async () => {
-    const getEpisodeVoteCount = vi.fn().mockResolvedValue(6220)
+  it('keeps working when the request ledger storage is unavailable', async () => {
+    const getEpisodeVoteCount = createCachedVoteGetter(6220)
     const loader = createEpisodeDetailLoader({
       loadProvider: vi.fn().mockResolvedValue({ getEpisodeVoteCount }),
       expectedSeriesId: 'tt4955642',
@@ -105,7 +145,7 @@ describe('episode detail loading', () => {
     await loader(createEpisode())
     const cached = await loader(createEpisode())
 
-    expect(getEpisodeVoteCount).toHaveBeenCalledTimes(1)
+    expect(getEpisodeVoteCount).toHaveBeenCalledTimes(2)
     expect(cached.ratings[1].votes).toBe(6220)
   })
 
@@ -117,15 +157,18 @@ describe('episode detail loading', () => {
       storage: createStorage()
     })
 
-    const [first, second] = await Promise.all([loader(createEpisode()), loader(createEpisode())])
+    const [first, second] = await Promise.all([
+      loader(createEpisode()),
+      loader(createEpisode())
+    ])
 
     expect(getEpisodeVoteCount).toHaveBeenCalledTimes(1)
     expect(first.ratings[1].votes).toBe(3379)
     expect(second.ratings[1].votes).toBe(3379)
   })
 
-  it('caches an unavailable vote count without retrying', async () => {
-    const getEpisodeVoteCount = vi.fn().mockResolvedValue(null)
+  it('accepts a transport-cached unavailable vote count', async () => {
+    const getEpisodeVoteCount = createCachedVoteGetter(null)
     const loader = createEpisodeDetailLoader({
       loadProvider: vi.fn().mockResolvedValue({ getEpisodeVoteCount }),
       expectedSeriesId: 'tt4955642',
@@ -135,29 +178,32 @@ describe('episode detail loading', () => {
     const first = await loader(createEpisode())
     const second = await loader(createEpisode())
 
-    expect(getEpisodeVoteCount).toHaveBeenCalledTimes(1)
-    expect(first.ratings[1]).toMatchObject({ votes: null, votesStatus: 'unavailable' })
-    expect(second.ratings[1]).toMatchObject({ votes: null, votesStatus: 'unavailable' })
+    expect(getEpisodeVoteCount).toHaveBeenCalledTimes(2)
+    expect(first.ratings[1]).toMatchObject({
+      votes: null,
+      votesStatus: 'unavailable'
+    })
+    expect(second.ratings[1]).toMatchObject({
+      votes: null,
+      votesStatus: 'unavailable'
+    })
   })
 
-  it('expires persisted vote counts after the cache TTL', async () => {
+  it('removes the superseded localStorage vote cache', () => {
     const storage = createStorage()
-    let timestamp = Date.UTC(2026, 7, 10)
-    const getEpisodeVoteCount = vi.fn().mockResolvedValueOnce(3379).mockResolvedValueOnce(3380)
-    const options = {
-      loadProvider: vi.fn().mockResolvedValue({ getEpisodeVoteCount }),
+    const legacyKey = 'graphtv:v1:align4:omdb:episode:tt5884092'
+    storage.setItem(legacyKey, JSON.stringify({ votes: 3379 }))
+
+    createEpisodeDetailLoader({
+      loadProvider: vi.fn(),
       expectedSeriesId: 'tt4955642',
-      storage,
-      now: () => timestamp
-    }
+      storage
+    })
 
-    await createEpisodeDetailLoader(options)(createEpisode())
-    timestamp += 15 * 24 * 60 * 60 * 1000
-    const refreshed = await createEpisodeDetailLoader(options)(createEpisode())
-
-    expect(getEpisodeVoteCount).toHaveBeenCalledTimes(2)
-    expect(refreshed.ratings[1].votes).toBe(3380)
-    expect(storage.removeItem).toHaveBeenCalled()
+    expect(storage.removeItem).toHaveBeenCalledWith(legacyKey)
+    expect(storage.getItem('graphtv:v1:omdb:episode-cache-cleaned')).toBe(
+      'true'
+    )
   })
 
   it('does not load votes for a moderate supplemental match', async () => {
@@ -181,7 +227,9 @@ describe('episode detail loading', () => {
       storage: createStorage()
     })
 
-    await expect(loader(createEpisode())).rejects.toThrow('expected IMDb series ID')
+    await expect(loader(createEpisode())).rejects.toThrow(
+      'expected IMDb series ID'
+    )
     expect(getEpisodeVoteCount).not.toHaveBeenCalled()
     expect(loader.getDebugState().requests).toBe(0)
   })
@@ -189,7 +237,9 @@ describe('episode detail loading', () => {
   it('briefly caches transient failures without disabling other episodes', async () => {
     const getEpisodeVoteCount = vi
       .fn()
-      .mockRejectedValueOnce(new Error('Request timed out at the gateway limit'))
+      .mockRejectedValueOnce(
+        new Error('Request timed out at the gateway limit')
+      )
       .mockResolvedValueOnce(4100)
     const loader = createEpisodeDetailLoader({
       loadProvider: vi.fn().mockResolvedValue({ getEpisodeVoteCount }),
@@ -221,7 +271,9 @@ describe('episode detail loading', () => {
       storage: createStorage()
     })
 
-    await expect(loader(createEpisode())).rejects.toThrow('Request limit reached')
+    await expect(loader(createEpisode())).rejects.toThrow(
+      'Request limit reached'
+    )
     const otherEpisode = createEpisode()
     otherEpisode.sourceIds.omdb = 'tt-other'
     await expect(loader(otherEpisode)).rejects.toThrow('Request limit reached')

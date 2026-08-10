@@ -1,11 +1,13 @@
 const browserGlobals = {
   AbortController: 'readonly',
+  DOMException: 'readonly',
   CustomEvent: 'readonly',
   DOMParser: 'readonly',
   Event: 'readonly',
   EventTarget: 'readonly',
   URL: 'readonly',
   URLSearchParams: 'readonly',
+  TextEncoder: 'readonly',
   ResizeObserver: 'readonly',
   Node: 'readonly',
   HTMLElement: 'readonly',
@@ -15,6 +17,8 @@ const browserGlobals = {
   location: 'readonly',
   history: 'readonly',
   fetch: 'readonly',
+  indexedDB: 'readonly',
+  structuredClone: 'readonly',
   console: 'readonly',
   setTimeout: 'readonly',
   clearTimeout: 'readonly'

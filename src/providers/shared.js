@@ -43,16 +43,3 @@ export function buildImageUrl(path, baseUrl) {
 
   return `${baseUrl}${path}`
 }
-
-export async function fetchJson(url, init = {}) {
-  const response = await fetch(url, init)
-
-  if (!response.ok) {
-    const error = new Error(`Request failed with status ${response.status}`)
-    error.status = response.status
-    error.url = url
-    throw error
-  }
-
-  return response.json()
-}

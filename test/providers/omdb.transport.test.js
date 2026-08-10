@@ -1,10 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { clearApiCache } from '../../src/data/apiCache.js'
 
 vi.mock('../../src/config/clientSecrets.js', () => ({
   getClientSecret: () => 'test-key'
 }))
 
-import { getEpisodeVoteCount, getSeasons } from '../../src/providers/omdb/transport.js'
+import {
+  getEpisodeVoteCount,
+  getSeasons
+} from '../../src/providers/omdb/transport.js'
 
 function jsonResponse(data, init = {}) {
   return new Response(JSON.stringify(data), {
@@ -14,8 +18,9 @@ function jsonResponse(data, init = {}) {
   })
 }
 
-afterEach(() => {
+afterEach(async () => {
   vi.unstubAllGlobals()
+  await clearApiCache()
 })
 
 describe('OMDb transport', () => {
@@ -49,7 +54,10 @@ describe('OMDb transport', () => {
   })
 
   it('preserves per-season diagnostics when every season fails', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network failure')))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockRejectedValue(new Error('network failure'))
+    )
 
     const error = await getSeasons('tt123', 2).catch((caught) => caught)
 
@@ -100,30 +108,73 @@ describe('OMDb transport', () => {
     ).rejects.toThrow('unexpected series')
   })
 
+  it('revalidates the parent series when the raw episode response is cached', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        imdbID: 'tt5884092',
+        seriesID: 'tt4955642',
+        imdbVotes: '3,379',
+        Response: 'True'
+      })
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      getEpisodeVoteCount('tt5884092', { expectedSeriesId: 'tt4955642' })
+    ).resolves.toBe(3379)
+    await expect(
+      getEpisodeVoteCount('tt5884092', { expectedSeriesId: 'tt-wrong' })
+    ).rejects.toThrow('unexpected series')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   it('requires the expected parent series before requesting episode details', async () => {
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
 
-    await expect(getEpisodeVoteCount('tt5884092')).rejects.toThrow('expected IMDb series ID')
+    await expect(getEpisodeVoteCount('tt5884092')).rejects.toThrow(
+      'expected IMDb series ID'
+    )
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('classifies OMDb quota responses without relying on arbitrary error text', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
         jsonResponse({ Response: 'False', Error: 'Request limit reached!' })
       )
-    )
+    vi.stubGlobal('fetch', fetchMock)
 
     const error = await getEpisodeVoteCount('tt5884092', {
       expectedSeriesId: 'tt4955642'
     }).catch((caught) => caught)
+    await expect(
+      getEpisodeVoteCount('tt5884092', { expectedSeriesId: 'tt4955642' })
+    ).rejects.toMatchObject({ code: 'quota' })
 
     expect(error).toMatchObject({
       message: 'Request limit reached!',
       provider: 'omdb',
       code: 'quota'
     })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('caches not-found payloads while continuing to surface the OMDb error', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ Response: 'False', Error: 'Incorrect IMDb ID.' })
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      getEpisodeVoteCount('tt-invalid', { expectedSeriesId: 'tt4955642' })
+    ).rejects.toThrow('Incorrect IMDb ID')
+    await expect(
+      getEpisodeVoteCount('tt-invalid', { expectedSeriesId: 'tt4955642' })
+    ).rejects.toThrow('Incorrect IMDb ID')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })
