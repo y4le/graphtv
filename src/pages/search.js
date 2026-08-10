@@ -43,7 +43,7 @@ export function renderSearchPage(container) {
               aria-label="Show title"
               placeholder="The Americans"
               autocomplete="off"
-              autofocus
+              ${query ? '' : 'autofocus'}
               required
             />
             <button type="submit">Search</button>
