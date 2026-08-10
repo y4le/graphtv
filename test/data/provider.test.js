@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
-import { getProviderLabel, getShowBundle, parseShowRef } from '../../src/data/provider.js'
+import {
+  getProviderLabel,
+  getShowBundle,
+  parseShowRef,
+  streamShowBundle
+} from '../../src/data/provider.js'
 
-function createShow(id, externalIds = {}) {
+function createShow(id, externalIds = {}, overrides = {}) {
   return {
     id,
     title: 'Example',
@@ -12,7 +17,8 @@ function createShow(id, externalIds = {}) {
     totalSeasons: 2,
     genres: [],
     ratings: [],
-    externalIds
+    externalIds,
+    ...overrides
   }
 }
 
@@ -100,5 +106,79 @@ describe('data/provider', () => {
         })
       })
     ).rejects.toThrow('invalid season data')
+  })
+
+  it('streams show metadata, primary episodes, and supplemental providers as they settle', async () => {
+    let resolveSlowSeasons
+    const slowSeasons = new Promise((resolve) => {
+      resolveSlowSeasons = resolve
+    })
+    const providers = {
+      tvmaze: {
+        getShow: async () => createShow('tvmaze:1', { imdb: 'tt123' }),
+        getSeasons: async () => []
+      },
+      slow: {
+        resolveShowRef: async () => 'slow:1',
+        getShow: async () =>
+          createShow(
+            'slow:1',
+            {},
+            { ratings: [{ source: 'slow', rating: 7, votes: null }] }
+          ),
+        getSeasons: async () => slowSeasons
+      },
+      fast: {
+        resolveShowRef: async () => 'fast:1',
+        getShow: async () =>
+          createShow(
+            'fast:1',
+            {},
+            { ratings: [{ source: 'fast', rating: 8, votes: null }] }
+          ),
+        getSeasons: async () => []
+      }
+    }
+    const progress = streamShowBundle('tvmaze:1', {
+      compareProviders: ['slow', 'fast'],
+      providerLoader: async (provider) => providers[provider]
+    })
+
+    const show = await progress.next()
+    expect(show.value).toMatchObject({
+      phase: 'show',
+      show: { id: 'tvmaze:1' }
+    })
+
+    const primary = await progress.next()
+    expect(primary.value).toMatchObject({
+      phase: 'primary',
+      complete: false,
+      pendingProviders: ['slow', 'fast']
+    })
+
+    const fast = await progress.next()
+    expect(fast.value).toMatchObject({
+      phase: 'supplemental',
+      provider: 'fast',
+      complete: false,
+      pendingProviders: ['slow']
+    })
+    expect(fast.value.bundle.show.ratings).toEqual([
+      { source: 'fast', rating: 8, votes: null }
+    ])
+
+    resolveSlowSeasons([])
+    const slow = await progress.next()
+    expect(slow.value).toMatchObject({
+      phase: 'supplemental',
+      provider: 'slow',
+      complete: true,
+      pendingProviders: []
+    })
+    expect(
+      slow.value.bundle.providerDiagnostics.map((item) => item.provider)
+    ).toEqual(['slow', 'fast'])
+    await expect(progress.next()).resolves.toMatchObject({ done: true })
   })
 })

@@ -12,11 +12,13 @@
   --spotColor: #c1432e;
   --spotColorMuted: #c1432e;
   --publisherAccent: #c1432e;
-  --font-app: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-app:
+    'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas,
+    'Liberation Mono', monospace;
   --font-serif: var(--font-app);
   --font-sans: var(--font-app);
   --font-mono: var(--font-app);
-  --font-editorial-serif: Georgia, "Times New Roman", "Liberation Serif", serif;
+  --font-editorial-serif: Georgia, 'Times New Roman', 'Liberation Serif', serif;
   --pageMaxWidth: 75rem;
   --searchMaxWidth: 39rem;
   --columnGap: clamp(2rem, 4vw, 4rem);
@@ -186,7 +188,9 @@ kbd,
   color: inherit;
   cursor: pointer;
   line-height: inherit;
-  transition: border-color var(--transition-fast), color var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .shortcut-action:hover,
@@ -269,7 +273,9 @@ kbd,
   color: var(--textPrimary);
   font-family: var(--font-serif);
   font-size: 1.15rem;
-  transition: border-color var(--transition-fast), color var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .search-row input::-webkit-search-cancel-button {
@@ -301,7 +307,9 @@ kbd,
   font-family: var(--font-sans);
   font-size: 0.94rem;
   cursor: pointer;
-  transition: color var(--transition-fast), border-color var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast);
 }
 
 .search-row .search-clear {
@@ -350,13 +358,13 @@ kbd,
 }
 
 .provider-inline::before {
-  content: "·";
+  content: '·';
   margin-right: 0.5rem;
   color: var(--textMuted);
 }
 
 .provider-inline:first-of-type::before {
-  content: "";
+  content: '';
   margin-right: 0;
 }
 
@@ -490,6 +498,19 @@ kbd,
   width: calc(100% + 2.5rem);
   margin-inline: -1.25rem;
   padding-inline-end: 1rem;
+}
+
+.results-progress {
+  margin: 0.45rem 1.25rem 0;
+  color: var(--textSecondary);
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+}
+
+.results-data .chart-root > .state-copy {
+  display: grid;
+  min-height: clamp(14rem, 45vh, 28rem);
+  place-items: center;
 }
 
 .results-episode {
@@ -872,7 +893,10 @@ kbd,
 
 .debug-provider-row {
   display: grid;
-  grid-template-columns: minmax(6rem, 1.1fr) minmax(6rem, 0.9fr) minmax(6rem, 0.9fr) minmax(10rem, 1.4fr);
+  grid-template-columns: minmax(6rem, 1.1fr) minmax(6rem, 0.9fr) minmax(
+      6rem,
+      0.9fr
+    ) minmax(10rem, 1.4fr);
   gap: 1rem;
   align-items: baseline;
 }

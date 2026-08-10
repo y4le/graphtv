@@ -2,11 +2,16 @@ import {
   createEpisodeDetailLoader,
   getComparisonProviders,
   getProviderCatalog,
-  getShowBundle,
+  streamShowBundle,
   parseShowRef
 } from '../data/provider.js'
 import { createChart } from '../viz/ratingsChart.js'
-import { formatRatingBadge, renderError, renderLoading, renderPublisherBrand } from './shared.js'
+import {
+  formatRatingBadge,
+  renderError,
+  renderLoading,
+  renderPublisherBrand
+} from './shared.js'
 import { requestSearchFocusOnNextPage } from './search.js'
 
 export function renderResultsMasthead({ interactive = false } = {}) {
@@ -35,7 +40,12 @@ export function renderResultsMasthead({ interactive = false } = {}) {
   `
 }
 
-export async function renderResultsPage(container, showRef) {
+export async function renderResultsPage(container, showRef, options = {}) {
+  const {
+    bundleStream = streamShowBundle,
+    chartFactory = createChart,
+    detailLoaderFactory = createEpisodeDetailLoader
+  } = options
   container.innerHTML = `
     <main class="document-shell">
       ${renderResultsMasthead()}
@@ -43,71 +53,72 @@ export async function renderResultsPage(container, showRef) {
     </main>
   `
 
+  let chart = null
+  let destroyed = false
+  let iterator = null
+  let latestBundle = null
+
   try {
     const debugEnabled = true
     const { provider } = parseShowRef(showRef)
-    const bundle = await getShowBundle(showRef, {
-      compareProviders: getComparisonProviders(provider)
+    const progress = bundleStream(showRef, {
+      compareProviders:
+        options.compareProviders ?? getComparisonProviders(provider),
+      providerLoader: options.providerLoader
+    })
+    iterator = progress[Symbol.asyncIterator]()
+    const showSnapshot = await iterator.next()
+    if (showSnapshot.done || showSnapshot.value.phase !== 'show') {
+      throw new Error('Provider returned no show details.')
+    }
+
+    renderResultsShell(container, showSnapshot.value.show)
+    document.title = `${showSnapshot.value.show.title} · graphtv`
+
+    const primarySnapshot = await iterator.next()
+    if (primarySnapshot.done || !primarySnapshot.value.bundle) {
+      throw new Error('Provider returned no episode data.')
+    }
+
+    latestBundle = primarySnapshot.value.bundle
+    updateResultsContent(container, latestBundle)
+    const episodeDetailLoader = detailLoaderFactory({
+      expectedSeriesId: latestBundle.show.externalIds.imdb,
+      primarySource: latestBundle.primarySource
+    })
+    chart = chartFactory(
+      container.querySelector('.chart-root'),
+      latestBundle.seasons,
+      {
+        detailRoot: container.querySelector('.results-episode'),
+        loadEpisodeDetails: episodeDetailLoader
+      }
+    )
+    updateProgress(container, primarySnapshot.value)
+
+    const whenSettled = consumeRemainingSnapshots(
+      iterator,
+      async (snapshot) => {
+        if (destroyed || !snapshot.bundle) {
+          return
+        }
+
+        latestBundle = snapshot.bundle
+        updateResultsContent(container, latestBundle)
+        chart.updateSeasons(latestBundle.seasons)
+        updateProgress(container, snapshot)
+      }
+    ).catch((error) => {
+      if (!destroyed) {
+        showSupplementalError(container, error)
+      }
     })
 
-    document.title = `${bundle.show.title} · graphtv`
-
-    container.innerHTML = `
-      <main class="document-shell results-document">
-        ${renderResultsMasthead({ interactive: true })}
-        <header class="results-heading">
-          <h1 tabindex="-1" class="results-title">${escapeHtml(bundle.show.title)}</h1>
-          ${bundle.show.year ? `<p class="results-year">${escapeHtml(bundle.show.year)}</p>` : ''}
-        </header>
-        <section class="results-layout">
-          <section class="results-data">
-            <div class="chart-root"></div>
-          </section>
-          <section
-            class="results-episode"
-            aria-label="Selected episode details"
-          ></section>
-          <aside class="results-context">
-            <div class="show-header">
-              <div class="show-poster-shell">
-                ${
-                  bundle.show.poster
-                    ? `<img src="${bundle.show.poster}" alt="" class="show-poster" />`
-                    : `<div class="poster-fallback large">No art</div>`
-                }
-              </div>
-              <div class="show-facts">
-                <p class="show-meta">${escapeHtml(bundle.show.genres.join(' · '))}</p>
-                <ul class="show-metrics">
-                  ${bundle.show.ratings.map((rating) => `<li class="rating-badge">${formatRatingBadge(rating)}</li>`).join('')}
-                </ul>
-              </div>
-              <div class="show-copy">
-                <p class="show-plot">${escapeHtml(bundle.show.plot ?? 'No synopsis available.')}</p>
-                ${
-                  bundle.alignmentIssues.length
-                    ? `<p class="mismatch-note">Ambiguous provider episode matches: ${bundle.alignmentIssues.length}. Use debug mode for details.</p>`
-                    : ''
-                }
-              </div>
-            </div>
-          </aside>
-        </section>
-      </main>
-    `
-
-    const episodeDetailLoader = createEpisodeDetailLoader({
-      expectedSeriesId: bundle.show.externalIds.imdb,
-      primarySource: bundle.primarySource
-    })
-    const chart = createChart(container.querySelector('.chart-root'), bundle.seasons, {
-      detailRoot: container.querySelector('.results-episode'),
-      loadEpisodeDetails: episodeDetailLoader
-    })
     return {
       kind: 'results',
       debugEnabled,
       chart,
+      whenSettled,
       focusInitial() {},
       focusSearch() {
         requestSearchFocusOnNextPage()
@@ -125,15 +136,15 @@ export async function renderResultsPage(container, showRef) {
           },
           {
             title: 'Provider diagnostics',
-            data: bundle.providerDiagnostics
+            data: latestBundle.providerDiagnostics
           },
           {
             title: 'Episode alignment',
-            data: bundle.alignment
+            data: latestBundle.alignment
           },
           {
             title: 'Merged bundle',
-            data: bundle
+            data: latestBundle
           },
           {
             title: 'Chart state',
@@ -142,16 +153,31 @@ export async function renderResultsPage(container, showRef) {
         ]
       },
       destroy() {
+        destroyed = true
+        void iterator?.return?.().catch(() => {})
         chart.destroy()
       }
     }
   } catch (error) {
-    container.innerHTML = `
-      <main class="document-shell">
-        ${renderResultsMasthead()}
-        ${renderError(error.message)}
-      </main>
-    `
+    void iterator?.return?.().catch(() => {})
+    const chartRoot = container.querySelector('.chart-root')
+    if (chartRoot) {
+      chartRoot.innerHTML = renderError(error.message)
+      container
+        .querySelector('.results-data')
+        ?.setAttribute('aria-busy', 'false')
+      const progressRoot = container.querySelector('.results-progress')
+      if (progressRoot) {
+        progressRoot.hidden = true
+      }
+    } else {
+      container.innerHTML = `
+        <main class="document-shell">
+          ${renderResultsMasthead()}
+          ${renderError(error.message)}
+        </main>
+      `
+    }
     return {
       kind: 'results',
       debugEnabled: false,
@@ -169,6 +195,98 @@ export async function renderResultsPage(container, showRef) {
         return []
       }
     }
+  }
+}
+
+function renderResultsShell(container, show) {
+  container.innerHTML = `
+    <main class="document-shell results-document">
+      ${renderResultsMasthead({ interactive: true })}
+      <header class="results-heading"></header>
+      <section class="results-layout">
+        <section class="results-data" aria-busy="true">
+          <div class="chart-root">${renderLoading('Loading episode ratings…', { announce: false })}</div>
+          <p class="results-progress" role="status" aria-live="polite">Loading episode ratings…</p>
+        </section>
+        <section
+          class="results-episode"
+          aria-label="Selected episode details"
+        ></section>
+        <aside class="results-context"></aside>
+      </section>
+    </main>
+  `
+  updateHeading(container, show)
+  updateShowContext(container, show, [])
+}
+
+function updateResultsContent(container, bundle) {
+  document.title = `${bundle.show.title} · graphtv`
+  updateHeading(container, bundle.show)
+  updateShowContext(container, bundle.show, bundle.alignmentIssues)
+}
+
+function updateHeading(container, show) {
+  container.querySelector('.results-heading').innerHTML = `
+    <h1 tabindex="-1" class="results-title">${escapeHtml(show.title)}</h1>
+    ${show.year ? `<p class="results-year">${escapeHtml(show.year)}</p>` : ''}
+  `
+}
+
+function updateShowContext(container, show, alignmentIssues) {
+  container.querySelector('.results-context').innerHTML = `
+    <div class="show-header">
+      <div class="show-poster-shell">
+        ${
+          show.poster
+            ? `<img src="${escapeHtml(show.poster)}" alt="" class="show-poster" />`
+            : `<div class="poster-fallback large">No art</div>`
+        }
+      </div>
+      <div class="show-facts">
+        <p class="show-meta">${escapeHtml(show.genres.join(' · '))}</p>
+        <ul class="show-metrics">
+          ${show.ratings.map((rating) => `<li class="rating-badge">${formatRatingBadge(rating)}</li>`).join('')}
+        </ul>
+      </div>
+      <div class="show-copy">
+        <p class="show-plot">${escapeHtml(show.plot ?? 'No synopsis available.')}</p>
+        ${
+          alignmentIssues.length
+            ? `<p class="mismatch-note">Ambiguous provider episode matches: ${alignmentIssues.length}. Use debug mode for details.</p>`
+            : ''
+        }
+      </div>
+    </div>
+  `
+}
+
+function updateProgress(container, snapshot) {
+  const dataRoot = container.querySelector('.results-data')
+  const progressRoot = container.querySelector('.results-progress')
+  const message = snapshot.complete ? '' : 'Loading additional ratings…'
+  dataRoot.setAttribute('aria-busy', String(!snapshot.complete))
+  progressRoot.textContent = message
+  progressRoot.hidden = !message
+}
+
+function showSupplementalError(container, error) {
+  const dataRoot = container.querySelector('.results-data')
+  const progressRoot = container.querySelector('.results-progress')
+  dataRoot?.setAttribute('aria-busy', 'false')
+  if (progressRoot) {
+    progressRoot.textContent = `Additional ratings could not be loaded: ${error.message}`
+    progressRoot.hidden = false
+  }
+}
+
+async function consumeRemainingSnapshots(iterator, onSnapshot) {
+  while (true) {
+    const next = await iterator.next()
+    if (next.done) {
+      return
+    }
+    await onSnapshot(next.value)
   }
 }
 

@@ -67,7 +67,9 @@ describe('createChart', () => {
 
     updateUiSettings({ absoluteYAxis: true })
 
-    expect(getAxisLabels(container)).toEqual(expect.arrayContaining(['0.0', '10.0']))
+    expect(getAxisLabels(container)).toEqual(
+      expect.arrayContaining(['0.0', '10.0'])
+    )
   })
 
   it('renders episode details outside the chart when given a detail root', () => {
@@ -85,6 +87,75 @@ describe('createChart', () => {
     expect(container.querySelector('.reading-pane-shell')).toBeNull()
     expect(detailRoot.querySelector('.sidenote-card')).not.toBeNull()
     expect(detailRoot.textContent).toContain('Episode 2')
+  })
+
+  it('updates provider ratings in place while preserving the selected episode', () => {
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+    const initialSeasons = createSeasons()
+
+    chart = createChart(container, initialSeasons, { detailRoot })
+    chart.moveEpisode(0)
+    const selectedPointId = chart.getDebugState().selectedPointId
+    expect(detailRoot.textContent).not.toContain('TMDB')
+
+    const updatedSeasons = createSeasons()
+    updatedSeasons[0].episodes[0].ratings.push({
+      source: 'tmdb',
+      rating: 9,
+      votes: 500
+    })
+    chart.updateSeasons(updatedSeasons)
+
+    expect(chart.getDebugState().selectedPointId).toBe(selectedPointId)
+    expect(detailRoot.textContent).toContain('TMDB: 9.0 · 500 votes')
+  })
+
+  it('merges late episode details into the newest provider snapshot', async () => {
+    vi.useFakeTimers()
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    let resolveDetails
+    const loadEpisodeDetails = vi.fn(
+      (point) =>
+        new Promise((resolve) => {
+          resolveDetails = () =>
+            resolve({
+              ...point,
+              ratings: point.ratings.map((rating) => ({
+                ...rating,
+                votes: 123,
+                votesStatus: 'loaded'
+              }))
+            })
+        })
+    )
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+
+    chart = createChart(container, createSeasons(), {
+      detailRoot,
+      loadEpisodeDetails
+    })
+    chart.moveEpisode(0)
+    await vi.advanceTimersByTimeAsync(250)
+
+    const updatedSeasons = createSeasons()
+    updatedSeasons[0].episodes[0].ratings.push({ source: 'tmdb', rating: 9, votes: 500 })
+    chart.updateSeasons(updatedSeasons)
+    resolveDetails()
+    await Promise.resolve()
+
+    expect(detailRoot.textContent).toContain('TEST: 6.0 · 123 votes')
+    expect(detailRoot.textContent).toContain('TMDB: 9.0 · 500 votes')
   })
 
   it('debounces selection-only episode detail loading', async () => {
@@ -128,7 +199,9 @@ describe('createChart', () => {
     document.body.appendChild(container)
 
     chart = createChart(container, createSeasons(), { loadEpisodeDetails })
-    container.querySelector('.episode-point').dispatchEvent(new MouseEvent('mouseenter'))
+    container
+      .querySelector('.episode-point')
+      .dispatchEvent(new MouseEvent('mouseenter'))
     await vi.advanceTimersByTimeAsync(300)
 
     expect(loadEpisodeDetails).not.toHaveBeenCalled()
@@ -172,7 +245,10 @@ function getViewBoxWidth(svg) {
 }
 
 function getAxisLabels(container) {
-  return Array.from(container.querySelectorAll('.range-tick text'), (node) => node.textContent)
+  return Array.from(
+    container.querySelectorAll('.range-tick text'),
+    (node) => node.textContent
+  )
 }
 
 function createSeasons() {

@@ -1,29 +1,42 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { renderResultsMasthead } from '../../src/pages/results.js'
+import {
+  renderResultsMasthead,
+  renderResultsPage
+} from '../../src/pages/results.js'
 
 let originalPath
+let originalTitle
 
 beforeEach(() => {
   originalPath = `${window.location.pathname}${window.location.search}${window.location.hash}`
+  originalTitle = document.title
 })
 
 afterEach(() => {
   window.history.replaceState({}, '', originalPath)
+  document.title = originalTitle
 })
 
 describe('renderResultsMasthead', () => {
-  it.each([false, true])('keeps the publisher signature first when interactive is %s', (interactive) => {
-    const container = document.createElement('div')
-    container.innerHTML = renderResultsMasthead({ interactive })
+  it.each([false, true])(
+    'keeps the publisher signature first when interactive is %s',
+    (interactive) => {
+      const container = document.createElement('div')
+      container.innerHTML = renderResultsMasthead({ interactive })
 
-    const masthead = container.querySelector('.masthead')
-    const navigation = masthead.firstElementChild
+      const masthead = container.querySelector('.masthead')
+      const navigation = masthead.firstElementChild
 
-    expect(navigation.classList.contains('masthead-navigation')).toBe(true)
-    expect(navigation.firstElementChild.classList.contains('publisher-brand')).toBe(true)
-    expect(masthead.querySelector('.masthead-meta .publisher-brand')).toBeNull()
-  })
+      expect(navigation.classList.contains('masthead-navigation')).toBe(true)
+      expect(
+        navigation.firstElementChild.classList.contains('publisher-brand')
+      ).toBe(true)
+      expect(
+        masthead.querySelector('.masthead-meta .publisher-brand')
+      ).toBeNull()
+    }
+  )
 
   it('renders help, view, and return shortcuts as actions on the interactive page', () => {
     const container = document.createElement('div')
@@ -39,9 +52,9 @@ describe('renderResultsMasthead', () => {
       'return-search'
     ])
     expect(
-      Array.from(container.querySelectorAll('.masthead-actions .masthead-action')).map(
-        (action) => action.dataset.uiAction
-      )
+      Array.from(
+        container.querySelectorAll('.masthead-actions .masthead-action')
+      ).map((action) => action.dataset.uiAction)
     ).toEqual(['help', 'view-options'])
   })
 
@@ -61,3 +74,161 @@ describe('renderResultsMasthead', () => {
     expect(target.hash).toBe('')
   })
 })
+
+describe('renderResultsPage', () => {
+  it('shows metadata before episodes and updates the primary chart as supplements settle', async () => {
+    let resolvePrimary
+    let resolveSupplemental
+    const primaryReady = new Promise((resolve) => {
+      resolvePrimary = resolve
+    })
+    const supplementalReady = new Promise((resolve) => {
+      resolveSupplemental = resolve
+    })
+    const primaryBundle = createBundle()
+    const supplementalBundle = createBundle({ supplemental: true })
+    const bundleStream = async function* () {
+      yield {
+        phase: 'show',
+        show: primaryBundle.show,
+        pendingProviders: ['tmdb'],
+        complete: false
+      }
+      await primaryReady
+      yield {
+        phase: 'primary',
+        bundle: primaryBundle,
+        pendingProviders: ['tmdb'],
+        complete: false
+      }
+      await supplementalReady
+      yield {
+        phase: 'supplemental',
+        provider: 'tmdb',
+        bundle: supplementalBundle,
+        pendingProviders: [],
+        complete: true
+      }
+    }
+    const chart = {
+      updateSeasons: vi.fn(),
+      destroy: vi.fn(),
+      getDebugState: vi.fn(() => ({}))
+    }
+    const chartFactory = vi.fn(() => chart)
+    const detailLoaderFactory = vi.fn(() => vi.fn())
+    const container = document.createElement('div')
+
+    const pagePromise = renderResultsPage(container, 'tvmaze:1', {
+      bundleStream,
+      chartFactory,
+      detailLoaderFactory,
+      compareProviders: ['tmdb']
+    })
+
+    await vi.waitFor(() =>
+      expect(container.querySelector('.results-title')).not.toBeNull()
+    )
+    expect(container.querySelector('.results-title').textContent).toBe(
+      'Example'
+    )
+    expect(container.querySelector('.show-plot').textContent).toBe(
+      'Primary synopsis'
+    )
+    expect(container.querySelector('.chart-root').textContent).toContain(
+      'Loading episode ratings'
+    )
+    expect(chartFactory).not.toHaveBeenCalled()
+
+    resolvePrimary()
+    const page = await pagePromise
+    expect(chartFactory).toHaveBeenCalledTimes(1)
+    expect(container.querySelector('.results-progress').textContent).toBe(
+      'Loading additional ratings…'
+    )
+
+    resolveSupplemental()
+    await page.whenSettled
+    expect(chart.updateSeasons).toHaveBeenCalledWith(supplementalBundle.seasons)
+    expect(container.querySelector('.show-metrics').textContent).toContain(
+      'TMDB: 9.0'
+    )
+    expect(container.querySelector('.results-progress').hidden).toBe(true)
+    expect(
+      container.querySelector('.results-data').getAttribute('aria-busy')
+    ).toBe('false')
+
+    page.destroy()
+    expect(chart.destroy).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps returned show metadata visible when primary episode loading fails', async () => {
+    const bundleStream = async function* () {
+      yield {
+        phase: 'show',
+        show: createBundle().show,
+        pendingProviders: [],
+        complete: false
+      }
+      throw new Error('Episode service unavailable')
+    }
+    const container = document.createElement('div')
+
+    const page = await renderResultsPage(container, 'tvmaze:1', {
+      bundleStream,
+      compareProviders: []
+    })
+
+    expect(page.chart).toBeNull()
+    expect(container.querySelector('.results-title').textContent).toBe('Example')
+    expect(container.querySelector('.show-plot').textContent).toBe('Primary synopsis')
+    expect(container.querySelector('.chart-root').textContent).toContain(
+      'Episode service unavailable'
+    )
+    expect(container.querySelector('.results-data').getAttribute('aria-busy')).toBe('false')
+  })
+})
+
+function createBundle({ supplemental = false } = {}) {
+  const ratings = [{ source: 'tvmaze', rating: 8, votes: null }]
+  if (supplemental) {
+    ratings.push({ source: 'tmdb', rating: 9, votes: 500 })
+  }
+
+  return {
+    primarySource: 'tvmaze',
+    show: {
+      id: 'tvmaze:1',
+      title: 'Example',
+      year: '2020',
+      plot: supplemental ? 'Supplemented synopsis' : 'Primary synopsis',
+      poster: null,
+      totalSeasons: 1,
+      genres: ['Comedy'],
+      ratings,
+      externalIds: { imdb: 'tt123' }
+    },
+    seasons: [
+      {
+        number: 1,
+        title: 'Season 1',
+        episodes: [
+          {
+            id: 'tvmaze:episode:1',
+            title: 'Pilot',
+            season: 1,
+            episode: 1,
+            ratings,
+            sourceIds: { tvmaze: '1' }
+          }
+        ]
+      }
+    ],
+    alignment: [],
+    alignmentIssues: [],
+    mismatches: [],
+    providerDiagnostics: supplemental
+      ? [{ provider: 'tmdb', role: 'supplemental', status: 'loaded' }]
+      : []
+  }
+}

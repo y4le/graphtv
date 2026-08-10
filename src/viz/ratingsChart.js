@@ -12,7 +12,13 @@ import {
   getVisibleSeasonSpans,
   getVisibleSeasonTrendlines
 } from './scales.js'
-import { renderCrosshair, renderPoints, renderRangeFrame, renderSeasonLabels, renderTrendlines } from './marks.js'
+import {
+  renderCrosshair,
+  renderPoints,
+  renderRangeFrame,
+  renderSeasonLabels,
+  renderTrendlines
+} from './marks.js'
 import { createSidenote } from './sidenote.js'
 import { createSparkline } from './sparkline.js'
 import { getChartTheme, getUiSettings } from './theme.js'
@@ -61,7 +67,7 @@ export function createChart(container, seasons, options = {}) {
   const mediaQuery = window.matchMedia(MOBILE_QUERY)
   const mobileLandscapeQuery = window.matchMedia(MOBILE_LANDSCAPE_QUERY)
 
-  const model = buildChartModel(seasons)
+  let model = buildChartModel(seasons)
   let viewport = null
   let selectedPointId = null
   let hoverPointId = null
@@ -131,7 +137,7 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function getPointById(id) {
-    return id ? model.points.find((point) => point.id === id) ?? null : null
+    return id ? (model.points.find((point) => point.id === id) ?? null) : null
   }
 
   function getRatedPoints() {
@@ -140,6 +146,34 @@ export function createChart(container, seasons, options = {}) {
 
   function getActivePoint() {
     return getPointById(hoverPointId) || getPointById(selectedPointId)
+  }
+
+  function mergeEpisodeDetails(point, detailedPoint) {
+    const detailedRatings = new Map(
+      detailedPoint.ratings.map((rating) => [rating.source, rating])
+    )
+    const currentSources = new Set(point.ratings.map((rating) => rating.source))
+    const addedRatings = detailedPoint.ratings.filter(
+      (rating) => !currentSources.has(rating.source)
+    )
+
+    return {
+      ...point,
+      ratings: [
+        ...point.ratings.map((rating) => {
+          const detailedRating = detailedRatings.get(rating.source)
+          return typeof detailedRating?.votes === 'number' ||
+            detailedRating?.votesStatus === 'unavailable'
+            ? {
+                ...rating,
+                votes: detailedRating.votes,
+                votesStatus: detailedRating.votesStatus
+              }
+            : rating
+        }),
+        ...addedRatings
+      ]
+    }
   }
 
   function scheduleDetailLoad(point) {
@@ -161,9 +195,13 @@ export function createChart(container, seasons, options = {}) {
           return
         }
 
-        detailCache.set(point.id, enrichedPoint)
+        const currentPoint = getPointById(point.id)
+        const mergedPoint = currentPoint
+          ? mergeEpisodeDetails(currentPoint, enrichedPoint)
+          : enrichedPoint
+        detailCache.set(point.id, mergedPoint)
         if (getActivePoint()?.id === point.id) {
-          sidenote.renderPoint(enrichedPoint)
+          sidenote.renderPoint(mergedPoint)
         }
       } catch (error) {
         if (error?.name !== 'AbortError') {
@@ -247,7 +285,9 @@ export function createChart(container, seasons, options = {}) {
       return
     }
     const points = getRatedPoints()
-    const currentIndex = points.findIndex((point) => point.id === currentPoint.id)
+    const currentIndex = points.findIndex(
+      (point) => point.id === currentPoint.id
+    )
     const nextIndex = clamp(currentIndex + delta, 0, points.length - 1)
     setSelectedPoint(points[nextIndex])
   }
@@ -259,8 +299,14 @@ export function createChart(container, seasons, options = {}) {
     }
 
     const seasonAnchors = getSeasonAnchors()
-    const currentSeasonIndex = seasonAnchors.findIndex((point) => point.season === activePoint.season)
-    const nextSeasonIndex = clamp(currentSeasonIndex + delta, 0, seasonAnchors.length - 1)
+    const currentSeasonIndex = seasonAnchors.findIndex(
+      (point) => point.season === activePoint.season
+    )
+    const nextSeasonIndex = clamp(
+      currentSeasonIndex + delta,
+      0,
+      seasonAnchors.length - 1
+    )
     setSelectedPoint(seasonAnchors[nextSeasonIndex])
   }
 
@@ -289,7 +335,10 @@ export function createChart(container, seasons, options = {}) {
 
   function syncScrollableViewportToPoint(point, shouldScroll) {
     const width = Math.max(bodyShell.clientWidth, 240)
-    const visibleEpisodes = Math.max(1, Math.round(width / MOBILE_POINT_SPACING))
+    const visibleEpisodes = Math.max(
+      1,
+      Math.round(width / MOBILE_POINT_SPACING)
+    )
     viewport = clampViewport(
       {
         start: point.x - Math.floor(visibleEpisodes / 2),
@@ -313,7 +362,9 @@ export function createChart(container, seasons, options = {}) {
     const contentWidth = getScrollableBodyWidth(width)
     const maxScrollLeft = Math.max(contentWidth - width, 0)
     const ratio = maxScrollLeft > 0 ? bodyShell.scrollLeft / maxScrollLeft : 0
-    const currentWidth = viewport ? viewport.end - viewport.start + 1 : Math.max(1, Math.round(width / MOBILE_POINT_SPACING))
+    const currentWidth = viewport
+      ? viewport.end - viewport.start + 1
+      : Math.max(1, Math.round(width / MOBILE_POINT_SPACING))
     const maxStart = Math.max(1, model.xMax - currentWidth + 1)
     const start = 1 + ratio * (maxStart - 1)
     viewport = clampViewport(
@@ -352,12 +403,43 @@ export function createChart(container, seasons, options = {}) {
     render()
   }
 
+  function updateSeasons(nextSeasons) {
+    if (destroyed) {
+      return
+    }
+
+    model = buildChartModel(nextSeasons)
+    if (!getPointById(selectedPointId)) {
+      selectedPointId = null
+    }
+    if (!getPointById(hoverPointId)) {
+      hoverPointId = null
+    }
+
+    for (const [episodeId, cachedPoint] of detailCache) {
+      const point = getPointById(episodeId)
+      if (!point) {
+        detailCache.delete(episodeId)
+        continue
+      }
+
+      detailCache.set(episodeId, mergeEpisodeDetails(point, cachedPoint))
+    }
+
+    if (viewport) {
+      viewport = clampViewport(viewport, model)
+    }
+    updateDetail(getActivePoint())
+    render()
+  }
+
   function resetViewportWidth(chartWidth, isScrollable) {
     const defaultViewport = createDefaultViewport(model, chartWidth, isMobile())
     const defaultWidth = defaultViewport.end - defaultViewport.start + 1
     const currentCenter = viewport
       ? viewport.start + (viewport.end - viewport.start) / 2
-      : defaultViewport.start + (defaultViewport.end - defaultViewport.start) / 2
+      : defaultViewport.start +
+        (defaultViewport.end - defaultViewport.start) / 2
     const centeredStart = currentCenter - (defaultWidth - 1) / 2
 
     viewport = clampViewport(
@@ -379,7 +461,13 @@ export function createChart(container, seasons, options = {}) {
     render()
   }
 
-  function renderDesktopChart(chartTheme, axisWidth, chartWidth, chartHeight, sparklineHeight) {
+  function renderDesktopChart(
+    chartTheme,
+    axisWidth,
+    chartWidth,
+    chartHeight,
+    sparklineHeight
+  ) {
     ensureViewport(chartWidth)
     const uiSettings = getUiSettings()
 
@@ -407,15 +495,28 @@ export function createChart(container, seasons, options = {}) {
     bodyShell.style.touchAction = isMobile() ? 'none' : ''
     bodyShell.scrollLeft = 0
 
-    axisSvg.attr('viewBox', `0 0 ${axisWidth} ${chartHeight}`).attr('width', axisWidth).attr('height', chartHeight)
-    mainSvg.attr('viewBox', `0 0 ${chartWidth} ${chartHeight}`).attr('width', chartWidth).attr('height', chartHeight)
+    axisSvg
+      .attr('viewBox', `0 0 ${axisWidth} ${chartHeight}`)
+      .attr('width', axisWidth)
+      .attr('height', chartHeight)
+    mainSvg
+      .attr('viewBox', `0 0 ${chartWidth} ${chartHeight}`)
+      .attr('width', chartWidth)
+      .attr('height', chartHeight)
     mainSvg.style('width', '100%')
 
     axisSvg.selectAll('*').remove()
-    renderRangeFrame(axisSvg, mainScales, { width: axisWidth, height: chartHeight }, chartTheme)
+    renderRangeFrame(
+      axisSvg,
+      mainScales,
+      { width: axisWidth, height: chartHeight },
+      chartTheme
+    )
     renderTrendlines(
       mainSvg,
-      uiSettings.seasonTrendlines ? getVisibleSeasonTrendlines(model, viewport) : [],
+      uiSettings.seasonTrendlines
+        ? getVisibleSeasonTrendlines(model, viewport)
+        : [],
       uiSettings.fullShowTrendline ? getMacroTrendline(model, viewport) : null,
       mainScales,
       chartTheme
@@ -428,25 +529,37 @@ export function createChart(container, seasons, options = {}) {
       { width: chartWidth, height: chartHeight },
       chartTheme
     )
-    renderCrosshair(mainSvg, getActivePoint(), mainScales, { width: chartWidth, height: chartHeight }, chartTheme)
-    renderPoints(mainSvg, getVisiblePoints(model, viewport), mainScales, chartTheme, {
-      activePointId: getActivePoint()?.id ?? null,
-      hoverEnabled: !isMobile(),
-      totalSeasons: model.totalSeasons,
-      onHover(point) {
-        hoverPointId = point.id
-        updateDetail(point)
-        render()
-      },
-      onLeave() {
-        hoverPointId = null
-        render()
-      },
-      onSelect(point) {
-        hoverPointId = null
-        setSelectedPoint(point, 'pointer')
+    renderCrosshair(
+      mainSvg,
+      getActivePoint(),
+      mainScales,
+      { width: chartWidth, height: chartHeight },
+      chartTheme
+    )
+    renderPoints(
+      mainSvg,
+      getVisiblePoints(model, viewport),
+      mainScales,
+      chartTheme,
+      {
+        activePointId: getActivePoint()?.id ?? null,
+        hoverEnabled: !isMobile(),
+        totalSeasons: model.totalSeasons,
+        onHover(point) {
+          hoverPointId = point.id
+          updateDetail(point)
+          render()
+        },
+        onLeave() {
+          hoverPointId = null
+          render()
+        },
+        onSelect(point) {
+          hoverPointId = null
+          setSelectedPoint(point, 'pointer')
+        }
       }
-    })
+    )
 
     renderSparkline(
       chartTheme,
@@ -461,7 +574,13 @@ export function createChart(container, seasons, options = {}) {
     )
   }
 
-  function renderScrollableMobileChart(chartTheme, axisWidth, chartWidth, chartHeight, sparklineHeight) {
+  function renderScrollableMobileChart(
+    chartTheme,
+    axisWidth,
+    chartWidth,
+    chartHeight,
+    sparklineHeight
+  ) {
     const uiSettings = getUiSettings()
     const scaleOptions = { absoluteYAxis: uiSettings.absoluteYAxis }
     const contentWidth = getScrollableBodyWidth(chartWidth)
@@ -486,24 +605,47 @@ export function createChart(container, seasons, options = {}) {
     shell.dataset.scrollable = 'true'
     bodyShell.style.overflowX = 'auto'
 
-    axisSvg.attr('viewBox', `0 0 ${axisWidth} ${chartHeight}`).attr('width', axisWidth).attr('height', chartHeight)
-    mainSvg.attr('viewBox', `0 0 ${contentWidth} ${chartHeight}`).attr('width', contentWidth).attr('height', chartHeight)
+    axisSvg
+      .attr('viewBox', `0 0 ${axisWidth} ${chartHeight}`)
+      .attr('width', axisWidth)
+      .attr('height', chartHeight)
+    mainSvg
+      .attr('viewBox', `0 0 ${contentWidth} ${chartHeight}`)
+      .attr('width', contentWidth)
+      .attr('height', chartHeight)
     mainSvg.style('width', `${contentWidth}px`)
 
     axisSvg.selectAll('*').remove()
-    renderRangeFrame(axisSvg, fullScales, { width: axisWidth, height: chartHeight }, chartTheme)
+    renderRangeFrame(
+      axisSvg,
+      fullScales,
+      { width: axisWidth, height: chartHeight },
+      chartTheme
+    )
     renderTrendlines(
       mainSvg,
       uiSettings.seasonTrendlines
         ? model.seasonTrendlines.map((trendline) => ({
             ...trendline,
             points: [
-              { x: trendline.startX, y: trendline.regression.slope * trendline.startX + trendline.regression.intercept },
-              { x: trendline.endX, y: trendline.regression.slope * trendline.endX + trendline.regression.intercept }
+              {
+                x: trendline.startX,
+                y:
+                  trendline.regression.slope * trendline.startX +
+                  trendline.regression.intercept
+              },
+              {
+                x: trendline.endX,
+                y:
+                  trendline.regression.slope * trendline.endX +
+                  trendline.regression.intercept
+              }
             ]
           }))
         : [],
-      uiSettings.fullShowTrendline ? getMacroTrendline(model, { start: 1, end: model.xMax }) : null,
+      uiSettings.fullShowTrendline
+        ? getMacroTrendline(model, { start: 1, end: model.xMax })
+        : null,
       fullScales,
       chartTheme
     )
@@ -515,7 +657,13 @@ export function createChart(container, seasons, options = {}) {
       { width: contentWidth, height: chartHeight },
       chartTheme
     )
-    renderCrosshair(mainSvg, getActivePoint(), fullScales, { width: contentWidth, height: chartHeight }, chartTheme)
+    renderCrosshair(
+      mainSvg,
+      getActivePoint(),
+      fullScales,
+      { width: contentWidth, height: chartHeight },
+      chartTheme
+    )
     renderPoints(mainSvg, model.points, fullScales, chartTheme, {
       activePointId: getActivePoint()?.id ?? null,
       hoverEnabled: !isMobile(),
@@ -543,7 +691,10 @@ export function createChart(container, seasons, options = {}) {
       (nextViewport) => {
         viewport = clampViewport(nextViewport, model)
         const maxScrollLeft = Math.max(contentWidth - chartWidth, 0)
-        const maxStart = Math.max(1, model.xMax - (viewport.end - viewport.start + 1) + 1)
+        const maxStart = Math.max(
+          1,
+          model.xMax - (viewport.end - viewport.start + 1) + 1
+        )
         const ratio = maxStart > 1 ? (viewport.start - 1) / (maxStart - 1) : 0
         setScrollLeftSuppressed(ratio * maxScrollLeft)
         render()
@@ -552,7 +703,14 @@ export function createChart(container, seasons, options = {}) {
     )
   }
 
-  function renderSparkline(chartTheme, sparklineScales, width, height, onViewportChange, onViewportReset) {
+  function renderSparkline(
+    chartTheme,
+    sparklineScales,
+    width,
+    height,
+    onViewportChange,
+    onViewportReset
+  ) {
     if (!sparkline) {
       sparkline = createSparkline(sparklineSvg, {
         model,
@@ -592,9 +750,21 @@ export function createChart(container, seasons, options = {}) {
     mainSvg.selectAll('*').remove()
 
     if (usesScrollableBody()) {
-      renderScrollableMobileChart(chartTheme, axisWidth, chartWidth, chartHeight, sparklineHeight)
+      renderScrollableMobileChart(
+        chartTheme,
+        axisWidth,
+        chartWidth,
+        chartHeight,
+        sparklineHeight
+      )
     } else {
-      renderDesktopChart(chartTheme, axisWidth, chartWidth, chartHeight, sparklineHeight)
+      renderDesktopChart(
+        chartTheme,
+        axisWidth,
+        chartWidth,
+        chartHeight,
+        sparklineHeight
+      )
     }
 
     const activePoint = getActivePoint()
@@ -604,8 +774,14 @@ export function createChart(container, seasons, options = {}) {
             width: getScrollableBodyWidth(chartWidth),
             height: chartHeight
           }).xScale
-        : createMainScales(model, viewport, { width: chartWidth, height: chartHeight }).xScale
-      shell.style.setProperty('--reading-pane-marker', `${scale(activePoint.x)}px`)
+        : createMainScales(model, viewport, {
+            width: chartWidth,
+            height: chartHeight
+          }).xScale
+      shell.style.setProperty(
+        '--reading-pane-marker',
+        `${scale(activePoint.x)}px`
+      )
       updateDetail(activePoint)
     } else {
       updateDetail(null)
@@ -651,13 +827,24 @@ export function createChart(container, seasons, options = {}) {
         return
       }
 
-      const horizontalDelta = Math.abs(event.deltaX) > 0 ? event.deltaX : event.shiftKey ? event.deltaY : 0
+      const horizontalDelta =
+        Math.abs(event.deltaX) > 0
+          ? event.deltaX
+          : event.shiftKey
+            ? event.deltaY
+            : 0
       if (!horizontalDelta) {
         return
       }
 
-      const visibleEpisodes = Math.max((viewport?.end ?? 1) - (viewport?.start ?? 1), 1)
-      const pixelsPerEpisode = Math.max(bodyShell.clientWidth / visibleEpisodes, 1)
+      const visibleEpisodes = Math.max(
+        (viewport?.end ?? 1) - (viewport?.start ?? 1),
+        1
+      )
+      const pixelsPerEpisode = Math.max(
+        bodyShell.clientWidth / visibleEpisodes,
+        1
+      )
       const deltaEpisodes = horizontalDelta / pixelsPerEpisode
 
       event.preventDefault()
@@ -684,7 +871,7 @@ export function createChart(container, seasons, options = {}) {
     const chartWidth = Math.max(bodyShell.clientWidth, 240)
     const viewportWidth = viewport.end - viewport.start
     const pixelsPerEpisode = chartWidth / viewportWidth
-    let velocity = -velocityPxPerMs * 16 / pixelsPerEpisode
+    let velocity = (-velocityPxPerMs * 16) / pixelsPerEpisode
 
     function step() {
       velocity *= FLING_FRICTION
@@ -693,10 +880,13 @@ export function createChart(container, seasons, options = {}) {
         return
       }
       const prev = viewport
-      viewport = clampViewport({
-        start: viewport.start + velocity,
-        end: viewport.end + velocity
-      }, model)
+      viewport = clampViewport(
+        {
+          start: viewport.start + velocity,
+          end: viewport.end + velocity
+        },
+        model
+      )
       if (viewport.start === prev.start && viewport.end === prev.end) {
         flingFrame = null
         return
@@ -741,7 +931,11 @@ export function createChart(container, seasons, options = {}) {
   })
 
   bodyShell.addEventListener('pointermove', (event) => {
-    if (!gesture || event.pointerType !== 'touch' || !gesture.pointers.has(event.pointerId)) {
+    if (
+      !gesture ||
+      event.pointerType !== 'touch' ||
+      !gesture.pointers.has(event.pointerId)
+    ) {
       return
     }
 
@@ -751,14 +945,18 @@ export function createChart(container, seasons, options = {}) {
       const xs = Array.from(gesture.pointers.values())
       const currentSpan = Math.abs(xs[1] - xs[0])
       const scale = gesture.initialSpan / Math.max(currentSpan, 1)
-      const startWidth = gesture.startViewport.end - gesture.startViewport.start + 1
+      const startWidth =
+        gesture.startViewport.end - gesture.startViewport.start + 1
       const startCenter = gesture.startViewport.start + (startWidth - 1) / 2
       const newWidth = Math.max(2, Math.round(startWidth * scale))
 
-      viewport = clampViewport({
-        start: startCenter - (newWidth - 1) / 2,
-        end: startCenter + (newWidth - 1) / 2
-      }, model)
+      viewport = clampViewport(
+        {
+          start: startCenter - (newWidth - 1) / 2,
+          end: startCenter + (newWidth - 1) / 2
+        },
+        model
+      )
       render()
       return
     }
@@ -779,14 +977,18 @@ export function createChart(container, seasons, options = {}) {
 
     gesture.type = 'pan'
     const chartWidth = Math.max(bodyShell.clientWidth, 240)
-    const viewportWidth = gesture.startViewport.end - gesture.startViewport.start
+    const viewportWidth =
+      gesture.startViewport.end - gesture.startViewport.start
     const pixelsPerEpisode = chartWidth / viewportWidth
     const deltaEpisodes = -deltaX / pixelsPerEpisode
 
-    viewport = clampViewport({
-      start: gesture.startViewport.start + deltaEpisodes,
-      end: gesture.startViewport.end + deltaEpisodes
-    }, model)
+    viewport = clampViewport(
+      {
+        start: gesture.startViewport.start + deltaEpisodes,
+        end: gesture.startViewport.end + deltaEpisodes
+      },
+      model
+    )
     render()
   })
 
@@ -859,6 +1061,7 @@ export function createChart(container, seasons, options = {}) {
     moveEpisode,
     moveSeason,
     jumpBoundary,
+    updateSeasons,
     getDebugState() {
       return {
         selectedPointId,
