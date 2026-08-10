@@ -5,7 +5,6 @@ import {
   getShowBundle,
   parseShowRef
 } from '../data/provider.js'
-import { getUrlParams } from '../lib/url.js'
 import { createChart } from '../viz/ratingsChart.js'
 import { formatRatingBadge, renderError, renderLoading, renderPublisherBrand } from './shared.js'
 import { requestSearchFocusOnNextPage } from './search.js'
@@ -181,19 +180,7 @@ export async function renderResultsPage(container, showRef) {
 }
 
 function buildBackHref() {
-  const params = getUrlParams()
-  const nextParams = new URLSearchParams()
-  if (params.has('q')) {
-    nextParams.set('q', params.get('q'))
-  }
-  if (params.has('debug')) {
-    nextParams.set('debug', params.get('debug') || '1')
-  }
-  if (params.has('api')) {
-    nextParams.set('api', params.get('api'))
-  }
-
-  return nextParams.toString() ? `?${nextParams.toString()}` : window.location.pathname
+  return window.location.pathname
 }
 
 function escapeHtml(value) {
