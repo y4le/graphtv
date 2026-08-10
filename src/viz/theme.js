@@ -39,7 +39,7 @@ const THEME_TOKENS = {
 
 const SETTINGS_DEFAULTS = {
   theme: 'light',
-  palette: 'subtle',
+  palette: 'monotone',
   seasonTrendlines: true,
   fullShowTrendline: false
 }

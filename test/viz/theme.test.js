@@ -1,6 +1,24 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 
-import { APP_FONT_STACK, getChartTheme, updateUiSettings } from '../../src/viz/theme.js'
+import {
+  APP_FONT_STACK,
+  getChartTheme,
+  initializeTheme,
+  updateUiSettings
+} from '../../src/viz/theme.js'
+
+beforeEach(() => {
+  window.localStorage.clear()
+})
+
+describe('theme defaults', () => {
+  it('starts with the mono palette when no preference is stored', () => {
+    const settings = initializeTheme()
+
+    expect(settings.palette).toBe('monotone')
+    expect(document.documentElement.dataset.palette).toBe('monotone')
+  })
+})
 
 describe('theme accents', () => {
   it.each(['light', 'dark'])('uses the single house accent in the %s theme', (theme) => {
