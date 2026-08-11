@@ -206,9 +206,7 @@ function renderRawJsonLink(section) {
     return ''
   }
 
-  const href = `data:application/json;charset=utf-8,${encodeURIComponent(
-    JSON.stringify(section.data, null, 2)
-  )}`
+  const href = `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(section.data, null, 2))}`
 
   return `<a class="debug-raw-link" href="${escapeAttribute(href)}" target="_blank" rel="noreferrer">raw</a>`
 }
@@ -220,9 +218,17 @@ function isRawJsonSection(section) {
 function renderProviderCatalogTable(rows) {
   const columns = [
     { key: 'provider', label: 'Provider' },
-    { key: 'configured', label: 'Status', format: (value) => (value ? 'configured' : 'missing') },
+    {
+      key: 'configured',
+      label: 'Status',
+      format: (value) => (value ? 'configured' : 'missing')
+    },
     { key: 'access', label: 'Access' },
-    { key: 'requirement', label: 'Requirement', format: (value) => value || 'none' }
+    {
+      key: 'requirement',
+      label: 'Requirement',
+      format: (value) => value || 'none'
+    }
   ]
 
   return `
@@ -419,6 +425,9 @@ export function openViewOptionsOverlay(overlayController) {
         if (row?.dataset.option === 'full-show-trendline') {
           toggleSetting('fullShowTrendline')
         }
+        if (row?.dataset.option === 'source-spread') {
+          toggleSetting('showSourceSpread')
+        }
         if (row?.dataset.option === 'absolute-y-axis') {
           toggleSetting('absoluteYAxis')
         }
@@ -446,6 +455,12 @@ export function openViewOptionsOverlay(overlayController) {
       if (event.key === 'f') {
         event.preventDefault()
         toggleSetting('fullShowTrendline')
+        syncViewOptions(content)
+      }
+
+      if (event.key === 'r') {
+        event.preventDefault()
+        toggleSetting('showSourceSpread')
         syncViewOptions(content)
       }
 
@@ -490,6 +505,13 @@ function renderViewOptionsContent() {
           ${renderToggleButtons('fullShowTrendline', settings.fullShowTrendline)}
         </span>
         <span class="view-option-hint">f</span>
+      </div>
+      <div class="view-option-row" data-option="source-spread" tabindex="0">
+        <span class="view-option-label">Show source spread</span>
+        <span class="view-option-values">
+          ${renderToggleButtons('showSourceSpread', settings.showSourceSpread)}
+        </span>
+        <span class="view-option-hint">r</span>
       </div>
       <div class="view-option-row" data-option="absolute-y-axis" tabindex="0">
         <span class="view-option-label">Absolute y-axis (0–10)</span>
@@ -552,10 +574,7 @@ function renderValueButton(kind, value, isActive) {
 }
 
 function renderToggleButtons(settingKey, isEnabled) {
-  return [
-    renderToggleButton(settingKey, true, isEnabled),
-    renderToggleButton(settingKey, false, !isEnabled)
-  ].join('')
+  return [renderToggleButton(settingKey, true, isEnabled), renderToggleButton(settingKey, false, !isEnabled)].join('')
 }
 
 function renderToggleButton(settingKey, value, isActive) {
@@ -631,10 +650,7 @@ function trapFocus(event, panel) {
 
   const currentIndex = focusable.indexOf(document.activeElement)
   const direction = event.shiftKey ? -1 : 1
-  const nextIndex =
-    currentIndex === -1
-      ? 0
-      : (currentIndex + direction + focusable.length) % focusable.length
+  const nextIndex = currentIndex === -1 ? 0 : (currentIndex + direction + focusable.length) % focusable.length
 
   event.preventDefault()
   focusable[nextIndex].focus({ preventScroll: true })
@@ -642,17 +658,12 @@ function trapFocus(event, panel) {
 
 function getFocusable(root) {
   return Array.from(
-    root.querySelectorAll(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    )
+    root.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
   ).filter((element) => !element.hasAttribute('disabled') && !element.getAttribute('aria-hidden'))
 }
 
 function escapeHtml(value) {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
+  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
 }
 
 function escapeAttribute(value) {

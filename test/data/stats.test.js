@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
-import { getAverageRating, linearRegression, linearRegressionFromPoints, trendline, trendlineFromPoints } from '../../src/data/stats.js'
+import {
+  getRatingSpread,
+  linearRegression,
+  linearRegressionFromPoints,
+  resolveEpisodeRating,
+  selectPrimaryRatingSource,
+  trendline,
+  trendlineFromPoints
+} from '../../src/data/stats.js'
 
 describe('data/stats', () => {
   it('computes a standard linear regression', () => {
@@ -61,24 +69,89 @@ describe('data/stats', () => {
     ])
   })
 
-  it('averages provider ratings while ignoring nulls', () => {
-    expect(
-      getAverageRating([
-        { source: 'tvmaze', rating: 8.1, votes: null },
-        { source: 'tmdb', rating: null, votes: 120 },
-        { source: 'omdb', rating: 8.7, votes: 6200 }
-      ])
-    ).toBeCloseTo(8.4, 6)
+  it('selects IMDb when it covers at least 60% of rateable episodes', () => {
+    const episodes = Array.from({ length: 5 }, (_, index) => ({
+      ratings: [
+        { source: 'tmdb', rating: 8 + index / 10 },
+        ...(index < 3 ? [{ source: 'omdb', rating: 8.5 + index / 10 }] : [])
+      ]
+    }))
+
+    expect(selectPrimaryRatingSource(episodes)).toMatchObject({
+      source: 'omdb',
+      eligibleEpisodes: 5
+    })
   })
 
-  it('treats zero and non-finite provider ratings as missing', () => {
+  it('uses the next preferred provider when IMDb coverage is too sparse', () => {
+    const episodes = Array.from({ length: 5 }, (_, index) => ({
+      ratings: [
+        { source: 'tmdb', rating: 8 + index / 10 },
+        ...(index < 2 ? [{ source: 'omdb', rating: 8.5 + index / 10 }] : [])
+      ]
+    }))
+
+    expect(selectPrimaryRatingSource(episodes).source).toBe('tmdb')
+  })
+
+  it('does not count episodes with no provider rating against source coverage', () => {
+    const episodes = [
+      { ratings: [{ source: 'omdb', rating: 8.1 }] },
+      { ratings: [{ source: 'omdb', rating: 8.2 }] },
+      { ratings: [{ source: 'tmdb', rating: 8.3 }] },
+      { ratings: [{ source: 'omdb', rating: null }] },
+      { ratings: [] }
+    ]
+
+    expect(selectPrimaryRatingSource(episodes)).toMatchObject({
+      source: 'omdb',
+      eligibleEpisodes: 3
+    })
+  })
+
+  it('resolves missing primary ratings by priority without averaging', () => {
     expect(
-      getAverageRating([
-        { source: 'tvmaze', rating: 8.2, votes: null },
-        { source: 'tmdb', rating: 0, votes: 0 },
-        { source: 'omdb', rating: Number.NaN, votes: null }
+      resolveEpisodeRating(
+        [
+          { source: 'tvmaze', rating: 8.1 },
+          { source: 'tmdb', rating: 8.4 },
+          { source: 'omdb', rating: null }
+        ],
+        'omdb'
+      )
+    ).toEqual({
+      rating: 8.4,
+      ratingSource: 'tmdb',
+      isFallbackRating: true
+    })
+  })
+
+  it('excludes weak episode alignments from source selection and spread', () => {
+    const weakOmdbRating = {
+      source: 'omdb',
+      rating: 9.8,
+      provenance: {
+        relation: 'one-to-one',
+        confidence: 'moderate'
+      }
+    }
+    const tmdbRating = { source: 'tmdb', rating: 8.2 }
+
+    expect(selectPrimaryRatingSource([{ ratings: [weakOmdbRating, tmdbRating] }]).source).toBe('tmdb')
+    expect(getRatingSpread([weakOmdbRating, tmdbRating])).toBeNull()
+  })
+
+  it('summarizes trustworthy provider disagreement as a range', () => {
+    expect(
+      getRatingSpread([
+        { source: 'tvmaze', rating: 8.1 },
+        { source: 'tmdb', rating: 8.4 },
+        { source: 'omdb', rating: 8.7 }
       ])
-    ).toBe(8.2)
-    expect(getAverageRating([{ source: 'tmdb', rating: 0, votes: 0 }])).toBeNull()
+    ).toEqual({
+      min: 8.1,
+      max: 8.7,
+      sources: ['tvmaze', 'tmdb', 'omdb']
+    })
   })
 })

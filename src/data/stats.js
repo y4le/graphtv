@@ -92,15 +92,117 @@ export function isUsableRating(value) {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 && value <= 10
 }
 
-export function getAverageRating(ratings = []) {
-  const numericRatings = ratings
-    .map((rating) => rating.rating)
-    .filter(isUsableRating)
+// These are explicit product-policy choices, not statistical weights.
+export const RATING_SOURCE_PRIORITY = ['omdb', 'tmdb', 'tvmaze']
+export const MIN_PRIMARY_RATING_COVERAGE = 0.6
 
-  if (numericRatings.length === 0) {
+export function isTrustedRating(rating) {
+  if (!rating?.provenance) {
+    return true
+  }
+
+  return rating.provenance.relation === 'one-to-one' && rating.provenance.confidence === 'strong'
+}
+
+export function isUsableProviderRating(rating) {
+  return isTrustedRating(rating) && isUsableRating(rating?.rating)
+}
+
+export function selectPrimaryRatingSource(
+  episodes = [],
+  { priority = RATING_SOURCE_PRIORITY, minimumCoverage = MIN_PRIMARY_RATING_COVERAGE } = {}
+) {
+  const eligibleEpisodes = episodes.filter((episode) => episode.ratings?.some(isUsableProviderRating))
+  const counts = new Map()
+
+  for (const episode of eligibleEpisodes) {
+    const sources = new Set(episode.ratings.filter(isUsableProviderRating).map((rating) => rating.source))
+    for (const source of sources) {
+      counts.set(source, (counts.get(source) ?? 0) + 1)
+    }
+  }
+
+  const eligibleCount = eligibleEpisodes.length
+  const coverage = Array.from(counts, ([source, ratedEpisodes]) => ({
+    source,
+    ratedEpisodes,
+    eligibleEpisodes: eligibleCount,
+    coverage: eligibleCount > 0 ? ratedEpisodes / eligibleCount : 0
+  })).sort((left, right) => {
+    const coverageDifference = right.coverage - left.coverage
+    if (coverageDifference !== 0) {
+      return coverageDifference
+    }
+
+    return sourceRank(left.source, priority) - sourceRank(right.source, priority)
+  })
+
+  const source =
+    priority.find((candidate) => (counts.get(candidate) ?? 0) / Math.max(eligibleCount, 1) >= minimumCoverage) ??
+    coverage[0]?.source ??
+    null
+
+  return {
+    source,
+    minimumCoverage,
+    eligibleEpisodes: eligibleCount,
+    coverage
+  }
+}
+
+export function resolveEpisodeRating(ratings = [], primarySource, priority = RATING_SOURCE_PRIORITY) {
+  const usableRatings = ratings.filter(isUsableProviderRating)
+  const sources = [primarySource, ...priority, ...usableRatings.map((rating) => rating.source)].filter(
+    (source, index, values) => source && values.indexOf(source) === index
+  )
+
+  for (const source of sources) {
+    const providerRating = usableRatings.find((rating) => rating.source === source)
+    if (providerRating) {
+      return {
+        rating: providerRating.rating,
+        ratingSource: providerRating.source,
+        isFallbackRating: providerRating.source !== primarySource
+      }
+    }
+  }
+
+  return {
+    rating: null,
+    ratingSource: null,
+    isFallbackRating: false
+  }
+}
+
+export function getRatingSpread(ratings = []) {
+  const usableRatings = ratings.filter(isUsableProviderRating)
+  if (usableRatings.length < 2) {
     return null
   }
 
-  const total = numericRatings.reduce((sum, rating) => sum + rating, 0)
-  return total / numericRatings.length
+  const values = usableRatings.map((rating) => rating.rating)
+  return {
+    min: Math.min(...values),
+    max: Math.max(...values),
+    sources: usableRatings.map((rating) => rating.source)
+  }
+}
+
+export function getRatingSourceLabel(source) {
+  if (source === 'omdb') {
+    return 'IMDb (via OMDb)'
+  }
+  if (source === 'tmdb') {
+    return 'TMDB'
+  }
+  if (source === 'tvmaze') {
+    return 'TVmaze'
+  }
+
+  return String(source ?? '').toUpperCase()
+}
+
+function sourceRank(source, priority) {
+  const index = priority.indexOf(source)
+  return index === -1 ? Number.MAX_SAFE_INTEGER : index
 }

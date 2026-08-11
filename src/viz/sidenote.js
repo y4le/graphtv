@@ -1,7 +1,12 @@
-import { isUsableRating } from '../data/stats.js'
+import {
+  getRatingSourceLabel,
+  isTrustedRating,
+  isUsableRating
+} from '../data/stats.js'
 
 function formatRatingList(point) {
   return point.ratings
+    .filter(isTrustedRating)
     .map((rating) => {
       const votes =
         typeof rating.votes === 'number'
@@ -9,10 +14,17 @@ function formatRatingList(point) {
           : ''
 
       if (!isUsableRating(rating.rating)) {
-        return `<li>${rating.source.toUpperCase()}: n/a${votes}</li>`
+        return `<li>${getRatingSourceLabel(rating.source)}: n/a${votes}</li>`
       }
 
-      return `<li>${rating.source.toUpperCase()}: ${rating.rating.toFixed(1)}${votes}</li>`
+      const plotted =
+        rating.source === point.ratingSource
+          ? point.isFallbackRating
+            ? ' · plotted fallback'
+            : ' · plotted'
+          : ''
+
+      return `<li>${getRatingSourceLabel(rating.source)}: ${rating.rating.toFixed(1)}${votes}${plotted}</li>`
     })
     .join('')
 }

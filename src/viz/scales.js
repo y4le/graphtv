@@ -1,12 +1,20 @@
 import { scaleLinear } from 'd3'
 
-import { getAverageRating, isUsableRating, linearRegressionFromPoints } from '../data/stats.js'
+import {
+  getRatingSpread,
+  isUsableRating,
+  linearRegressionFromPoints,
+  resolveEpisodeRating,
+  selectPrimaryRatingSource
+} from '../data/stats.js'
 
 const MIN_RATING = 0
 const MAX_RATING = 10
 const X_EDGE_INSET = 6
 
 export function buildChartModel(seasons) {
+  const episodes = seasons.flatMap((season) => season.episodes)
+  const primaryRating = selectPrimaryRatingSource(episodes)
   const points = []
   const seasonSpans = []
   const seasonTrendlines = []
@@ -17,11 +25,12 @@ export function buildChartModel(seasons) {
     const start = absoluteIndex
 
     season.episodes.forEach((episode) => {
-      const rating = getAverageRating(episode.ratings)
+      const resolvedRating = resolveEpisodeRating(episode.ratings, primaryRating.source)
       const point = {
         ...episode,
         x: absoluteIndex,
-        rating,
+        ...resolvedRating,
+        ratingSpread: getRatingSpread(episode.ratings),
         seasonIndex
       }
 
@@ -40,7 +49,7 @@ export function buildChartModel(seasons) {
       midpoint: start + (end - start) / 2
     })
 
-    const ratedSeasonPoints = seasonPoints.filter((point) => isUsableRating(point.rating))
+    const ratedSeasonPoints = seasonPoints.filter((point) => isUsableRating(point.rating) && !point.isFallbackRating)
     const regression = linearRegressionFromPoints(
       ratedSeasonPoints.map((point) => ({
         x: point.x,
@@ -48,7 +57,7 @@ export function buildChartModel(seasons) {
       }))
     )
 
-    if (regression && ratedSeasonPoints.length > 1) {
+    if (regression && ratedSeasonPoints.length >= 3) {
       seasonTrendlines.push({
         seasonNumber: season.number,
         seasonIndex,
@@ -60,16 +69,24 @@ export function buildChartModel(seasons) {
   })
 
   const ratedPoints = points.filter((point) => isUsableRating(point.rating))
-  const macroRegression = linearRegressionFromPoints(
-    ratedPoints.map((point) => ({
-      x: point.x,
-      y: point.rating
-    }))
-  )
+  const primaryRatedPoints = ratedPoints.filter((point) => !point.isFallbackRating)
+  const macroRegression =
+    primaryRatedPoints.length >= 3
+      ? linearRegressionFromPoints(
+          primaryRatedPoints.map((point) => ({
+            x: point.x,
+            y: point.rating
+          }))
+        )
+      : null
 
   return {
     points,
     ratedPoints,
+    primaryRatedPoints,
+    primaryRatingSource: primaryRating.source,
+    ratingSourceCoverage: primaryRating.coverage,
+    minimumPrimaryCoverage: primaryRating.minimumCoverage,
     seasonSpans,
     seasonTrendlines,
     macroRegression,
@@ -152,7 +169,7 @@ export function getVisibleSeasonTrendlines(model, viewport) {
 }
 
 export function getMacroTrendline(model, viewport) {
-  if (!model.macroRegression || model.ratedPoints.length <= 1) {
+  if (!model.macroRegression || model.primaryRatedPoints.length < 3) {
     return null
   }
 
@@ -180,15 +197,10 @@ export function createSparklineScales(model, dimensions, options = {}) {
 
 export function createMainScales(model, viewport, dimensions, options = {}) {
   const visibleRatedPoints = getVisibleRatedPoints(model, viewport)
-  const domain = resolveRatingDomain(
-    visibleRatedPoints.length ? visibleRatedPoints : model.ratedPoints,
-    options
-  )
+  const domain = resolveRatingDomain(visibleRatedPoints.length ? visibleRatedPoints : model.ratedPoints, options)
 
   return {
-    xScale: scaleLinear()
-      .domain([viewport.start, viewport.end])
-      .range(resolveXRange(dimensions.width)),
+    xScale: scaleLinear().domain([viewport.start, viewport.end]).range(resolveXRange(dimensions.width)),
     yScale: scaleLinear().domain(domain).range([dimensions.height, 0]),
     yDomain: domain
   }
@@ -212,12 +224,17 @@ function resolveXRange(width) {
   return [X_EDGE_INSET, width - X_EDGE_INSET]
 }
 
-function resolveRatingDomain(points, { absoluteYAxis = false } = {}) {
+function resolveRatingDomain(points, { absoluteYAxis = false, showSourceSpread = false } = {}) {
   if (absoluteYAxis) {
     return [MIN_RATING, MAX_RATING]
   }
 
-  const ratings = points.map((point) => point.rating).filter(isUsableRating)
+  const ratings = points
+    .flatMap((point) => [
+      point.rating,
+      ...(showSourceSpread && point.ratingSpread ? [point.ratingSpread.min, point.ratingSpread.max] : [])
+    ])
+    .filter(isUsableRating)
 
   if (ratings.length === 0) {
     return [MIN_RATING, MAX_RATING]
@@ -227,17 +244,11 @@ function resolveRatingDomain(points, { absoluteYAxis = false } = {}) {
   const maxRating = Math.max(...ratings)
 
   if (minRating === maxRating) {
-    return [
-      clamp(minRating - 0.6, MIN_RATING, MAX_RATING),
-      clamp(maxRating + 0.6, MIN_RATING, MAX_RATING)
-    ]
+    return [clamp(minRating - 0.6, MIN_RATING, MAX_RATING), clamp(maxRating + 0.6, MIN_RATING, MAX_RATING)]
   }
 
   const padding = Math.max((maxRating - minRating) * 0.15, 0.18)
-  return [
-    clamp(minRating - padding, MIN_RATING, MAX_RATING),
-    clamp(maxRating + padding, MIN_RATING, MAX_RATING)
-  ]
+  return [clamp(minRating - padding, MIN_RATING, MAX_RATING), clamp(maxRating + padding, MIN_RATING, MAX_RATING)]
 }
 
 function projectRegression(regression, x) {

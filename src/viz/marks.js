@@ -4,6 +4,9 @@ import { isUsableRating } from '../data/stats.js'
 
 const formatRating = format('.1f')
 const Y_LABEL_INSET = 8
+const MIN_SOURCE_SPREAD_PIXELS = 3
+const SOURCE_SPREAD_OPACITY = 0.16
+const CLIPPED_SPREAD_NUB_WIDTH = 4
 
 export function renderRangeFrame(svg, scales, dimensions, theme) {
   const [minRating, maxRating] = scales.yDomain
@@ -22,11 +25,14 @@ export function renderRangeFrame(svg, scales, dimensions, theme) {
     .attr('stroke', theme.textSecondary)
     .attr('stroke-width', 1)
 
-  const ticks = axis.selectAll('.range-tick').data(tickValues, (tick) => String(tick)).join((enter) => {
-    const group = enter.append('g').attr('class', 'range-tick')
-    group.append('text')
-    return group
-  })
+  const ticks = axis
+    .selectAll('.range-tick')
+    .data(tickValues, (tick) => String(tick))
+    .join((enter) => {
+      const group = enter.append('g').attr('class', 'range-tick')
+      group.append('text')
+      return group
+    })
 
   ticks
     .select('text')
@@ -122,6 +128,70 @@ export function renderCrosshair(svg, point, scales, dimensions, theme) {
     .attr('stroke-dasharray', '3 4')
 }
 
+export function renderSourceSpreads(svg, points, scales, dimensions, theme, visible = true) {
+  const [domainMin, domainMax] = scales.yDomain
+  const spreads = visible
+    ? points
+        .filter((point) => point.ratingSpread)
+        .map((point) => {
+          const min = clamp(point.ratingSpread.min, domainMin, domainMax)
+          const max = clamp(point.ratingSpread.max, domainMin, domainMax)
+          return {
+            ...point.ratingSpread,
+            id: point.id,
+            x: scales.xScale(point.x),
+            y1: scales.yScale(min),
+            y2: scales.yScale(max),
+            clippedMin: point.ratingSpread.min < domainMin,
+            clippedMax: point.ratingSpread.max > domainMax
+          }
+        })
+        .filter(
+          (spread) =>
+            Math.abs(spread.y2 - spread.y1) >= MIN_SOURCE_SPREAD_PIXELS || spread.clippedMin || spread.clippedMax
+        )
+    : []
+
+  const spreadLayer = svg
+    .selectAll('.source-spread-layer')
+    .data([null])
+    .join('g')
+    .attr('class', 'source-spread-layer')
+    .attr('pointer-events', 'none')
+
+  spreadLayer
+    .selectAll('.source-spread')
+    .data(spreads, (spread) => spread.id)
+    .join('line')
+    .attr('class', 'source-spread')
+    .attr('x1', (spread) => spread.x)
+    .attr('x2', (spread) => spread.x)
+    .attr('y1', (spread) => spread.y1)
+    .attr('y2', (spread) => spread.y2)
+    .attr('stroke', theme.textSecondary)
+    .attr('stroke-opacity', SOURCE_SPREAD_OPACITY)
+    .attr('stroke-width', 1.25)
+    .attr('stroke-linecap', 'round')
+
+  const clippedEnds = spreads.flatMap((spread) => [
+    ...(spread.clippedMin ? [{ id: `${spread.id}:min`, x: spread.x, y: dimensions.height }] : []),
+    ...(spread.clippedMax ? [{ id: `${spread.id}:max`, x: spread.x, y: 0 }] : [])
+  ])
+
+  spreadLayer
+    .selectAll('.source-spread-clip')
+    .data(clippedEnds, (end) => end.id)
+    .join('line')
+    .attr('class', 'source-spread-clip')
+    .attr('x1', (end) => end.x - CLIPPED_SPREAD_NUB_WIDTH / 2)
+    .attr('x2', (end) => end.x + CLIPPED_SPREAD_NUB_WIDTH / 2)
+    .attr('y1', (end) => end.y)
+    .attr('y2', (end) => end.y)
+    .attr('stroke', theme.textSecondary)
+    .attr('stroke-opacity', SOURCE_SPREAD_OPACITY)
+    .attr('stroke-width', 1.25)
+}
+
 export function renderPoints(svg, points, scales, theme, interactions) {
   const pointLayer = svg.selectAll('.point-layer').data([null]).join('g').attr('class', 'point-layer')
   const plottedPoints = points.filter((point) => isUsableRating(point.rating))
@@ -134,11 +204,25 @@ export function renderPoints(svg, points, scales, theme, interactions) {
     .attr('cx', (point) => scales.xScale(point.x))
     .attr('cy', (point) => scales.yScale(point.rating))
     .attr('r', (point) => (point.id === interactions.activePointId ? 4.5 : 3))
-    .attr('fill', (point) =>
-      point.id === interactions.activePointId
+    .attr('fill', (point) => {
+      if (point.isFallbackRating) {
+        return theme.background
+      }
+      return point.id === interactions.activePointId
         ? theme.spotColor
         : theme.seasonColor(point.seasonIndex, interactions.totalSeasons)
-    )
+    })
+    .attr('stroke', (point) => {
+      if (!point.isFallbackRating) {
+        return 'none'
+      }
+      return point.id === interactions.activePointId
+        ? theme.spotColor
+        : theme.seasonColor(point.seasonIndex, interactions.totalSeasons)
+    })
+    .attr('stroke-width', (point) => (point.isFallbackRating ? 1.5 : 0))
+    .attr('data-rating-source', (point) => point.ratingSource)
+    .attr('data-rating-fallback', (point) => String(point.isFallbackRating))
     .on('mouseenter', (_, point) => interactions.hoverEnabled && interactions.onHover(point))
     .on('mouseleave', () => interactions.hoverEnabled && interactions.onLeave())
     .on('click', (event, point) => {

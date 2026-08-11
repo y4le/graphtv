@@ -13,7 +13,7 @@ beforeEach(() => {
       disconnect() {}
     }
   )
-  updateUiSettings({ absoluteYAxis: false })
+  updateUiSettings({ absoluteYAxis: false, showSourceSpread: true })
   vi.stubGlobal(
     'matchMedia',
     vi.fn((query) => ({
@@ -72,6 +72,71 @@ describe('createChart', () => {
     )
   })
 
+  it('shows provider disagreement by default and lets the setting hide it', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+    const seasons = createSeasons()
+    seasons[0].episodes[0].ratings.push({ source: 'tmdb', rating: 1 })
+
+    chart = createChart(container, seasons)
+
+    expect(container.querySelectorAll('.source-spread')).toHaveLength(1)
+    expect(
+      container.querySelector('.chart-source-status').textContent
+    ).toContain('Plotting TEST')
+    expect(
+      container.querySelector('.chart-source-status').textContent
+    ).toContain('source spread shows TMDB')
+    expect(getAxisLabels(container)).toEqual(
+      expect.arrayContaining(['0.0', '10.0'])
+    )
+
+    updateUiSettings({ showSourceSpread: false })
+
+    expect(container.querySelectorAll('.source-spread')).toHaveLength(0)
+    expect(getAxisLabels(container)).not.toContain('0.0')
+  })
+
+  it('renders a borrowed provider rating as a hollow point', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+    const seasons = [
+      {
+        number: 1,
+        episodes: [
+          createRatedEpisode('one', [
+            { source: 'omdb', rating: 8 },
+            { source: 'tmdb', rating: 7 }
+          ]),
+          createRatedEpisode('two', [
+            { source: 'omdb', rating: 8.2 },
+            { source: 'tmdb', rating: 7.2 }
+          ]),
+          createRatedEpisode('three', [
+            { source: 'omdb', rating: 8.4 },
+            { source: 'tmdb', rating: 7.4 }
+          ]),
+          createRatedEpisode('four', [{ source: 'tmdb', rating: 7.6 }])
+        ]
+      }
+    ]
+
+    chart = createChart(container, seasons)
+
+    const fallback = container.querySelector('[data-rating-fallback="true"]')
+    expect(fallback).not.toBeNull()
+    expect(fallback.getAttribute('fill')).toBe('#FDFCF8')
+    expect(fallback.getAttribute('stroke')).not.toBe('none')
+  })
+
   it('renders episode details outside the chart when given a detail root', () => {
     const container = document.createElement('div')
     const detailRoot = document.createElement('section')
@@ -87,6 +152,7 @@ describe('createChart', () => {
     expect(container.querySelector('.reading-pane-shell')).toBeNull()
     expect(detailRoot.querySelector('.sidenote-card')).not.toBeNull()
     expect(detailRoot.textContent).toContain('Episode 2')
+    expect(detailRoot.textContent).toContain('TEST: 7.0 · plotted')
   })
 
   it('updates provider ratings in place while preserving the selected episode', () => {
@@ -149,7 +215,11 @@ describe('createChart', () => {
     await vi.advanceTimersByTimeAsync(250)
 
     const updatedSeasons = createSeasons()
-    updatedSeasons[0].episodes[0].ratings.push({ source: 'tmdb', rating: 9, votes: 500 })
+    updatedSeasons[0].episodes[0].ratings.push({
+      source: 'tmdb',
+      rating: 9,
+      votes: 500
+    })
     chart.updateSeasons(updatedSeasons)
     resolveDetails()
     await Promise.resolve()
@@ -185,7 +255,9 @@ describe('createChart', () => {
     await vi.advanceTimersByTimeAsync(1)
     expect(loadEpisodeDetails).toHaveBeenCalledTimes(1)
     expect(loadEpisodeDetails.mock.calls[0][0].title).toBe('Episode 3')
-    expect(detailRoot.textContent).toContain('OMDB: n/a · 3,379 votes')
+    expect(detailRoot.textContent).toContain(
+      'IMDb (via OMDb): n/a · 3,379 votes'
+    )
   })
 
   it('does not load episode details from hover', async () => {
@@ -264,4 +336,14 @@ function createSeasons() {
       }))
     }
   ]
+}
+
+function createRatedEpisode(id, ratings) {
+  return {
+    id,
+    title: id,
+    season: 1,
+    episode: Number.NaN,
+    ratings
+  }
 }

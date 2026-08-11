@@ -42,6 +42,7 @@ const SETTINGS_DEFAULTS = {
   palette: 'monotone',
   seasonTrendlines: true,
   fullShowTrendline: false,
+  showSourceSpread: true,
   absoluteYAxis: false
 }
 
@@ -80,17 +81,15 @@ function sanitizeSettings(candidate = {}) {
     theme: THEMES.includes(candidate.theme) ? candidate.theme : getSystemTheme(),
     palette: PALETTES.includes(candidate.palette) ? candidate.palette : SETTINGS_DEFAULTS.palette,
     seasonTrendlines:
-      typeof candidate.seasonTrendlines === 'boolean'
-        ? candidate.seasonTrendlines
-        : SETTINGS_DEFAULTS.seasonTrendlines,
+      typeof candidate.seasonTrendlines === 'boolean' ? candidate.seasonTrendlines : SETTINGS_DEFAULTS.seasonTrendlines,
     fullShowTrendline:
       typeof candidate.fullShowTrendline === 'boolean'
         ? candidate.fullShowTrendline
         : SETTINGS_DEFAULTS.fullShowTrendline,
+    showSourceSpread:
+      typeof candidate.showSourceSpread === 'boolean' ? candidate.showSourceSpread : SETTINGS_DEFAULTS.showSourceSpread,
     absoluteYAxis:
-      typeof candidate.absoluteYAxis === 'boolean'
-        ? candidate.absoluteYAxis
-        : SETTINGS_DEFAULTS.absoluteYAxis
+      typeof candidate.absoluteYAxis === 'boolean' ? candidate.absoluteYAxis : SETTINGS_DEFAULTS.absoluteYAxis
   }
 }
 
@@ -227,7 +226,6 @@ export function getChartTheme(settings = uiSettings) {
     spotColor: themeTokens.spotColor,
     spotColorMuted: themeTokens.spotColorMuted,
     canvasSubtle: themeTokens.canvasSubtle,
-    seasonColor: (seasonIndex, totalSeasons) =>
-      seasonColor(settings.palette, seasonIndex, totalSeasons, settings.theme)
+    seasonColor: (seasonIndex, totalSeasons) => seasonColor(settings.palette, seasonIndex, totalSeasons, settings.theme)
   }
 }

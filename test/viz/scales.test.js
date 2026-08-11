@@ -8,7 +8,7 @@ import {
 } from '../../src/viz/scales.js'
 
 describe('rating scale domains', () => {
-  it('excludes missing and zero ratings from averages and the y-axis domain', () => {
+  it('excludes missing and zero ratings from primary selection and the y-axis domain', () => {
     const model = createModel()
     const scales = createMainScales(model, { start: 1, end: 4 }, { width: 600, height: 400 })
 
@@ -18,14 +18,87 @@ describe('rating scale domains', () => {
     expect(scales.yDomain).toEqual([8.02, 8.78])
   })
 
+  it('uses a show-wide preferred source and marks per-episode fallbacks', () => {
+    const model = buildChartModel([
+      {
+        number: 1,
+        episodes: Array.from({ length: 5 }, (_, index) =>
+          createEpisode(`episode-${index}`, [
+            { source: 'tmdb', rating: 7 + index / 10 },
+            ...(index < 3 ? [{ source: 'omdb', rating: 9 + index / 10 }] : [])
+          ])
+        )
+      }
+    ])
+
+    expect(model.primaryRatingSource).toBe('omdb')
+    expect(model.points.map((point) => point.rating)).toEqual([9, 9.1, 9.2, 7.3, 7.4])
+    expect(model.points.map((point) => point.isFallbackRating)).toEqual([false, false, false, true, true])
+    expect(model.primaryRatedPoints).toHaveLength(3)
+    expect(model.seasonTrendlines).toHaveLength(1)
+  })
+
+  it('does not let fallback values influence trendline regression', () => {
+    const model = buildChartModel([
+      {
+        number: 1,
+        episodes: [
+          createEpisode('one', [{ source: 'omdb', rating: 7 }]),
+          createEpisode('two', [{ source: 'omdb', rating: 8 }]),
+          createEpisode('three', [{ source: 'omdb', rating: 9 }]),
+          createEpisode('fallback', [{ source: 'tmdb', rating: 1 }])
+        ]
+      }
+    ])
+
+    expect(model.macroRegression).toEqual({ slope: 1, intercept: 6 })
+    expect(model.seasonTrendlines[0].endX).toBe(3)
+  })
+
+  it('includes source-spread endpoints in the y-axis domain only while they are visible', () => {
+    const model = buildChartModel([
+      {
+        number: 1,
+        episodes: [
+          createEpisode('one', [
+            { source: 'omdb', rating: 8.1 },
+            { source: 'tmdb', rating: 1 }
+          ]),
+          createEpisode('two', [
+            { source: 'omdb', rating: 8.3 },
+            { source: 'tmdb', rating: 10 }
+          ]),
+          createEpisode('three', [
+            { source: 'omdb', rating: 8.5 },
+            { source: 'tmdb', rating: 5 }
+          ])
+        ]
+      }
+    ])
+    const primaryOnlyScales = createMainScales(
+      model,
+      { start: 1, end: 3 },
+      { width: 600, height: 400 },
+      { showSourceSpread: false }
+    )
+    const spreadScales = createMainScales(
+      model,
+      { start: 1, end: 3 },
+      { width: 600, height: 400 },
+      { showSourceSpread: true }
+    )
+
+    expect(primaryOnlyScales.yDomain[0]).toBeGreaterThan(7)
+    expect(primaryOnlyScales.yDomain[1]).toBeLessThan(9)
+    expect(spreadScales.yDomain).toEqual([0, 10])
+  })
+
   it('uses an absolute 0–10 domain for every chart scale when requested', () => {
     const model = createModel()
     const dimensions = { width: 600, height: 400 }
     const options = { absoluteYAxis: true }
 
-    expect(createMainScales(model, { start: 1, end: 4 }, dimensions, options).yDomain).toEqual([
-      0, 10
-    ])
+    expect(createMainScales(model, { start: 1, end: 4 }, dimensions, options).yDomain).toEqual([0, 10])
     expect(createFullSeriesScales(model, dimensions, options).yDomain).toEqual([0, 10])
     expect(createSparklineScales(model, dimensions, options).yDomain).toEqual([0, 10])
   })

@@ -1,11 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import {
-  APP_FONT_STACK,
-  getChartTheme,
-  initializeTheme,
-  updateUiSettings
-} from '../../src/viz/theme.js'
+import { APP_FONT_STACK, getChartTheme, initializeTheme, updateUiSettings } from '../../src/viz/theme.js'
 
 beforeEach(() => {
   window.localStorage.clear()
@@ -27,6 +22,15 @@ describe('theme defaults', () => {
 
     expect(JSON.parse(window.localStorage.getItem('graphtv-ui-settings')).absoluteYAxis).toBe(true)
     expect(initializeTheme().absoluteYAxis).toBe(true)
+  })
+
+  it('shows source spread by default and persists an opt-out', () => {
+    expect(initializeTheme().showSourceSpread).toBe(true)
+
+    updateUiSettings({ showSourceSpread: false })
+
+    expect(JSON.parse(window.localStorage.getItem('graphtv-ui-settings')).showSourceSpread).toBe(false)
+    expect(initializeTheme().showSourceSpread).toBe(false)
   })
 })
 

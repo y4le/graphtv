@@ -17,11 +17,13 @@ import {
   renderPoints,
   renderRangeFrame,
   renderSeasonLabels,
+  renderSourceSpreads,
   renderTrendlines
 } from './marks.js'
 import { createSidenote } from './sidenote.js'
 import { createSparkline } from './sparkline.js'
 import { getChartTheme, getUiSettings } from './theme.js'
+import { getRatingSourceLabel } from '../data/stats.js'
 
 const MOBILE_QUERY = '(max-width: 767px)'
 const MOBILE_LANDSCAPE_QUERY = '(max-width: 767px) and (orientation: landscape)'
@@ -37,6 +39,7 @@ export function createChart(container, seasons, options = {}) {
   const shell = document.createElement('div')
   shell.className = 'chart-shell'
   shell.innerHTML = `
+    <p class="chart-source-status" aria-live="polite"></p>
     <div class="sparkline-shell">
       <svg class="sparkline-chart" aria-hidden="true"></svg>
     </div>
@@ -63,6 +66,7 @@ export function createChart(container, seasons, options = {}) {
   const axisSvg = select(shell.querySelector('.chart-axis'))
   const mainSvg = select(shell.querySelector('.ratings-chart'))
   const bodyShell = shell.querySelector('.chart-body-shell')
+  const sourceStatus = shell.querySelector('.chart-source-status')
   const readingPane = shell.querySelector('[data-reading-pane]')
   const mediaQuery = window.matchMedia(MOBILE_QUERY)
   const mobileLandscapeQuery = window.matchMedia(MOBILE_LANDSCAPE_QUERY)
@@ -471,7 +475,10 @@ export function createChart(container, seasons, options = {}) {
     ensureViewport(chartWidth)
     const uiSettings = getUiSettings()
 
-    const scaleOptions = { absoluteYAxis: uiSettings.absoluteYAxis }
+    const scaleOptions = {
+      absoluteYAxis: uiSettings.absoluteYAxis,
+      showSourceSpread: uiSettings.showSourceSpread
+    }
     const mainScales = createMainScales(
       model,
       viewport,
@@ -520,6 +527,14 @@ export function createChart(container, seasons, options = {}) {
       uiSettings.fullShowTrendline ? getMacroTrendline(model, viewport) : null,
       mainScales,
       chartTheme
+    )
+    renderSourceSpreads(
+      mainSvg,
+      getVisiblePoints(model, viewport),
+      mainScales,
+      { width: chartWidth, height: chartHeight },
+      chartTheme,
+      uiSettings.showSourceSpread
     )
     renderSeasonLabels(
       mainSvg,
@@ -582,7 +597,10 @@ export function createChart(container, seasons, options = {}) {
     sparklineHeight
   ) {
     const uiSettings = getUiSettings()
-    const scaleOptions = { absoluteYAxis: uiSettings.absoluteYAxis }
+    const scaleOptions = {
+      absoluteYAxis: uiSettings.absoluteYAxis,
+      showSourceSpread: uiSettings.showSourceSpread
+    }
     const contentWidth = getScrollableBodyWidth(chartWidth)
     const fullScales = createFullSeriesScales(
       model,
@@ -648,6 +666,14 @@ export function createChart(container, seasons, options = {}) {
         : null,
       fullScales,
       chartTheme
+    )
+    renderSourceSpreads(
+      mainSvg,
+      model.points,
+      fullScales,
+      { width: contentWidth, height: chartHeight },
+      chartTheme,
+      uiSettings.showSourceSpread
     )
     renderSeasonLabels(
       mainSvg,
@@ -746,6 +772,7 @@ export function createChart(container, seasons, options = {}) {
 
     shell.style.setProperty('--axis-width', `${axisWidth}px`)
     shell.style.setProperty('--chart-height', `${chartHeight}px`)
+    renderSourceStatus(sourceStatus, model, getUiSettings())
 
     mainSvg.selectAll('*').remove()
 
@@ -804,7 +831,10 @@ export function createChart(container, seasons, options = {}) {
         width: chartWidth,
         height: sparklineHeight
       },
-      { absoluteYAxis: getUiSettings().absoluteYAxis }
+      {
+        absoluteYAxis: getUiSettings().absoluteYAxis,
+        showSourceSpread: getUiSettings().showSourceSpread
+      }
     )
 
     sparkline?.render({
@@ -1068,6 +1098,11 @@ export function createChart(container, seasons, options = {}) {
         hoverPointId,
         viewport,
         mobileScrollable: usesScrollableBody(),
+        ratings: {
+          primarySource: model.primaryRatingSource,
+          minimumCoverage: model.minimumPrimaryCoverage,
+          coverage: model.ratingSourceCoverage
+        },
         episodeDetails: {
           loaded: detailCache.size,
           errors: detailErrors,
@@ -1092,4 +1127,32 @@ export function createChart(container, seasons, options = {}) {
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max)
+}
+
+function renderSourceStatus(root, model, settings) {
+  if (!model.primaryRatingSource) {
+    root.textContent = 'No usable episode ratings.'
+    return
+  }
+
+  const otherSources = model.ratingSourceCoverage
+    .filter((entry) => entry.source !== model.primaryRatingSource)
+    .map((entry) => getRatingSourceLabel(entry.source))
+  const spreadText =
+    settings.showSourceSpread && otherSources.length > 0
+      ? ` · source spread shows ${formatList(otherSources)}`
+      : ''
+
+  root.textContent = `Plotting ${getRatingSourceLabel(model.primaryRatingSource)}${spreadText}`
+}
+
+function formatList(values) {
+  if (values.length < 2) {
+    return values[0] ?? ''
+  }
+  if (values.length === 2) {
+    return values.join(' and ')
+  }
+
+  return `${values.slice(0, -1).join(', ')}, and ${values.at(-1)}`
 }
