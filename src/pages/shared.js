@@ -1,4 +1,6 @@
 import { isUsableRating } from '../data/stats.js'
+import { getRatingSourceLabel } from '../data/ratingProviders.js'
+import { formatCompactNumber } from '../lib/number.js'
 
 export function renderLoading(message = 'Loading...', { announce = true } = {}) {
   return `<p class="state-copy"${announce ? ' role="status"' : ''}>${message}</p>`
@@ -21,10 +23,28 @@ export function renderError(message) {
 }
 
 export function formatRatingBadge(rating) {
+  const source = escapeHtml(getRatingSourceLabel(rating.source))
+
   if (!isUsableRating(rating.rating)) {
-    return `${rating.source.toUpperCase()}: n/a`
+    return renderRatingBadgeColumns(source, 'n/a', '')
   }
 
-  const votes = typeof rating.votes === 'number' ? ` · ${rating.votes.toLocaleString()} votes` : ''
-  return `${rating.source.toUpperCase()}: ${rating.rating.toFixed(1)}${votes}`
+  const votes =
+    typeof rating.votes === 'number'
+      ? `${formatCompactNumber(rating.votes)} ${rating.votes === 1 ? 'vote' : 'votes'}`
+      : ''
+
+  return renderRatingBadgeColumns(source, rating.rating.toFixed(1), votes)
+}
+
+function renderRatingBadgeColumns(source, rating, votes) {
+  return `<span class="rating-badge-source">${source}</span><span class="rating-badge-value">${rating}</span><span class="rating-badge-votes">${votes}</span>`
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
 }

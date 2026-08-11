@@ -150,9 +150,19 @@ describe('renderResultsPage', () => {
     resolveSupplemental()
     await page.whenSettled
     expect(chart.updateSeasons).toHaveBeenCalledWith(supplementalBundle.seasons)
-    expect(container.querySelector('.show-metrics').textContent).toContain(
-      'TMDB: 9.0'
+    const ratingRows = Array.from(
+      container.querySelectorAll('.show-metrics .rating-badge')
     )
+    expect(
+      ratingRows.map(
+        (row) => row.querySelector('.rating-badge-source').textContent
+      )
+    ).toEqual(['IMDb', 'TVmaze', 'TMDB'])
+    expect(
+      ratingRows.map(
+        (row) => row.querySelector('.rating-badge-votes').textContent
+      )
+    ).toEqual(['1.1m votes', '', '8.3k votes'])
     expect(container.querySelector('.results-progress').hidden).toBe(true)
     expect(
       container.querySelector('.results-data').getAttribute('aria-busy')
@@ -192,7 +202,10 @@ describe('renderResultsPage', () => {
 function createBundle({ supplemental = false } = {}) {
   const ratings = [{ source: 'tvmaze', rating: 8, votes: null }]
   if (supplemental) {
-    ratings.push({ source: 'tmdb', rating: 9, votes: 500 })
+    ratings.push(
+      { source: 'tmdb', rating: 9, votes: 8300 },
+      { source: 'omdb', rating: 8.8, votes: 1_100_000 }
+    )
   }
 
   return {

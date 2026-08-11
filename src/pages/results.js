@@ -13,6 +13,7 @@ import {
   renderPublisherBrand
 } from './shared.js'
 import { requestSearchFocusOnNextPage } from './search.js'
+import { orderVisibleRatings } from '../data/ratingProviders.js'
 
 export function renderResultsMasthead({ interactive = false } = {}) {
   return `
@@ -246,7 +247,7 @@ function updateShowContext(container, show, alignmentIssues) {
       <div class="show-facts">
         <p class="show-meta">${escapeHtml(show.genres.join(' · '))}</p>
         <ul class="show-metrics">
-          ${show.ratings.map((rating) => `<li class="rating-badge">${formatRatingBadge(rating)}</li>`).join('')}
+          ${orderVisibleRatings(show.ratings).map((rating) => `<li class="rating-badge">${formatRatingBadge(rating)}</li>`).join('')}
         </ul>
       </div>
       <div class="show-copy">

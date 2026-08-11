@@ -1,19 +1,17 @@
 import {
-  RATING_SOURCE_PRIORITY,
   getRatingSourceLabel,
-  isTrustedRating,
-  isUsableRating
-} from '../data/stats.js'
+  orderVisibleRatings
+} from '../data/ratingProviders.js'
+import { isTrustedRating, isUsableRating } from '../data/stats.js'
+import { formatCompactNumber } from '../lib/number.js'
 
 function formatRatingList(point, { loadingDetails = false } = {}) {
-  return [...point.ratings]
-    .filter(isTrustedRating)
-    .sort(compareRatingSources)
+  return orderVisibleRatings(point.ratings.filter(isTrustedRating))
     .map((rating, index) => {
       const isPrimary = rating.source === point.ratingSource
       const votes =
         typeof rating.votes === 'number'
-          ? ` (${formatVoteCount(rating.votes)} ${rating.votes === 1 ? 'vote' : 'votes'})`
+          ? ` (${formatCompactNumber(rating.votes)} ${rating.votes === 1 ? 'vote' : 'votes'})`
           : loadingDetails && rating.source === 'omdb'
             ? ` (${renderVotesLoading()})`
           : ''
@@ -43,29 +41,8 @@ function renderVotesLoading() {
   return '<span class="sidenote-votes-loading" role="status" aria-label="Loading IMDb vote count"><span class="sidenote-votes-loading-dot" aria-hidden="true"></span><span aria-hidden="true">votes</span></span>'
 }
 
-function compareRatingSources(left, right) {
-  return getRatingSourceRank(left.source) - getRatingSourceRank(right.source)
-}
-
-function getRatingSourceRank(source) {
-  const index = RATING_SOURCE_PRIORITY.indexOf(source)
-  return index === -1 ? Number.MAX_SAFE_INTEGER : index
-}
-
 function getEpisodeRatingSourceLabel(source) {
-  return source === 'omdb' ? 'IMDb' : getRatingSourceLabel(source)
-}
-
-function formatVoteCount(votes) {
-  return new Intl.NumberFormat('en-US', {
-    notation: 'compact',
-    maximumFractionDigits: 1
-  })
-    .format(votes)
-    .replaceAll('K', 'k')
-    .replaceAll('M', 'm')
-    .replaceAll('B', 'b')
-    .replaceAll('T', 't')
+  return getRatingSourceLabel(source)
 }
 
 export function createSidenote({ desktopRoot, mobileRoot }) {

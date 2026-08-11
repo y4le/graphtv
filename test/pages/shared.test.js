@@ -22,6 +22,32 @@ describe('renderLoading', () => {
 
 describe('formatRatingBadge', () => {
   it('renders a zero rating as unavailable', () => {
-    expect(formatRatingBadge({ source: 'tmdb', rating: 0, votes: 0 })).toBe('TMDB: n/a')
+    const root = renderBadge({ source: 'tmdb', rating: 0, votes: 0 })
+
+    expect(root.querySelector('.rating-badge-source').textContent).toBe('TMDB')
+    expect(root.querySelector('.rating-badge-value').textContent).toBe('n/a')
+    expect(root.querySelector('.rating-badge-votes').textContent).toBe('')
+  })
+
+  it('labels IMDb ratings and condenses large vote counts', () => {
+    const millions = renderBadge({
+      source: 'omdb',
+      rating: 8.7,
+      votes: 1_100_000
+    })
+    const thousands = renderBadge({
+      source: 'tmdb',
+      rating: 8.1,
+      votes: 8300
+    })
+
+    expect(millions.textContent).toBe('IMDb8.71.1m votes')
+    expect(thousands.textContent).toBe('TMDB8.18.3k votes')
   })
 })
+
+function renderBadge(rating) {
+  const root = document.createElement('li')
+  root.innerHTML = formatRatingBadge(rating)
+  return root
+}

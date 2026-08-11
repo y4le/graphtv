@@ -1,3 +1,10 @@
+import {
+  RATING_SOURCE_PRIORITY,
+  getRatingSourceLabel
+} from './ratingProviders.js'
+
+export { RATING_SOURCE_PRIORITY, getRatingSourceLabel }
+
 export function linearRegression(values) {
   const points = values.map((value, index) => ({ x: index, y: value }))
   return linearRegressionFromPoints(points)
@@ -92,8 +99,6 @@ export function isUsableRating(value) {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 && value <= 10
 }
 
-// These are explicit product-policy choices, not statistical weights.
-export const RATING_SOURCE_PRIORITY = ['omdb', 'tvmaze', 'tmdb']
 export const MIN_PRIMARY_RATING_COVERAGE = 0.6
 
 export function isTrustedRating(rating) {
@@ -186,20 +191,6 @@ export function getRatingSpread(ratings = []) {
     max: Math.max(...values),
     sources: usableRatings.map((rating) => rating.source)
   }
-}
-
-export function getRatingSourceLabel(source) {
-  if (source === 'omdb') {
-    return 'IMDb (via OMDb)'
-  }
-  if (source === 'tmdb') {
-    return 'TMDB'
-  }
-  if (source === 'tvmaze') {
-    return 'TVmaze'
-  }
-
-  return String(source ?? '').toUpperCase()
 }
 
 function sourceRank(source, priority) {

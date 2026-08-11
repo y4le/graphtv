@@ -503,7 +503,7 @@ kbd,
 
 .show-header {
   display: grid;
-  grid-template-columns: minmax(5rem, 6.75rem) minmax(0, 1fr);
+  grid-template-columns: minmax(5rem, 32%) minmax(0, 1fr);
   gap: 0.85rem 1rem;
   align-items: start;
 }
@@ -546,10 +546,26 @@ kbd,
 
 .show-metrics {
   display: grid;
-  gap: 0.15rem;
+  grid-template-columns: max-content 2.4rem minmax(0, 1fr);
+  gap: 0.15rem 0.55rem;
+  align-items: baseline;
   margin: 0.3rem 0 0;
   padding: 0;
   list-style: none;
+}
+
+.rating-badge {
+  display: contents;
+}
+
+.rating-badge-value,
+.rating-badge-votes {
+  font-variant-numeric: tabular-nums;
+}
+
+.rating-badge-votes {
+  color: var(--textMuted);
+  white-space: nowrap;
 }
 
 .show-plot {
