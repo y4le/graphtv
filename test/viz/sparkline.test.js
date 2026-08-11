@@ -18,6 +18,8 @@ const MODEL = {
 const THEME = {
   text: '#1A1A1A'
 }
+const ACTIVE_POINT_RADIUS_FOR_TEST = 1.7
+const INACTIVE_POINT_RADIUS_FOR_TEST = 1.2
 
 let sparkline
 
@@ -67,6 +69,33 @@ describe('createSparkline', () => {
     )
     expect(Number(inactivePoint.getAttribute('opacity'))).toBeLessThanOrEqual(
       0.35
+    )
+  })
+
+  it('proportionally enlarges sparse points while keeping them smaller than chart points', () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    document.body.appendChild(svg)
+    const model = {
+      xMax: 5,
+      ratedPoints: MODEL.ratedPoints.slice(0, 5)
+    }
+    const dimensions = { width: 600, height: 40 }
+    const scales = createSparklineScales(model, dimensions)
+    sparkline = createSparkline(svg, {
+      ...createConfig(scales, { start: 2, end: 4 }),
+      model,
+      dimensions
+    })
+    const points = Array.from(svg.querySelectorAll('.sparkline-point'))
+    const inactiveRadius = Number(points[0].getAttribute('r'))
+    const activeRadius = Number(points[1].getAttribute('r'))
+
+    expect(inactiveRadius).toBeGreaterThan(INACTIVE_POINT_RADIUS_FOR_TEST)
+    expect(activeRadius).toBeGreaterThan(ACTIVE_POINT_RADIUS_FOR_TEST)
+    expect(activeRadius).toBeLessThan(3)
+    expect(activeRadius / inactiveRadius).toBeCloseTo(
+      ACTIVE_POINT_RADIUS_FOR_TEST / INACTIVE_POINT_RADIUS_FOR_TEST,
+      2
     )
   })
 

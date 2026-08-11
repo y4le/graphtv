@@ -1,6 +1,7 @@
 import { brushX, line, select } from 'd3'
 
 import { createSparklineScales, viewportToBrushSelection } from './scales.js'
+import { scalePointRadiusForDensity } from './pointSize.js'
 
 const DOUBLE_TAP_DELAY = 320
 const TAP_MOVE_TOLERANCE = 10
@@ -69,6 +70,16 @@ export function createSparkline(svgNode, config) {
     const isInWindow = (point) => point.x >= config.viewport.start && point.x <= config.viewport.end
     const pathData =
       config.model.ratedPoints.length > 1 ? generator(config.model.ratedPoints) : null
+    const activePointRadius = scalePointRadiusForDensity(
+      ACTIVE_POINT_RADIUS,
+      config.model.ratedPoints.length,
+      config.scales.xScale
+    )
+    const inactivePointRadius = scalePointRadiusForDensity(
+      INACTIVE_POINT_RADIUS,
+      config.model.ratedPoints.length,
+      config.scales.xScale
+    )
 
     windowClipRect
       .attr('x', windowX1)
@@ -109,7 +120,9 @@ export function createSparkline(svgNode, config) {
       .attr('class', 'sparkline-point')
       .attr('cx', (point) => config.scales.xScale(point.x))
       .attr('cy', (point) => config.scales.yScale(point.rating))
-      .attr('r', (point) => (isInWindow(point) ? ACTIVE_POINT_RADIUS : INACTIVE_POINT_RADIUS))
+      .attr('r', (point) =>
+        isInWindow(point) ? activePointRadius : inactivePointRadius
+      )
       .attr('fill', config.theme.text)
       .attr('opacity', (point) => (isInWindow(point) ? 1 : INACTIVE_INK_OPACITY))
 

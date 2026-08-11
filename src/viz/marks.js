@@ -1,6 +1,7 @@
 import { format, line } from 'd3'
 
 import { isUsableProviderRating, isUsableRating } from '../data/stats.js'
+import { scalePointRadiusForDensity } from './pointSize.js'
 
 const formatRating = format('.1f')
 const Y_LABEL_INSET = 8
@@ -11,6 +12,8 @@ const CLIPPED_SPREAD_NUB_WIDTH = 4
 const SOURCE_SPREAD_WHISKER_WIDTH = 7
 const SOURCE_RATING_OPACITY = 0.68
 const FALLBACK_POINT_FILL_OPACITY = 0.2
+const DEFAULT_POINT_RADIUS = 3
+const ACTIVE_POINT_RADIUS_OFFSET = 1.5
 
 export function renderRangeFrame(svg, scales, dimensions, theme) {
   const [minRating, maxRating] = scales.yDomain
@@ -291,6 +294,11 @@ export function renderPoints(svg, points, scales, theme, interactions) {
   const pointLayer = svg.selectAll('.point-layer').data([null]).join('g').attr('class', 'point-layer')
   const plottedPoints = points.filter((point) => isUsableRating(point.rating))
   const pointColor = (point) => theme.seasonColor(point.seasonIndex, interactions.totalSeasons)
+  const pointRadius = scalePointRadiusForDensity(
+    DEFAULT_POINT_RADIUS,
+    plottedPoints.length,
+    scales.xScale
+  )
 
   pointLayer
     .selectAll('.episode-point')
@@ -299,7 +307,11 @@ export function renderPoints(svg, points, scales, theme, interactions) {
     .attr('class', 'episode-point')
     .attr('cx', (point) => scales.xScale(point.x))
     .attr('cy', (point) => scales.yScale(point.rating))
-    .attr('r', (point) => (point.id === interactions.activePointId ? 4.5 : 3))
+    .attr('r', (point) =>
+      point.id === interactions.activePointId
+        ? pointRadius + ACTIVE_POINT_RADIUS_OFFSET
+        : pointRadius
+    )
     .attr('fill', (point) => {
       if (point.id === interactions.activePointId) {
         return theme.spotColor

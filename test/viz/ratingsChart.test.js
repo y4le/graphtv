@@ -170,6 +170,30 @@ describe('createChart', () => {
     expect(fallback.getAttribute('stroke-opacity')).toBe('1')
   })
 
+  it('subtly enlarges points when few ratings occupy the available width', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+    const seasons = createSeasons()
+    seasons[0].episodes = seasons[0].episodes.slice(0, 5)
+
+    chart = createChart(container, seasons)
+
+    const restingRadius = Number(
+      container.querySelector('.episode-point').getAttribute('r')
+    )
+    expect(restingRadius).toBe(5)
+
+    chart.moveEpisode(0)
+    const activeRadius = Number(
+      container.querySelector('.episode-point').getAttribute('r')
+    )
+    expect(activeRadius).toBe(restingRadius + 1.5)
+  })
+
   it('preserves small horizontal trackpad deltas', () => {
     const container = document.createElement('div')
     Object.defineProperty(container, 'clientWidth', {
