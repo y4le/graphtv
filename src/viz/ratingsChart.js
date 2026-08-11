@@ -30,6 +30,7 @@ const MOBILE_LANDSCAPE_QUERY = '(max-width: 767px) and (orientation: landscape)'
 const MOBILE_POINT_SPACING = 18
 const DETAIL_LOAD_DELAY_MS = 250
 const MAX_DETAIL_ERRORS = 25
+const DRAG_START_TOLERANCE_PX = 4
 
 export function createChart(container, seasons, options = {}) {
   container.innerHTML = ''
@@ -951,6 +952,9 @@ export function createChart(container, seasons, options = {}) {
     gesture.pointers.set(event.pointerId, event.clientX)
     if (gesture.pointers.size >= 2) {
       const xs = Array.from(gesture.pointers.values())
+      for (const pointerId of gesture.pointers.keys()) {
+        bodyShell.setPointerCapture?.(pointerId)
+      }
       gesture = {
         type: 'pinch',
         pointers: gesture.pointers,
@@ -972,6 +976,7 @@ export function createChart(container, seasons, options = {}) {
     gesture.pointers.set(event.pointerId, event.clientX)
 
     if (gesture.type === 'pinch') {
+      event.preventDefault()
       const xs = Array.from(gesture.pointers.values())
       const currentSpan = Math.abs(xs[1] - xs[0])
       const scale = gesture.initialSpan / Math.max(currentSpan, 1)
@@ -1001,10 +1006,17 @@ export function createChart(container, seasons, options = {}) {
     gesture.prevTime = now
 
     const deltaX = event.clientX - gesture.startX
-    if (gesture.type === 'pending' && Math.abs(deltaX) < 8) {
+    if (
+      gesture.type === 'pending' &&
+      Math.abs(deltaX) < DRAG_START_TOLERANCE_PX
+    ) {
       return
     }
 
+    event.preventDefault()
+    if (gesture.type === 'pending') {
+      bodyShell.setPointerCapture?.(event.pointerId)
+    }
     gesture.type = 'pan'
     const chartWidth = Math.max(bodyShell.clientWidth, 240)
     const viewportWidth =
@@ -1029,6 +1041,9 @@ export function createChart(container, seasons, options = {}) {
 
     const wasPan = gesture.type === 'pan'
     const velocity = gesture.velocity
+    if (bodyShell.hasPointerCapture?.(event.pointerId)) {
+      bodyShell.releasePointerCapture(event.pointerId)
+    }
 
     gesture.pointers.delete(event.pointerId)
 

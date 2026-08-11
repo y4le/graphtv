@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   buildChartModel,
+  clampViewport,
   createFullSeriesScales,
   createMainScales,
   createSparklineScales
@@ -101,6 +102,21 @@ describe('rating scale domains', () => {
     expect(createMainScales(model, { start: 1, end: 4 }, dimensions, options).yDomain).toEqual([0, 10])
     expect(createFullSeriesScales(model, dimensions, options).yDomain).toEqual([0, 10])
     expect(createSparklineScales(model, dimensions, options).yDomain).toEqual([0, 10])
+  })
+})
+
+describe('viewport clamping', () => {
+  it('preserves fractional movement while keeping the viewport in bounds', () => {
+    const model = { xMax: 72 }
+
+    expect(clampViewport({ start: 1.25, end: 18.25 }, model)).toEqual({
+      start: 1.25,
+      end: 18.25
+    })
+    expect(clampViewport({ start: 70.5, end: 87.5 }, model)).toEqual({
+      start: 55,
+      end: 72
+    })
   })
 })
 

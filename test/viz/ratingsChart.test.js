@@ -137,6 +137,68 @@ describe('createChart', () => {
     expect(fallback.getAttribute('stroke')).not.toBe('none')
   })
 
+  it('preserves small horizontal trackpad deltas', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    const body = container.querySelector('.chart-body-shell')
+    Object.defineProperty(body, 'clientWidth', {
+      configurable: true,
+      value: 528
+    })
+    const initialViewport = chart.getDebugState().viewport
+
+    body.dispatchEvent(
+      new WheelEvent('wheel', {
+        bubbles: true,
+        cancelable: true,
+        deltaX: 5
+      })
+    )
+
+    const nextViewport = chart.getDebugState().viewport
+    expect(nextViewport.start).toBeGreaterThan(initialViewport.start)
+    expect(nextViewport.start).toBeLessThan(initialViewport.start + 1)
+  })
+
+  it('responds continuously once a slow touch drag crosses the intent threshold', () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query) => ({
+        matches: query === '(max-width: 767px)',
+        media: query,
+        addEventListener() {},
+        removeEventListener() {}
+      }))
+    )
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    const body = container.querySelector('.chart-body-shell')
+    Object.defineProperty(body, 'clientWidth', {
+      configurable: true,
+      value: 544
+    })
+    const initialViewport = chart.getDebugState().viewport
+
+    dispatchTouchPointer(body, 'pointerdown', { pointerId: 1, clientX: 100 })
+    dispatchTouchPointer(body, 'pointermove', { pointerId: 1, clientX: 95 })
+
+    const nextViewport = chart.getDebugState().viewport
+    expect(nextViewport.start).toBeGreaterThan(initialViewport.start)
+    expect(nextViewport.start).toBeLessThan(initialViewport.start + 1)
+  })
+
   it('renders episode details outside the chart when given a detail root', () => {
     const container = document.createElement('div')
     const detailRoot = document.createElement('section')
@@ -346,4 +408,14 @@ function createRatedEpisode(id, ratings) {
     episode: Number.NaN,
     ratings
   }
+}
+
+function dispatchTouchPointer(target, type, properties) {
+  const event = new Event(type, { bubbles: true, cancelable: true })
+  Object.defineProperties(event, {
+    pointerType: { value: 'touch' },
+    pointerId: { value: properties.pointerId },
+    clientX: { value: properties.clientX }
+  })
+  target.dispatchEvent(event)
 }

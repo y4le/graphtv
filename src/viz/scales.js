@@ -116,11 +116,11 @@ export function createDefaultViewport(model, width, isMobile) {
 }
 
 export function clampViewport(viewport, model) {
-  const width = Math.max(1, Math.round(viewport.end - viewport.start + 1))
-  const safeWidth = Math.min(width, model.xMax)
-  const maxStart = Math.max(1, model.xMax - safeWidth + 1)
-  const start = clamp(Math.round(viewport.start), 1, maxStart)
-  const end = Math.min(model.xMax, start + safeWidth - 1)
+  const span = Math.max(0, viewport.end - viewport.start)
+  const safeSpan = Math.min(span, Math.max(model.xMax - 1, 0))
+  const maxStart = Math.max(1, model.xMax - safeSpan)
+  const start = clamp(viewport.start, 1, maxStart)
+  const end = Math.min(model.xMax, start + safeSpan)
 
   return { start, end }
 }
