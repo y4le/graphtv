@@ -6,7 +6,8 @@
 >
   <title id="graphtv-card-title">graphtv</title>
   <desc id="graphtv-card-description">
-    The graphtv wordmark crossed by a scrolling episode-rating trendline.
+    The graphtv wordmark over scrolling episode-rating dots, source-spread hairlines,
+    and season trendlines.
   </desc>
   <style>
     .word {
@@ -17,12 +18,23 @@
       letter-spacing: -0.06em;
     }
 
-    .trend {
-      fill: none;
-      stroke: #c1432e;
-      stroke-linecap: square;
-      stroke-linejoin: miter;
-      stroke-width: 12;
+    .season-trendline {
+      stroke: #777269;
+      stroke-width: 2;
+    }
+
+    .source-hairline {
+      stroke: #8a857a;
+      stroke-opacity: 0.42;
+      stroke-width: 2;
+    }
+
+    .episode-point {
+      fill: #e8e3d5;
+    }
+
+    .episode-point-active {
+      fill: #c1432e;
     }
 
     .rolling-trend {
@@ -41,11 +53,39 @@
       }
     }
   </style>
-  <text class="word" x="809" y="602" text-anchor="middle">graphtv</text>
+  <defs>
+    <g id="trend-segment">
+      <line class="season-trendline" x1="0" y1="510" x2="1370" y2="430" />
+      <g class="source-hairlines">
+        <line class="source-hairline" x1="112" y1="445" x2="112" y2="499" />
+        <line class="source-hairline" x1="328" y1="351" x2="328" y2="416" />
+        <line class="source-hairline" x1="550" y1="321" x2="550" y2="374" />
+        <line class="source-hairline" x1="766" y1="432" x2="766" y2="493" />
+        <line class="source-hairline" x1="988" y1="461" x2="988" y2="516" />
+        <line class="source-hairline" x1="1208" y1="368" x2="1208" y2="433" />
+      </g>
+      <g class="episode-points">
+        <circle class="episode-point" cx="0" cy="508" r="6" />
+        <circle class="episode-point" cx="112" cy="472" r="6" />
+        <circle class="episode-point" cx="220" cy="533" r="6" />
+        <circle class="episode-point" cx="328" cy="382" r="6" />
+        <circle class="episode-point" cx="442" cy="427" r="6" />
+        <circle class="episode-point" cx="550" cy="346" r="6" />
+        <circle class="episode-point-active" cx="660" cy="501" r="7" />
+        <circle class="episode-point" cx="766" cy="462" r="6" />
+        <circle class="episode-point" cx="878" cy="560" r="6" />
+        <circle class="episode-point" cx="988" cy="486" r="6" />
+        <circle class="episode-point" cx="1098" cy="526" r="6" />
+        <circle class="episode-point" cx="1208" cy="399" r="6" />
+        <circle class="episode-point" cx="1310" cy="438" r="6" />
+      </g>
+    </g>
+  </defs>
   <g class="rolling-trend">
-    <path
-      class="trend"
-      d="M-1370 508 L-1258 472 L-1150 533 L-1042 382 L-928 427 L-820 346 L-710 501 L-604 462 L-492 560 L-382 486 L-272 526 L-162 399 L-60 438 L0 508 L112 472 L220 533 L328 382 L442 427 L550 346 L660 501 L766 462 L878 560 L988 486 L1098 526 L1208 399 L1310 438 L1370 508 L1482 472 L1590 533 L1698 382 L1812 427 L1920 346 L2030 501 L2136 462 L2248 560 L2358 486 L2468 526 L2578 399 L2680 438 L2740 508 L2852 472 L2960 533 L3068 382 L3182 427 L3290 346 L3400 501 L3506 462 L3618 560 L3728 486 L3838 526 L3948 399 L4050 438 L4110 508"
-    />
+    <use href="#trend-segment" x="-1370" />
+    <use href="#trend-segment" x="0" />
+    <use href="#trend-segment" x="1370" />
+    <use href="#trend-segment" x="2740" />
   </g>
+  <text class="word" x="809" y="602" text-anchor="middle">graphtv</text>
 </svg>
