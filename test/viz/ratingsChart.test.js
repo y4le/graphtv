@@ -91,6 +91,9 @@ describe('createChart', () => {
     expect(
       container.querySelector('.chart-source-status').textContent
     ).toContain('source spread shows TMDB')
+    expect(
+      container.querySelector('.chart-source-status').textContent
+    ).toContain('Pinch or drag the overview to adjust the visible range.')
     expect(getAxisLabels(container)).toEqual(
       expect.arrayContaining(['0.0', '10.0'])
     )
@@ -166,6 +169,89 @@ describe('createChart', () => {
     const nextViewport = chart.getDebugState().viewport
     expect(nextViewport.start).toBeGreaterThan(initialViewport.start)
     expect(nextViewport.start).toBeLessThan(initialViewport.start + 1)
+  })
+
+  it('zooms at the cursor for a trackpad pinch over the main graph', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    const body = container.querySelector('.chart-body-shell')
+    Object.defineProperty(body, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ left: 56, width: 528 })
+    })
+    const initialViewport = chart.getDebugState().viewport
+    const initialSpan = initialViewport.end - initialViewport.start
+    const pinch = new WheelEvent('wheel', {
+      bubbles: true,
+      cancelable: true,
+      clientX: 320,
+      ctrlKey: true,
+      deltaY: -8
+    })
+
+    body.dispatchEvent(pinch)
+
+    const nextViewport = chart.getDebugState().viewport
+    expect(pinch.defaultPrevented).toBe(true)
+    expect(nextViewport.end - nextViewport.start).toBeLessThan(initialSpan)
+    expect((nextViewport.start + nextViewport.end) / 2).toBeCloseTo(
+      (initialViewport.start + initialViewport.end) / 2
+    )
+  })
+
+  it('zooms at the selected window for a trackpad pinch over the sparkline', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    const sparkline = container.querySelector('.sparkline-chart')
+    const body = container.querySelector('.chart-body-shell')
+    Object.defineProperty(sparkline, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ left: 56, width: 528 })
+    })
+    Object.defineProperty(body, 'clientWidth', {
+      configurable: true,
+      value: 528
+    })
+    body.dispatchEvent(
+      new WheelEvent('wheel', {
+        bubbles: true,
+        cancelable: true,
+        deltaX: 150
+      })
+    )
+    const initialViewport = chart.getDebugState().viewport
+    const initialSpan = initialViewport.end - initialViewport.start
+    const selectedCenterX =
+      56 +
+      (((initialViewport.start + initialViewport.end) / 2 - 1) / 71) * 528
+    const pinch = new WheelEvent('wheel', {
+      bubbles: true,
+      cancelable: true,
+      clientX: selectedCenterX,
+      ctrlKey: true,
+      deltaY: 8
+    })
+
+    sparkline.dispatchEvent(pinch)
+
+    const nextViewport = chart.getDebugState().viewport
+    expect(pinch.defaultPrevented).toBe(true)
+    expect(nextViewport.end - nextViewport.start).toBeGreaterThan(initialSpan)
+    expect((nextViewport.start + nextViewport.end) / 2).toBeCloseTo(
+      (initialViewport.start + initialViewport.end) / 2
+    )
   })
 
   it('responds continuously once a slow touch drag crosses the intent threshold', () => {

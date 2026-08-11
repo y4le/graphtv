@@ -31,6 +31,9 @@ const MOBILE_POINT_SPACING = 18
 const DETAIL_LOAD_DELAY_MS = 250
 const MAX_DETAIL_ERRORS = 25
 const DRAG_START_TOLERANCE_PX = 4
+const MIN_VIEWPORT_SPAN = 1
+const WHEEL_DELTA_LINE = 1
+const WHEEL_DELTA_PAGE = 2
 
 export function createChart(container, seasons, options = {}) {
   container.innerHTML = ''
@@ -395,6 +398,28 @@ export function createChart(container, seasons, options = {}) {
       {
         start: viewport.start + deltaEpisodes,
         end: viewport.start + deltaEpisodes + width
+      },
+      model
+    )
+    render()
+  }
+
+  function zoomViewport(scale, anchorRatio) {
+    if (!viewport || !Number.isFinite(scale) || scale <= 0) {
+      return
+    }
+
+    const span = viewport.end - viewport.start
+    const maxSpan = Math.max(model.xMax - 1, 0)
+    const minSpan = Math.min(MIN_VIEWPORT_SPAN, maxSpan)
+    const nextSpan = clamp(span * scale, minSpan, maxSpan)
+    const ratio = clamp(anchorRatio, 0, 1)
+    const anchor = viewport.start + span * ratio
+
+    viewport = clampViewport(
+      {
+        start: anchor - nextSpan * ratio,
+        end: anchor + nextSpan * (1 - ratio)
       },
       model
     )
@@ -849,38 +874,72 @@ export function createChart(container, seasons, options = {}) {
     })
   })
 
-  bodyShell.addEventListener(
-    'wheel',
-    (event) => {
-      if (usesScrollableBody() || event.ctrlKey) {
-        return
-      }
+  function handleTrackpadPinch(event, surface) {
+    if (!event.ctrlKey) {
+      return false
+    }
 
-      const horizontalDelta =
-        Math.abs(event.deltaX) > 0
-          ? event.deltaX
-          : event.shiftKey
-            ? event.deltaY
-            : 0
-      if (!horizontalDelta) {
-        return
-      }
+    event.preventDefault()
+    if (!viewport || event.deltaY === 0) {
+      return true
+    }
 
-      const visibleEpisodes = Math.max(
-        (viewport?.end ?? 1) - (viewport?.start ?? 1),
-        1
-      )
-      const pixelsPerEpisode = Math.max(
-        bodyShell.clientWidth / visibleEpisodes,
-        1
-      )
-      const deltaEpisodes = horizontalDelta / pixelsPerEpisode
+    const surfaceRatio = getEventXRatio(event, surface)
+    const anchorRatio =
+      surface === sparklineSvg
+        ? getSparklineViewportRatio(surfaceRatio)
+        : surfaceRatio
+    zoomViewport(getWheelZoomScale(event), anchorRatio)
+    return true
+  }
 
-      event.preventDefault()
-      panViewport(deltaEpisodes)
-    },
-    { passive: false }
-  )
+  function getSparklineViewportRatio(surfaceRatio) {
+    const span = viewport.end - viewport.start
+    if (span <= 0 || model.xMax <= 1) {
+      return 0.5
+    }
+
+    const episodeX = 1 + surfaceRatio * (model.xMax - 1)
+    return clamp((episodeX - viewport.start) / span, 0, 1)
+  }
+
+  function handleBodyWheel(event) {
+    if (handleTrackpadPinch(event, bodyShell) || usesScrollableBody()) {
+      return
+    }
+
+    const horizontalDelta =
+      Math.abs(event.deltaX) > 0
+        ? event.deltaX
+        : event.shiftKey
+          ? event.deltaY
+          : 0
+    if (!horizontalDelta) {
+      return
+    }
+
+    const visibleEpisodes = Math.max(
+      (viewport?.end ?? 1) - (viewport?.start ?? 1),
+      1
+    )
+    const pixelsPerEpisode = Math.max(
+      bodyShell.clientWidth / visibleEpisodes,
+      1
+    )
+    const deltaEpisodes = horizontalDelta / pixelsPerEpisode
+
+    event.preventDefault()
+    panViewport(deltaEpisodes)
+  }
+
+  function handleSparklineWheel(event) {
+    handleTrackpadPinch(event, sparklineSvg)
+  }
+
+  bodyShell.addEventListener('wheel', handleBodyWheel, { passive: false })
+  sparklineSvg.addEventListener('wheel', handleSparklineWheel, {
+    passive: false
+  })
 
   let gesture = null
   let suppressNextClick = false
@@ -1131,6 +1190,8 @@ export function createChart(container, seasons, options = {}) {
       }
       resizeObserver.disconnect()
       document.removeEventListener('graphtv:settings-change', settingsListener)
+      bodyShell.removeEventListener('wheel', handleBodyWheel)
+      sparklineSvg.removeEventListener('wheel', handleSparklineWheel)
       sparkline?.destroy()
       options.loadEpisodeDetails?.destroy?.()
       container.innerHTML = ''
@@ -1140,6 +1201,27 @@ export function createChart(container, seasons, options = {}) {
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max)
+}
+
+function getEventXRatio(event, element) {
+  const bounds = element.getBoundingClientRect()
+  const width = bounds.width || element.clientWidth
+  if (!width) {
+    return 0.5
+  }
+
+  return clamp((event.clientX - bounds.left) / width, 0, 1)
+}
+
+function getWheelZoomScale(event) {
+  const deltaUnit =
+    event.deltaMode === WHEEL_DELTA_LINE
+      ? 0.05
+      : event.deltaMode === WHEEL_DELTA_PAGE
+        ? 1
+        : 0.002
+  const exponent = clamp(event.deltaY * deltaUnit * 10, -1, 1)
+  return 2 ** exponent
 }
 
 function renderSourceStatus(root, model, settings) {
@@ -1156,7 +1238,7 @@ function renderSourceStatus(root, model, settings) {
       ? ` · source spread shows ${formatList(otherSources)}`
       : ''
 
-  root.textContent = `Plotting ${getRatingSourceLabel(model.primaryRatingSource)}${spreadText}`
+  root.textContent = `Plotting ${getRatingSourceLabel(model.primaryRatingSource)}${spreadText} · Pinch or drag the overview to adjust the visible range.`
 }
 
 function formatList(values) {
