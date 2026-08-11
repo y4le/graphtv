@@ -858,8 +858,9 @@ kbd,
 }
 
 .overlay-backdrop {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-height: 100vh;
   padding: 1.25rem;
   background: color-mix(in srgb, var(--canvas) 76%, transparent);
@@ -869,7 +870,9 @@ kbd,
 .overlay-panel {
   display: flex;
   flex-direction: column;
-  width: min(42rem, calc(100vw - 2rem));
+  width: 100%;
+  max-width: 42rem;
+  min-width: 0;
   max-height: min(85vh, 44rem);
   overflow: hidden;
   border: 1px solid var(--lineStrong);
@@ -1158,6 +1161,10 @@ kbd,
     width: 100%;
   }
 
+  .search-document-has-results .search-submit {
+    display: none;
+  }
+
   .show-poster-shell {
     max-width: 6rem;
   }
@@ -1193,10 +1200,6 @@ kbd,
   .reading-pane-shell,
   .main-chart-shell {
     gap: 0.35rem;
-  }
-
-  .overlay-panel {
-    width: calc(100vw - 1rem);
   }
 
   .help-grid {

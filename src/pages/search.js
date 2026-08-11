@@ -94,6 +94,10 @@ export function renderSearchPage(container) {
     searchDocument.classList.toggle('search-document-empty', isEmpty)
   }
 
+  function syncResultsLayout(hasResults) {
+    searchDocument.classList.toggle('search-document-has-results', hasResults)
+  }
+
   function syncClearControl() {
     clearButton.hidden = input.value.length === 0 && state.committedQuery.length === 0
   }
@@ -129,6 +133,7 @@ export function renderSearchPage(container) {
     resultsSection.setAttribute('aria-busy', 'false')
     updateSearchUrl('')
     syncEmptyLayout(true)
+    syncResultsLayout(false)
     syncClearControl()
     placeholderRotation.restart()
 
@@ -180,6 +185,7 @@ export function renderSearchPage(container) {
     resultsRoot.setAttribute('aria-label', `Search results for ${nextQuery}`)
     resultsSection.setAttribute('aria-busy', 'true')
     syncEmptyLayout(false)
+    syncResultsLayout(false)
 
     try {
       const results = await searchShows(nextQuery, provider, {
@@ -204,6 +210,7 @@ export function renderSearchPage(container) {
       )
       renderResultsList(resultsRoot, state.results, state.selectedIndex)
       syncEmptyLayout(false)
+      syncResultsLayout(true)
     } catch (error) {
       if (requestId !== state.requestId || error?.name === 'AbortError') {
         return

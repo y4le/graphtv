@@ -164,6 +164,9 @@ describe('renderSearchPage', () => {
     await vi.waitFor(() => expect(results.children).toHaveLength(1))
 
     expect(status.textContent).toBe('')
+    expect(container.querySelector('.search-document').classList).toContain(
+      'search-document-has-results'
+    )
     expect(new URL(window.location.href).searchParams.get('q')).toBe('wire')
 
     input.value = ''
@@ -183,6 +186,9 @@ describe('renderSearchPage', () => {
     expect(clearButton.hidden).toBe(true)
     expect(new URL(window.location.href).searchParams.has('q')).toBe(false)
     expect(container.querySelector('.search-document').classList).toContain('search-document-empty')
+    expect(container.querySelector('.search-document').classList).not.toContain(
+      'search-document-has-results'
+    )
 
     page.destroy()
   })
