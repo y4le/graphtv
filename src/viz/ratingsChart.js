@@ -31,7 +31,8 @@ const MOBILE_POINT_SPACING = 18
 const DETAIL_LOAD_DELAY_MS = 250
 const MAX_DETAIL_ERRORS = 25
 const DRAG_START_TOLERANCE_PX = 4
-const MIN_VIEWPORT_SPAN = 1
+const MIN_VIEWPORT_SPAN = 4
+const VIEWPORT_ANNOUNCEMENT_DELAY_MS = 120
 const WHEEL_DELTA_LINE = 1
 const WHEEL_DELTA_PAGE = 2
 
@@ -44,6 +45,7 @@ export function createChart(container, seasons, options = {}) {
   shell.className = 'chart-shell'
   shell.innerHTML = `
     <p class="chart-source-status" aria-live="polite"></p>
+    <p class="chart-viewport-status visually-hidden" aria-live="polite" aria-atomic="true"></p>
     <div class="sparkline-shell">
       <svg class="sparkline-chart" aria-hidden="true"></svg>
     </div>
@@ -71,6 +73,7 @@ export function createChart(container, seasons, options = {}) {
   const mainSvg = select(shell.querySelector('.ratings-chart'))
   const bodyShell = shell.querySelector('.chart-body-shell')
   const sourceStatus = shell.querySelector('.chart-source-status')
+  const viewportStatus = shell.querySelector('.chart-viewport-status')
   const readingPane = shell.querySelector('[data-reading-pane]')
   const mediaQuery = window.matchMedia(MOBILE_QUERY)
   const mobileLandscapeQuery = window.matchMedia(MOBILE_LANDSCAPE_QUERY)
@@ -82,6 +85,7 @@ export function createChart(container, seasons, options = {}) {
   let sparkline = null
   let suppressScrollSync = false
   let suppressScrollSyncFrame = null
+  let viewportAnnouncementTimer = null
   let detailLoadTimer = null
   let scheduledDetailPointId = null
   let destroyed = false
@@ -453,6 +457,81 @@ export function createChart(container, seasons, options = {}) {
     render()
   }
 
+  function getViewportCenter() {
+    const fallbackViewport = createDefaultViewport(
+      model,
+      getCurrentChartWidth(),
+      isMobile()
+    )
+    const currentViewport = viewport ?? fallbackViewport
+    return (
+      currentViewport.start + (currentViewport.end - currentViewport.start) / 2
+    )
+  }
+
+  function getKeyboardViewportAnchor() {
+    const selectedPoint = getPointById(selectedPointId)
+    if (
+      selectedPoint &&
+      viewport &&
+      selectedPoint.x >= viewport.start &&
+      selectedPoint.x <= viewport.end
+    ) {
+      return selectedPoint.x
+    }
+
+    return getViewportCenter()
+  }
+
+  function getCurrentChartWidth() {
+    const width = Math.max(container.clientWidth, 320)
+    const axisWidth = isMobile() ? 40 : 56
+    return Math.max(width - axisWidth - 16, 240)
+  }
+
+  function fitSeries() {
+    viewport = clampViewport({ start: 1, end: model.xMax }, model)
+    render()
+    announceViewport()
+  }
+
+  function resetZoom() {
+    resetViewportWidth(
+      getCurrentChartWidth(),
+      usesScrollableBody(),
+      getKeyboardViewportAnchor()
+    )
+    announceViewport()
+  }
+
+  function zoomBy(scale) {
+    if (!viewport) {
+      return
+    }
+
+    const span = viewport.end - viewport.start
+    const anchorRatio =
+      span > 0
+        ? clamp((getKeyboardViewportAnchor() - viewport.start) / span, 0, 1)
+        : 0.5
+    zoomViewport(scale, anchorRatio)
+    announceViewport()
+  }
+
+  function announceViewport() {
+    if (viewportAnnouncementTimer) {
+      clearTimeout(viewportAnnouncementTimer)
+    }
+
+    viewportAnnouncementTimer = setTimeout(() => {
+      viewportAnnouncementTimer = null
+      viewportStatus.textContent = formatViewportAnnouncement(
+        viewport,
+        model.xMax
+      )
+    }, VIEWPORT_ANNOUNCEMENT_DELAY_MS)
+  }
+
   function clearActivePoint() {
     hoverPointId = null
     selectedPointId = null
@@ -490,14 +569,14 @@ export function createChart(container, seasons, options = {}) {
     render()
   }
 
-  function resetViewportWidth(chartWidth, isScrollable) {
+  function resetViewportWidth(
+    chartWidth,
+    isScrollable,
+    center = getViewportCenter()
+  ) {
     const defaultViewport = createDefaultViewport(model, chartWidth, isMobile())
     const defaultWidth = defaultViewport.end - defaultViewport.start + 1
-    const currentCenter = viewport
-      ? viewport.start + (viewport.end - viewport.start) / 2
-      : defaultViewport.start +
-        (defaultViewport.end - defaultViewport.start) / 2
-    const centeredStart = currentCenter - (defaultWidth - 1) / 2
+    const centeredStart = center - (defaultWidth - 1) / 2
 
     viewport = clampViewport(
       {
@@ -1192,6 +1271,9 @@ export function createChart(container, seasons, options = {}) {
     moveEpisode,
     moveSeason,
     jumpBoundary,
+    fitSeries,
+    resetZoom,
+    zoomBy,
     updateSeasons,
     getDebugState() {
       return {
@@ -1215,6 +1297,9 @@ export function createChart(container, seasons, options = {}) {
     destroy() {
       destroyed = true
       cancelScheduledDetailLoad()
+      if (viewportAnnouncementTimer) {
+        clearTimeout(viewportAnnouncementTimer)
+      }
       loadingDetailPointIds.clear()
       resizeObserver.disconnect()
       document.removeEventListener('graphtv:settings-change', settingsListener)
@@ -1225,6 +1310,16 @@ export function createChart(container, seasons, options = {}) {
       container.innerHTML = ''
     }
   }
+}
+
+function formatViewportAnnouncement(viewport, episodeCount) {
+  if (viewport.start <= 1 && viewport.end >= episodeCount) {
+    return `Whole series, ${episodeCount} ${episodeCount === 1 ? 'episode' : 'episodes'}`
+  }
+
+  const start = Math.max(1, Math.ceil(viewport.start))
+  const end = Math.min(episodeCount, Math.floor(viewport.end))
+  return `Episodes ${start}–${end} of ${episodeCount}`
 }
 
 function clamp(value, min, max) {

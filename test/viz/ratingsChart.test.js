@@ -107,18 +107,16 @@ describe('createChart', () => {
 
     expect(container.querySelectorAll('.crosshair')).toHaveLength(2)
     expect(
-      container.querySelector('.source-spread.is-active').getAttribute(
-        'stroke-opacity'
-      )
+      container
+        .querySelector('.source-spread.is-active')
+        .getAttribute('stroke-opacity')
     ).toBe('0.72')
-    expect(container.querySelectorAll('.source-spread-whisker')).toHaveLength(
-      2
-    )
+    expect(container.querySelectorAll('.source-spread-whisker')).toHaveLength(2)
     expect(container.querySelectorAll('.source-rating-point')).toHaveLength(1)
     expect(
-      container.querySelector('.source-rating-point').getAttribute(
-        'data-rating-source'
-      )
+      container
+        .querySelector('.source-rating-point')
+        .getAttribute('data-rating-source')
     ).toBe('tmdb')
 
     updateUiSettings({ showSourceSpread: false })
@@ -286,8 +284,7 @@ describe('createChart', () => {
     const initialViewport = chart.getDebugState().viewport
     const initialSpan = initialViewport.end - initialViewport.start
     const selectedCenterX =
-      56 +
-      (((initialViewport.start + initialViewport.end) / 2 - 1) / 71) * 528
+      56 + (((initialViewport.start + initialViewport.end) / 2 - 1) / 71) * 528
     const pinch = new WheelEvent('wheel', {
       bubbles: true,
       cancelable: true,
@@ -303,6 +300,81 @@ describe('createChart', () => {
     expect(nextViewport.end - nextViewport.start).toBeGreaterThan(initialSpan)
     expect((nextViewport.start + nextViewport.end) / 2).toBeCloseTo(
       (initialViewport.start + initialViewport.end) / 2
+    )
+  })
+
+  it('fits the whole series and restores default zoom around the selection', () => {
+    vi.useFakeTimers()
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    const initialViewport = chart.getDebugState().viewport
+    const initialSpan = initialViewport.end - initialViewport.start
+    chart.moveEpisode(40)
+    const selectedPointId = chart.getDebugState().selectedPointId
+
+    chart.fitSeries()
+    expect(chart.getDebugState().viewport).toEqual({ start: 1, end: 72 })
+    expect(chart.getDebugState().selectedPointId).toBe(selectedPointId)
+
+    vi.advanceTimersByTime(120)
+    expect(container.querySelector('.chart-viewport-status').textContent).toBe(
+      'Whole series, 72 episodes'
+    )
+
+    chart.resetZoom()
+    const resetViewport = chart.getDebugState().viewport
+    expect(resetViewport.end - resetViewport.start).toBeCloseTo(initialSpan)
+    expect((resetViewport.start + resetViewport.end) / 2).toBeCloseTo(41)
+    expect(chart.getDebugState().selectedPointId).toBe(selectedPointId)
+
+    chart.zoomBy(1 / 1.5)
+    const zoomedViewport = chart.getDebugState().viewport
+    expect(zoomedViewport.end - zoomedViewport.start).toBeLessThan(initialSpan)
+    expect((zoomedViewport.start + zoomedViewport.end) / 2).toBeCloseTo(41)
+
+    for (let index = 0; index < 20; index += 1) {
+      chart.zoomBy(1 / 1.5)
+    }
+    const minimumViewport = chart.getDebugState().viewport
+    expect(minimumViewport.end - minimumViewport.start).toBeCloseTo(4)
+  })
+
+  it('preserves the viewport center when the selection is offscreen', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    chart.moveEpisode(0)
+    const body = container.querySelector('.chart-body-shell')
+    Object.defineProperty(body, 'clientWidth', {
+      configurable: true,
+      value: 528
+    })
+    body.dispatchEvent(
+      new WheelEvent('wheel', {
+        bubbles: true,
+        cancelable: true,
+        deltaX: 1000
+      })
+    )
+    chart.zoomBy(1 / 1.5)
+    const zoomedViewport = chart.getDebugState().viewport
+    const zoomedCenter = (zoomedViewport.start + zoomedViewport.end) / 2
+
+    chart.resetZoom()
+    const resetViewport = chart.getDebugState().viewport
+    expect((resetViewport.start + resetViewport.end) / 2).toBeCloseTo(
+      zoomedCenter
     )
   })
 
@@ -355,9 +427,9 @@ describe('createChart', () => {
     expect(detailRoot.querySelector('.sidenote-card')).not.toBeNull()
     expect(detailRoot.textContent).toContain('Episode 2')
     expect(detailRoot.textContent).toContain('TEST 7.0')
-    expect(detailRoot.querySelector('.sidenote-rating-primary').textContent).toBe(
-      'TEST 7.0'
-    )
+    expect(
+      detailRoot.querySelector('.sidenote-rating-primary').textContent
+    ).toBe('TEST 7.0')
   })
 
   it('updates provider ratings in place while preserving the selected episode', () => {

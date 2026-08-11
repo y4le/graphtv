@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createKeyboardController } from '../../src/ui/keyboard.js'
 import { createOverlayController } from '../../src/ui/overlay.js'
+import { getUiSettings } from '../../src/viz/theme.js'
 
 let keyboardController
 
@@ -73,7 +74,9 @@ describe('createKeyboardController', () => {
     document.querySelector('button').focus()
 
     pressKey('?')
-    expect(overlayController.open).toHaveBeenCalledWith(expect.objectContaining({ id: 'help' }))
+    expect(overlayController.open).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'help' })
+    )
 
     pressKey('/')
     expect(page.focusSearch).toHaveBeenCalledOnce()
@@ -113,6 +116,17 @@ describe('createKeyboardController', () => {
     pressKey('v')
     expect(overlayController.getActiveId()).toBe('view-options')
 
+    const initialYAxis = getUiSettings().absoluteYAxis
+    document.activeElement.dispatchEvent(
+      new window.KeyboardEvent('keydown', {
+        key: 'y',
+        bubbles: true,
+        cancelable: true
+      })
+    )
+    expect(getUiSettings().absoluteYAxis).toBe(!initialYAxis)
+    expect(document.activeElement.dataset.option).toBe('absolute-y-axis')
+
     document.activeElement.dispatchEvent(
       new window.KeyboardEvent('keydown', {
         key: 'v',
@@ -123,14 +137,104 @@ describe('createKeyboardController', () => {
 
     expect(overlayController.isOpen()).toBe(false)
   })
+
+  it('uses the simplified chart navigation and viewport bindings', () => {
+    const chart = {
+      fitSeries: vi.fn(),
+      jumpBoundary: vi.fn(),
+      moveEpisode: vi.fn(),
+      moveSeason: vi.fn(),
+      resetZoom: vi.fn(),
+      zoomBy: vi.fn()
+    }
+    keyboardController = createKeyboardController({
+      page: { kind: 'results', chart },
+      overlayController: createClosedOverlayController()
+    })
+
+    pressKey('ArrowLeft')
+    pressKey('l')
+    pressKey('ArrowUp')
+    pressKey('j')
+    pressKey('Home')
+    pressKey('G')
+    pressKey('f')
+    pressKey('r')
+    pressKey('-')
+    pressKey('=')
+    pressKey('+', { shiftKey: true })
+
+    expect(chart.moveEpisode.mock.calls).toEqual([[-1], [1]])
+    expect(chart.moveSeason.mock.calls).toEqual([[-1], [1]])
+    expect(chart.jumpBoundary.mock.calls).toEqual([['start'], ['end']])
+    expect(chart.fitSeries).toHaveBeenCalledOnce()
+    expect(chart.resetZoom).toHaveBeenCalledOnce()
+    expect(chart.zoomBy.mock.calls).toEqual([[1.5], [1 / 1.5], [1 / 1.5]])
+
+    for (const removedKey of ['b', 'w', '0', '$']) {
+      pressKey(removedKey)
+    }
+
+    expect(chart.moveSeason).toHaveBeenCalledTimes(2)
+    expect(chart.jumpBoundary).toHaveBeenCalledTimes(2)
+  })
+
+  it('leaves browser and operating-system shortcuts untouched', () => {
+    const chart = {
+      fitSeries: vi.fn(),
+      moveEpisode: vi.fn(),
+      resetZoom: vi.fn(),
+      zoomBy: vi.fn()
+    }
+    const overlayController = createClosedOverlayController()
+    keyboardController = createKeyboardController({
+      page: {
+        kind: 'results',
+        chart,
+        debugEnabled: true,
+        getDebugSections: () => []
+      },
+      overlayController
+    })
+
+    const reload = pressKey('r', { ctrlKey: true })
+    const addressBar = pressKey('l', { metaKey: true })
+    const browserZoom = pressKey('-', { ctrlKey: true })
+    const browserBookmark = pressKey('d', { ctrlKey: true })
+    pressKey('d')
+
+    expect(reload.defaultPrevented).toBe(false)
+    expect(addressBar.defaultPrevented).toBe(false)
+    expect(browserZoom.defaultPrevented).toBe(false)
+    expect(browserBookmark.defaultPrevented).toBe(false)
+    expect(chart.resetZoom).not.toHaveBeenCalled()
+    expect(chart.moveEpisode).not.toHaveBeenCalled()
+    expect(chart.zoomBy).not.toHaveBeenCalled()
+    expect(overlayController.open).not.toHaveBeenCalled()
+
+    pressKey('D', { shiftKey: true })
+    expect(overlayController.open).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'debug' })
+    )
+  })
 })
 
-function pressKey(key) {
-  document.dispatchEvent(
-    new window.KeyboardEvent('keydown', {
-      key,
-      bubbles: true,
-      cancelable: true
-    })
-  )
+function createClosedOverlayController() {
+  return {
+    open: vi.fn(),
+    close: vi.fn(),
+    isOpen: () => false,
+    getActiveId: () => null
+  }
+}
+
+function pressKey(key, options = {}) {
+  const event = new window.KeyboardEvent('keydown', {
+    key,
+    bubbles: true,
+    cancelable: true,
+    ...options
+  })
+  document.dispatchEvent(event)
+  return event
 }

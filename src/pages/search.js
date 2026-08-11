@@ -1,7 +1,16 @@
-import { getActiveProvider, getProviderCatalog, searchShows } from '../data/provider.js'
+import {
+  getActiveProvider,
+  getProviderCatalog,
+  searchShows
+} from '../data/provider.js'
 import { buildUrl, getUrlParams, preserveDebugParams } from '../lib/url.js'
 import { createPlaceholderRotation } from '../ui/placeholderRotation.js'
-import { renderEmpty, renderError, renderLoading, renderPublisherBrand } from './shared.js'
+import {
+  renderEmpty,
+  renderError,
+  renderLoading,
+  renderPublisherBrand
+} from './shared.js'
 
 const SEARCH_FOCUS_KEY = 'graphtv-focus-search'
 
@@ -15,9 +24,9 @@ export function renderSearchMasthead() {
           <button type="button" class="masthead-action" data-ui-action="view-options">Options</button>
         </div>
         <p class="masthead-hint">
-          Press <kbd>/</kbd> to search,
-          <button type="button" class="shortcut-action" data-ui-action="help" aria-label="? shortcut: Open help">?</button> for help,
-          <button type="button" class="shortcut-action" data-ui-action="view-options" aria-label="v shortcut: Open view options">v</button> for view options.
+          Press <kbd class="keycap">/</kbd> to search,
+          <button type="button" class="shortcut-action keycap" data-ui-action="help" aria-label="? shortcut: Open help">?</button> for help,
+          <button type="button" class="shortcut-action keycap" data-ui-action="view-options" aria-label="v shortcut: Open view options">v</button> for view options.
         </p>
       </div>
     </header>
@@ -99,7 +108,8 @@ export function renderSearchPage(container) {
   }
 
   function syncClearControl() {
-    clearButton.hidden = input.value.length === 0 && state.committedQuery.length === 0
+    clearButton.hidden =
+      input.value.length === 0 && state.committedQuery.length === 0
   }
 
   function updateSearchUrl(nextQuery) {
@@ -197,7 +207,9 @@ export function renderSearchPage(container) {
       }
 
       if (results.length === 0) {
-        resultsStatus.innerHTML = renderEmpty(`No shows found for “${escapeHtml(nextQuery)}”.`)
+        resultsStatus.innerHTML = renderEmpty(
+          `No shows found for “${escapeHtml(nextQuery)}”.`
+        )
         return
       }
 
@@ -251,7 +263,9 @@ export function renderSearchPage(container) {
       selectResult(edge === 'start' ? 0 : state.results.length - 1)
     },
     openSelection() {
-      const active = resultsRoot.querySelector('.search-result-item.is-selected .search-result-link')
+      const active = resultsRoot.querySelector(
+        '.search-result-item.is-selected .search-result-link'
+      )
       if (active) {
         active.click()
       }
@@ -321,7 +335,9 @@ function syncResultSelection(root, selectedIndex, { focus = false } = {}) {
   active?.focus({ preventScroll: true })
   active?.scrollIntoView?.({
     block: 'nearest',
-    behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+    behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+      ? 'auto'
+      : 'smooth'
   })
 }
 

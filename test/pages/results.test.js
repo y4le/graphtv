@@ -51,6 +51,9 @@ describe('renderResultsMasthead', () => {
       'view-options',
       'return-search'
     ])
+    expect(actions.every((action) => action.classList.contains('keycap'))).toBe(
+      true
+    )
     expect(
       Array.from(
         container.querySelectorAll('.masthead-actions .masthead-action')
@@ -190,12 +193,18 @@ describe('renderResultsPage', () => {
     })
 
     expect(page.chart).toBeNull()
-    expect(container.querySelector('.results-title').textContent).toBe('Example')
-    expect(container.querySelector('.show-plot').textContent).toBe('Primary synopsis')
+    expect(container.querySelector('.results-title').textContent).toBe(
+      'Example'
+    )
+    expect(container.querySelector('.show-plot').textContent).toBe(
+      'Primary synopsis'
+    )
     expect(container.querySelector('.chart-root').textContent).toContain(
       'Episode service unavailable'
     )
-    expect(container.querySelector('.results-data').getAttribute('aria-busy')).toBe('false')
+    expect(
+      container.querySelector('.results-data').getAttribute('aria-busy')
+    ).toBe('false')
   })
 })
 

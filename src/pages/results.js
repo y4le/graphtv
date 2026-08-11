@@ -30,9 +30,9 @@ export function renderResultsMasthead({ interactive = false } = {}) {
                 <button type="button" class="masthead-action" data-ui-action="view-options">Options</button>
               </div>
               <p class="masthead-hint">
-                Press <button type="button" class="shortcut-action" data-ui-action="help" aria-label="? shortcut: Open help">?</button> for help,
-                <button type="button" class="shortcut-action" data-ui-action="view-options" aria-label="v shortcut: Open view options">v</button> for view options,
-                <button type="button" class="shortcut-action" data-ui-action="return-search" aria-label="q shortcut: Return to search">q</button> to return.
+                Press <button type="button" class="shortcut-action keycap" data-ui-action="help" aria-label="? shortcut: Open help">?</button> for help,
+                <button type="button" class="shortcut-action keycap" data-ui-action="view-options" aria-label="v shortcut: Open view options">v</button> for view options,
+                <button type="button" class="shortcut-action keycap" data-ui-action="return-search" aria-label="q shortcut: Return to search">q</button> to return.
               </p>
             </div>`
           : ''
@@ -247,7 +247,12 @@ function updateShowContext(container, show, alignmentIssues) {
       <div class="show-facts">
         <p class="show-meta">${escapeHtml(show.genres.join(' · '))}</p>
         <ul class="show-metrics">
-          ${orderVisibleRatings(show.ratings).map((rating) => `<li class="rating-badge">${formatRatingBadge(rating)}</li>`).join('')}
+          ${orderVisibleRatings(show.ratings)
+            .map(
+              (rating) =>
+                `<li class="rating-badge">${formatRatingBadge(rating)}</li>`
+            )
+            .join('')}
         </ul>
       </div>
       <div class="show-copy">

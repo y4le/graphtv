@@ -1,12 +1,31 @@
-import { createChordTracker, isEditableElement, isSuppressedInteractiveElement } from '../lib/keyboard.js'
-import { openDebugOverlay, openHelpOverlay, openViewOptionsOverlay } from './overlay.js'
+import {
+  createChordTracker,
+  hasCommandModifier,
+  isEditableElement,
+  isSuppressedInteractiveElement
+} from '../lib/keyboard.js'
+import {
+  openDebugOverlay,
+  openHelpOverlay,
+  openViewOptionsOverlay
+} from './overlay.js'
+
+const KEYBOARD_ZOOM_STEP = 1.5
 
 export function createKeyboardController({ page, overlayController }) {
   const chordTracker = createChordTracker()
 
   function onKeyDown(event) {
+    if (hasCommandModifier(event)) {
+      chordTracker.reset()
+      return
+    }
+
     if (overlayController.isOpen()) {
-      if (event.key === 'v' && overlayController.getActiveId() === 'view-options') {
+      if (
+        event.key === 'v' &&
+        overlayController.getActiveId() === 'view-options'
+      ) {
         event.preventDefault()
         overlayController.close()
       }
@@ -15,7 +34,8 @@ export function createKeyboardController({ page, overlayController }) {
 
     const activeElement = document.activeElement
     const isSearchResultTarget = Boolean(
-      page.kind === 'search' && activeElement?.closest?.('[data-focus-zone="search-results"]')
+      page.kind === 'search' &&
+        activeElement?.closest?.('[data-focus-zone="search-results"]')
     )
 
     if (isEditableElement(activeElement)) {
@@ -27,7 +47,10 @@ export function createKeyboardController({ page, overlayController }) {
       return
     }
 
-    if (isSuppressedInteractiveElement(activeElement) && !isSearchResultTarget) {
+    if (
+      isSuppressedInteractiveElement(activeElement) &&
+      !isSearchResultTarget
+    ) {
       chordTracker.reset()
 
       if (keyWorksFromInteractiveControl(event.key)) {
@@ -116,7 +139,7 @@ export function createKeyboardController({ page, overlayController }) {
       return true
     }
 
-    if (key === 'd' || key === 'D') {
+    if (key === 'D') {
       event.preventDefault()
       openDebugOverlay(overlayController, page)
       return true
@@ -185,27 +208,51 @@ export function createKeyboardController({ page, overlayController }) {
       return
     }
 
-    if (key === 'k' || key === 'b' || (event.key === 'ArrowUp' && !event.ctrlKey) || (event.key === 'ArrowLeft' && event.ctrlKey)) {
+    if (key === 'k' || key === 'ArrowUp') {
       event.preventDefault()
       page.chart.moveSeason(-1)
       return
     }
 
-    if (key === 'j' || key === 'w' || (event.key === 'ArrowDown' && !event.ctrlKey) || (event.key === 'ArrowRight' && event.ctrlKey)) {
+    if (key === 'j' || key === 'ArrowDown') {
       event.preventDefault()
       page.chart.moveSeason(1)
       return
     }
 
-    if (key === 'gg' || key === 'Home' || key === '0') {
+    if (key === 'gg' || key === 'Home') {
       event.preventDefault()
       page.chart.jumpBoundary('start')
       return
     }
 
-    if (key === 'G' || key === 'End' || key === '$') {
+    if (key === 'G' || key === 'End') {
       event.preventDefault()
       page.chart.jumpBoundary('end')
+      return
+    }
+
+    if (key === 'f') {
+      event.preventDefault()
+      page.chart.fitSeries()
+      return
+    }
+
+    if (key === 'r') {
+      event.preventDefault()
+      page.chart.resetZoom()
+      return
+    }
+
+    if (key === '-') {
+      event.preventDefault()
+      page.chart.zoomBy(KEYBOARD_ZOOM_STEP)
+      return
+    }
+
+    if (key === '=' || key === '+') {
+      event.preventDefault()
+      page.chart.zoomBy(1 / KEYBOARD_ZOOM_STEP)
     }
   }
 

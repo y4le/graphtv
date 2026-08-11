@@ -84,7 +84,7 @@ If one slice grows too large, split it.
   - normal-mode navigation routes directly to chart state
   - `h`/`l` or `ArrowLeft`/`ArrowRight` move by episode
   - `j`/`k` or `ArrowUp`/`ArrowDown` move by season
-  - `w`/`b`, `0`/`$`, `gg`/`G`, `Home`/`End` all work per spec
+  - `gg`/`G` and `Home`/`End` jump to the first/last episode
   - viewport auto-follows keyboard navigation
 - Global commands:
   - `/` focuses search

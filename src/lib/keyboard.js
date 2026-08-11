@@ -60,3 +60,7 @@ export function isSuppressedInteractiveElement(element) {
   const tagName = element.tagName.toLowerCase()
   return tagName === 'a' || tagName === 'button' || tagName === 'summary'
 }
+
+export function hasCommandModifier(event) {
+  return Boolean(event.altKey || event.ctrlKey || event.metaKey)
+}

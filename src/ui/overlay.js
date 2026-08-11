@@ -1,4 +1,28 @@
-import { PALETTES, THEMES, getUiSettings, toggleTheme, updateUiSettings, cyclePalette } from '../viz/theme.js'
+import {
+  PALETTES,
+  THEMES,
+  getUiSettings,
+  toggleTheme,
+  updateUiSettings,
+  cyclePalette
+} from '../viz/theme.js'
+import { hasCommandModifier } from '../lib/keyboard.js'
+
+const VIEW_OPTION_SHORTCUTS = {
+  c: 'palette',
+  f: 'full-show-trendline',
+  r: 'source-spread',
+  s: 'season-trendlines',
+  t: 'theme',
+  y: 'absolute-y-axis'
+}
+
+const VIEW_OPTION_SETTING_KEYS = {
+  'absolute-y-axis': 'absoluteYAxis',
+  'full-show-trendline': 'fullShowTrendline',
+  'season-trendlines': 'seasonTrendlines',
+  'source-spread': 'showSourceSpread'
+}
 
 export function createOverlayController() {
   const root = document.createElement('div')
@@ -52,6 +76,10 @@ export function createOverlayController() {
     }
 
     panel.addEventListener('keydown', (event) => {
+      if (hasCommandModifier(event)) {
+        return
+      }
+
       if (event.key === 'Escape' || event.key === 'q') {
         event.preventDefault()
         event.stopPropagation()
@@ -62,7 +90,7 @@ export function createOverlayController() {
       if (
         (config.id === 'help' && (event.key === '?' || event.key === 'F1')) ||
         (config.id === 'view-options' && event.key === 'v') ||
-        (config.id === 'debug' && (event.key === 'd' || event.key === 'D'))
+        (config.id === 'debug' && event.key === 'D')
       ) {
         event.preventDefault()
         event.stopPropagation()
@@ -90,7 +118,9 @@ export function createOverlayController() {
 
     root.querySelector('[data-overlay-close]').addEventListener('click', close)
     config.onMount?.({ panel, content, close })
-    focusInitial(panel)
+    if (!panel.contains(document.activeElement)) {
+      focusInitial(panel)
+    }
   }
 
   return {
@@ -106,7 +136,8 @@ export function createOverlayController() {
 }
 
 export function openHelpOverlay(overlayController, page) {
-  const sections = page.kind === 'results' ? resultsHelpSections() : searchHelpSections()
+  const sections =
+    page.kind === 'results' ? resultsHelpSections() : searchHelpSections()
   overlayController.open({
     id: 'help',
     title: 'Keyboard help',
@@ -212,7 +243,10 @@ function renderRawJsonLink(section) {
 }
 
 function isRawJsonSection(section) {
-  return section.title === 'Provider diagnostics' || section.title === 'Merged bundle'
+  return (
+    section.title === 'Provider diagnostics' ||
+    section.title === 'Merged bundle'
+  )
 }
 
 function renderProviderCatalogTable(rows) {
@@ -235,7 +269,10 @@ function renderProviderCatalogTable(rows) {
     <div class="debug-provider-table" role="table" aria-label="Provider settings">
       <div class="debug-provider-row debug-provider-row-header" role="row">
         ${columns
-          .map((column) => `<span class="debug-provider-cell" role="columnheader">${column.label}</span>`)
+          .map(
+            (column) =>
+              `<span class="debug-provider-cell" role="columnheader">${column.label}</span>`
+          )
           .join('')}
       </div>
       ${rows
@@ -245,7 +282,9 @@ function renderProviderCatalogTable(rows) {
               ${columns
                 .map((column) => {
                   const rawValue = row[column.key]
-                  const value = column.format ? column.format(rawValue, row) : rawValue
+                  const value = column.format
+                    ? column.format(rawValue, row)
+                    : rawValue
                   return `<span class="debug-provider-cell" role="cell">${escapeHtml(String(value))}</span>`
                 })
                 .join('')}
@@ -261,7 +300,9 @@ function hydrateDebugTrees(content, sections) {
   content.querySelectorAll('[data-debug-tree-index]').forEach((root) => {
     const index = Number(root.dataset.debugTreeIndex)
     const section = sections[index]
-    const shouldOpen = section.title === 'Provider diagnostics' || section.title === 'Merged bundle'
+    const shouldOpen =
+      section.title === 'Provider diagnostics' ||
+      section.title === 'Merged bundle'
     root.replaceChildren(createJsonNode(section.data, 0, shouldOpen))
   })
 }
@@ -295,11 +336,19 @@ function createJsonNode(value, depth, shouldOpen = false, keyLabel = null) {
     leaf.appendChild(createJsonTextSpan('debug-json-key', `${keyLabel}:`))
   }
 
-  leaf.appendChild(createJsonTextSpan('debug-json-value', formatJsonValue(value)))
+  leaf.appendChild(
+    createJsonTextSpan('debug-json-value', formatJsonValue(value))
+  )
   return leaf
 }
 
-function createJsonBranchNode({ keyLabel, summary, depth, shouldOpen, entries }) {
+function createJsonBranchNode({
+  keyLabel,
+  summary,
+  depth,
+  shouldOpen,
+  entries
+}) {
   const details = document.createElement('details')
   details.className = 'debug-json-branch'
   details.style.setProperty('--debug-depth', depth)
@@ -308,7 +357,9 @@ function createJsonBranchNode({ keyLabel, summary, depth, shouldOpen, entries })
   const summaryNode = document.createElement('summary')
   summaryNode.className = 'debug-json-summary'
   if (keyLabel !== null) {
-    summaryNode.appendChild(createJsonTextSpan('debug-json-key', `${keyLabel}:`))
+    summaryNode.appendChild(
+      createJsonTextSpan('debug-json-key', `${keyLabel}:`)
+    )
   }
   summaryNode.appendChild(createJsonTextSpan('debug-json-meta', summary))
   details.appendChild(summaryNode)
@@ -398,76 +449,53 @@ export function openViewOptionsOverlay(overlayController) {
     },
     onKeyDown(event, { content }) {
       const rows = Array.from(content.querySelectorAll('.view-option-row'))
-      const currentIndex = rows.findIndex((row) => row === document.activeElement)
+      const focusedRow = document.activeElement?.closest?.('.view-option-row')
+      const currentIndex = rows.indexOf(focusedRow)
 
       if (event.key === 'j' || event.key === 'ArrowDown') {
         event.preventDefault()
         rows[Math.min(currentIndex + 1, rows.length - 1)]?.focus()
+        return
       }
 
       if (event.key === 'k' || event.key === 'ArrowUp') {
         event.preventDefault()
         rows[Math.max(currentIndex - 1, 0)]?.focus()
+        return
       }
 
-      if (event.key === 'Enter') {
+      if (event.key === 'h' || event.key === 'ArrowLeft') {
         event.preventDefault()
-        const row = rows[currentIndex]
-        if (row?.dataset.option === 'theme') {
-          toggleTheme()
+        setViewOptionDirection(rows[currentIndex]?.dataset.option, -1)
+        syncViewOptions(content)
+        return
+      }
+
+      if (event.key === 'l' || event.key === 'ArrowRight') {
+        event.preventDefault()
+        setViewOptionDirection(rows[currentIndex]?.dataset.option, 1)
+        syncViewOptions(content)
+        return
+      }
+
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault()
+        if (!event.repeat) {
+          activateViewOption(rows[currentIndex]?.dataset.option)
         }
-        if (row?.dataset.option === 'palette') {
-          cyclePalette()
+        syncViewOptions(content)
+        return
+      }
+
+      const option = VIEW_OPTION_SHORTCUTS[event.key]
+      if (option) {
+        event.preventDefault()
+        const row = content.querySelector(`[data-option="${option}"]`)
+        row?.focus()
+        if (!event.repeat) {
+          activateViewOption(option)
+          syncViewOptions(content)
         }
-        if (row?.dataset.option === 'season-trendlines') {
-          toggleSetting('seasonTrendlines')
-        }
-        if (row?.dataset.option === 'full-show-trendline') {
-          toggleSetting('fullShowTrendline')
-        }
-        if (row?.dataset.option === 'source-spread') {
-          toggleSetting('showSourceSpread')
-        }
-        if (row?.dataset.option === 'absolute-y-axis') {
-          toggleSetting('absoluteYAxis')
-        }
-        syncViewOptions(content)
-      }
-
-      if (event.key === 't') {
-        event.preventDefault()
-        toggleTheme()
-        syncViewOptions(content)
-      }
-
-      if (event.key === 'c') {
-        event.preventDefault()
-        cyclePalette()
-        syncViewOptions(content)
-      }
-
-      if (event.key === 's') {
-        event.preventDefault()
-        toggleSetting('seasonTrendlines')
-        syncViewOptions(content)
-      }
-
-      if (event.key === 'f') {
-        event.preventDefault()
-        toggleSetting('fullShowTrendline')
-        syncViewOptions(content)
-      }
-
-      if (event.key === 'r') {
-        event.preventDefault()
-        toggleSetting('showSourceSpread')
-        syncViewOptions(content)
-      }
-
-      if (event.key === 'y') {
-        event.preventDefault()
-        toggleSetting('absoluteYAxis')
-        syncViewOptions(content)
       }
     }
   })
@@ -483,42 +511,42 @@ function renderViewOptionsContent() {
         <span class="view-option-values">
           ${THEMES.map((theme) => renderValueButton('theme', theme, settings.theme === theme)).join('')}
         </span>
-        <span class="view-option-hint">t</span>
+        <kbd class="view-option-hint keycap">t</kbd>
       </div>
       <div class="view-option-row" data-option="palette" tabindex="0">
         <span class="view-option-label">Palette</span>
         <span class="view-option-values">
           ${PALETTES.map((palette) => renderValueButton('palette', palette, settings.palette === palette)).join('')}
         </span>
-        <span class="view-option-hint">c</span>
+        <kbd class="view-option-hint keycap">c</kbd>
       </div>
       <div class="view-option-row" data-option="season-trendlines" tabindex="0">
         <span class="view-option-label">Season trendlines</span>
         <span class="view-option-values">
           ${renderToggleButtons('seasonTrendlines', settings.seasonTrendlines)}
         </span>
-        <span class="view-option-hint">s</span>
+        <kbd class="view-option-hint keycap">s</kbd>
       </div>
       <div class="view-option-row" data-option="full-show-trendline" tabindex="0">
         <span class="view-option-label">Full-show trendline</span>
         <span class="view-option-values">
           ${renderToggleButtons('fullShowTrendline', settings.fullShowTrendline)}
         </span>
-        <span class="view-option-hint">f</span>
+        <kbd class="view-option-hint keycap">f</kbd>
       </div>
       <div class="view-option-row" data-option="source-spread" tabindex="0">
-        <span class="view-option-label">Show source spread</span>
+        <span class="view-option-label">Rating source spread</span>
         <span class="view-option-values">
           ${renderToggleButtons('showSourceSpread', settings.showSourceSpread)}
         </span>
-        <span class="view-option-hint">r</span>
+        <kbd class="view-option-hint keycap">r</kbd>
       </div>
       <div class="view-option-row" data-option="absolute-y-axis" tabindex="0">
         <span class="view-option-label">Absolute y-axis (0–10)</span>
         <span class="view-option-values">
           ${renderToggleButtons('absoluteYAxis', settings.absoluteYAxis)}
         </span>
-        <span class="view-option-hint">y</span>
+        <kbd class="view-option-hint keycap">y</kbd>
       </div>
     </div>
   `
@@ -555,26 +583,44 @@ function bindViewOptions(content) {
 function syncViewOptions(content) {
   const settings = getUiSettings()
   content.querySelectorAll('[data-view-theme]').forEach((button) => {
-    button.setAttribute('aria-pressed', String(button.dataset.viewTheme === settings.theme))
+    button.setAttribute(
+      'aria-pressed',
+      String(button.dataset.viewTheme === settings.theme)
+    )
   })
   content.querySelectorAll('[data-view-palette]').forEach((button) => {
-    button.setAttribute('aria-pressed', String(button.dataset.viewPalette === settings.palette))
+    button.setAttribute(
+      'aria-pressed',
+      String(button.dataset.viewPalette === settings.palette)
+    )
   })
   content.querySelectorAll('[data-view-toggle]').forEach((button) => {
     const key = button.dataset.viewToggle
     const value = button.dataset.viewToggleValue === 'true'
-    button.setAttribute('aria-pressed', String(Boolean(settings[key]) === value))
+    button.setAttribute(
+      'aria-pressed',
+      String(Boolean(settings[key]) === value)
+    )
   })
 }
 
 function renderValueButton(kind, value, isActive) {
-  const dataAttribute = kind === 'theme' ? `data-view-theme="${value}"` : `data-view-palette="${value}"`
-  const label = value === 'monotone' ? 'Mono' : value.charAt(0).toUpperCase() + value.slice(1)
+  const dataAttribute =
+    kind === 'theme'
+      ? `data-view-theme="${value}"`
+      : `data-view-palette="${value}"`
+  const label =
+    value === 'monotone'
+      ? 'Mono'
+      : value.charAt(0).toUpperCase() + value.slice(1)
   return `<button type="button" class="view-value" ${dataAttribute} aria-pressed="${String(isActive)}">${label}</button>`
 }
 
 function renderToggleButtons(settingKey, isEnabled) {
-  return [renderToggleButton(settingKey, true, isEnabled), renderToggleButton(settingKey, false, !isEnabled)].join('')
+  return [
+    renderToggleButton(settingKey, true, isEnabled),
+    renderToggleButton(settingKey, false, !isEnabled)
+  ].join('')
 }
 
 function renderToggleButton(settingKey, value, isActive) {
@@ -586,6 +632,49 @@ function toggleSetting(key) {
   updateUiSettings({ [key]: !settings[key] })
 }
 
+function activateViewOption(option) {
+  if (option === 'theme') {
+    toggleTheme()
+    return
+  }
+
+  if (option === 'palette') {
+    cyclePalette()
+    return
+  }
+
+  const settingKey = VIEW_OPTION_SETTING_KEYS[option]
+  if (settingKey) {
+    toggleSetting(settingKey)
+  }
+}
+
+function setViewOptionDirection(option, direction) {
+  const settings = getUiSettings()
+
+  if (option === 'theme') {
+    updateUiSettings({ theme: stepValue(THEMES, settings.theme, direction) })
+    return
+  }
+
+  if (option === 'palette') {
+    updateUiSettings({
+      palette: stepValue(PALETTES, settings.palette, direction)
+    })
+    return
+  }
+
+  const settingKey = VIEW_OPTION_SETTING_KEYS[option]
+  if (settingKey) {
+    updateUiSettings({ [settingKey]: direction > 0 })
+  }
+}
+
+function stepValue(values, currentValue, direction) {
+  const currentIndex = Math.max(values.indexOf(currentValue), 0)
+  return values[(currentIndex + direction + values.length) % values.length]
+}
+
 function resultsHelpSections() {
   return [
     {
@@ -594,18 +683,27 @@ function resultsHelpSections() {
         { keys: ['/', 'q'], action: 'Return to search' },
         { keys: ['v'], action: 'Open view options' },
         { keys: ['?', 'F1'], action: 'Open help' },
-        { keys: ['d', 'D'], action: 'Toggle debug overlay' }
+        { keys: ['D'], action: 'Toggle debug overlay' }
       ]
     },
     {
-      title: 'Chart',
+      title: 'Chart navigation',
       items: [
         { keys: ['ArrowLeft', 'h'], action: 'Previous episode' },
         { keys: ['ArrowRight', 'l'], action: 'Next episode' },
-        { keys: ['ArrowUp', 'k', 'b'], action: 'Previous season' },
-        { keys: ['ArrowDown', 'j', 'w'], action: 'Next season' },
-        { keys: ['Home', '0', 'gg'], action: 'First episode' },
-        { keys: ['End', '$', 'G'], action: 'Last episode' }
+        { keys: ['ArrowUp', 'k'], action: 'Previous season' },
+        { keys: ['ArrowDown', 'j'], action: 'Next season' },
+        { keys: ['Home', 'gg'], action: 'First episode' },
+        { keys: ['End', 'G'], action: 'Last episode' }
+      ]
+    },
+    {
+      title: 'Viewport',
+      items: [
+        { keys: ['f'], action: 'Fit entire series' },
+        { keys: ['r'], action: 'Reset zoom' },
+        { keys: ['-'], action: 'Zoom out' },
+        { keys: ['=', '+'], action: 'Zoom in' }
       ]
     }
   ]
@@ -619,7 +717,7 @@ function searchHelpSections() {
         { keys: ['/'], action: 'Focus search input' },
         { keys: ['v'], action: 'Open view options' },
         { keys: ['?', 'F1'], action: 'Open help' },
-        { keys: ['d', 'D'], action: 'Toggle debug overlay' }
+        { keys: ['D'], action: 'Toggle debug overlay' }
       ]
     },
     {
@@ -646,8 +744,10 @@ function renderHelpKeys(keys) {
   return keys
     .map((key) => {
       const label = labels[key]
-      const accessibleName = label ? ` aria-label="${label.name}" title="${label.name}"` : ''
-      return `<kbd class="help-key"${accessibleName}>${escapeHtml(label?.glyph ?? key)}</kbd>`
+      const accessibleName = label
+        ? ` aria-label="${label.name}" title="${label.name}"`
+        : ''
+      return `<kbd class="help-key keycap"${accessibleName}>${escapeHtml(label?.glyph ?? key)}</kbd>`
     })
     .join('<span class="help-key-separator" aria-hidden="true">/</span>')
 }
@@ -667,7 +767,10 @@ function trapFocus(event, panel) {
 
   const currentIndex = focusable.indexOf(document.activeElement)
   const direction = event.shiftKey ? -1 : 1
-  const nextIndex = currentIndex === -1 ? 0 : (currentIndex + direction + focusable.length) % focusable.length
+  const nextIndex =
+    currentIndex === -1
+      ? 0
+      : (currentIndex + direction + focusable.length) % focusable.length
 
   event.preventDefault()
   focusable[nextIndex].focus({ preventScroll: true })
@@ -675,12 +778,20 @@ function trapFocus(event, panel) {
 
 function getFocusable(root) {
   return Array.from(
-    root.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
-  ).filter((element) => !element.hasAttribute('disabled') && !element.getAttribute('aria-hidden'))
+    root.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )
+  ).filter(
+    (element) =>
+      !element.hasAttribute('disabled') && !element.getAttribute('aria-hidden')
+  )
 }
 
 function escapeHtml(value) {
-  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
 }
 
 function escapeAttribute(value) {
@@ -688,5 +799,7 @@ function escapeAttribute(value) {
 }
 
 function getMotionBehavior() {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ? 'auto'
+    : 'smooth'
 }

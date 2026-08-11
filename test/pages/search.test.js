@@ -15,7 +15,10 @@ import {
   renderSearchPage,
   requestSearchFocusOnNextPage
 } from '../../src/pages/search.js'
-import { PLACEHOLDER_FADE_MS, PLACEHOLDER_ROTATION_MS } from '../../src/ui/placeholderRotation.js'
+import {
+  PLACEHOLDER_FADE_MS,
+  PLACEHOLDER_ROTATION_MS
+} from '../../src/ui/placeholderRotation.js'
 
 let originalPath
 
@@ -41,7 +44,9 @@ describe('renderSearchMasthead', () => {
 
     const masthead = container.querySelector('.masthead')
 
-    expect(masthead.firstElementChild.classList.contains('publisher-brand')).toBe(true)
+    expect(
+      masthead.firstElementChild.classList.contains('publisher-brand')
+    ).toBe(true)
     expect(masthead.querySelector('.masthead-meta .publisher-brand')).toBeNull()
   })
 
@@ -57,11 +62,16 @@ describe('renderSearchMasthead', () => {
       'help',
       'view-options'
     ])
-    expect(container.querySelector('.masthead-hint kbd').textContent).toBe('/')
+    expect(actions.every((action) => action.classList.contains('keycap'))).toBe(
+      true
+    )
     expect(
-      Array.from(container.querySelectorAll('.masthead-actions .masthead-action')).map(
-        (action) => action.dataset.uiAction
-      )
+      container.querySelector('.masthead-hint kbd.keycap').textContent
+    ).toBe('/')
+    expect(
+      Array.from(
+        container.querySelectorAll('.masthead-actions .masthead-action')
+      ).map((action) => action.dataset.uiAction)
     ).toEqual(['help', 'view-options'])
   })
 })
@@ -112,7 +122,9 @@ describe('renderSearchPage', () => {
   })
 
   it('leaves focus alone when the page opens with a query', () => {
-    vi.spyOn(HTMLFormElement.prototype, 'requestSubmit').mockImplementation(() => {})
+    vi.spyOn(HTMLFormElement.prototype, 'requestSubmit').mockImplementation(
+      () => {}
+    )
     const { input, page } = renderPage('/?q=fringe')
 
     expect(input.hasAttribute('autofocus')).toBe(false)
@@ -123,7 +135,9 @@ describe('renderSearchPage', () => {
   })
 
   it('restores focus when returning from a show page', () => {
-    vi.spyOn(HTMLFormElement.prototype, 'requestSubmit').mockImplementation(() => {})
+    vi.spyOn(HTMLFormElement.prototype, 'requestSubmit').mockImplementation(
+      () => {}
+    )
     requestSearchFocusOnNextPage()
     const { input, page } = renderPage('/?q=fringe')
 
@@ -139,13 +153,17 @@ describe('renderSearchPage', () => {
     const { clearButton, container, input, page } = renderPage()
 
     expect(clearButton.hidden).toBe(true)
-    expect(clearButton.getAttribute('aria-label')).toBe('Clear search and results')
+    expect(clearButton.getAttribute('aria-label')).toBe(
+      'Clear search and results'
+    )
     expect(input.required).toBe(false)
     expect(input.getAttribute('enterkeyhint')).toBe('search')
     expect(input.getAttribute('autocorrect')).toBe('off')
     expect(input.getAttribute('autocapitalize')).toBe('off')
     expect(input.getAttribute('spellcheck')).toBe('false')
-    expect(container.querySelector('.search-form').getAttribute('role')).toBe('search')
+    expect(container.querySelector('.search-form').getAttribute('role')).toBe(
+      'search'
+    )
     expect(container.querySelector('.provider-note')).toBeNull()
 
     input.value = 'wire'
@@ -157,7 +175,8 @@ describe('renderSearchPage', () => {
 
   it('keeps committed results when the draft is deleted and resets them from Clear', async () => {
     vi.mocked(searchShows).mockResolvedValue([createSearchResult()])
-    const { clearButton, container, form, input, page, results, status } = renderPage()
+    const { clearButton, container, form, input, page, results, status } =
+      renderPage()
 
     input.value = 'wire'
     form.requestSubmit()
@@ -185,7 +204,9 @@ describe('renderSearchPage', () => {
     expect(status.textContent).toBe('')
     expect(clearButton.hidden).toBe(true)
     expect(new URL(window.location.href).searchParams.has('q')).toBe(false)
-    expect(container.querySelector('.search-document').classList).toContain('search-document-empty')
+    expect(container.querySelector('.search-document').classList).toContain(
+      'search-document-empty'
+    )
     expect(container.querySelector('.search-document').classList).not.toContain(
       'search-document-has-results'
     )
@@ -238,7 +259,9 @@ describe('renderSearchPage', () => {
   it('ignores stale searches that finish out of order', async () => {
     const first = createDeferred()
     const second = createDeferred()
-    vi.mocked(searchShows).mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
+    vi.mocked(searchShows)
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
     const { form, input, page, results, status } = renderPage()
 
     input.value = 'alpha'
@@ -293,7 +316,11 @@ describe('renderSearchPage', () => {
     form.requestSubmit()
     await vi.waitFor(() => expect(results.children).toHaveLength(2))
 
-    expect(container.querySelector('.search-results-section').hasAttribute('aria-live')).toBe(false)
+    expect(
+      container
+        .querySelector('.search-results-section')
+        .hasAttribute('aria-live')
+    ).toBe(false)
     expect(status.getAttribute('aria-live')).toBe('polite')
     expect(status.getAttribute('aria-atomic')).toBe('true')
     expect(status.textContent).toBe('')
@@ -301,7 +328,9 @@ describe('renderSearchPage', () => {
       'Search results for wire: 2'
     )
     expect(results.querySelector('[aria-current]')).toBeNull()
-    expect(results.querySelector('.search-result-meta').textContent).toBe('2002 · Crime · Drama')
+    expect(results.querySelector('.search-result-meta').textContent).toBe(
+      '2002 · Crime · Drama'
+    )
     expect(results.querySelector('img').getAttribute('loading')).toBe('lazy')
 
     page.moveSelection(1)
@@ -319,15 +348,21 @@ describe('renderSearchPage', () => {
 
     input.value = 'missing'
     form.requestSubmit()
-    await vi.waitFor(() => expect(status.textContent).toContain('No shows found'))
+    await vi.waitFor(() =>
+      expect(status.textContent).toContain('No shows found')
+    )
     expect(container.querySelector('.search-document').classList).not.toContain(
       'search-document-empty'
     )
 
-    vi.mocked(searchShows).mockRejectedValueOnce(new Error('Provider unavailable'))
+    vi.mocked(searchShows).mockRejectedValueOnce(
+      new Error('Provider unavailable')
+    )
     input.value = 'error'
     form.requestSubmit()
-    await vi.waitFor(() => expect(status.textContent).toBe('Provider unavailable'))
+    await vi.waitFor(() =>
+      expect(status.textContent).toBe('Provider unavailable')
+    )
     expect(container.querySelector('.search-document').classList).not.toContain(
       'search-document-empty'
     )

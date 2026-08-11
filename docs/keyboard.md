@@ -24,20 +24,20 @@ Some vim bindings use multi-key sequences (e.g., `gg`). The implementation shoul
 
 ### Global (normal mode)
 
-| Action | Vim | Conventional | Notes |
-|---|---|---|---|
-| Open/close help | `?` | `F1` | Shows context-sensitive bindings |
-| Focus search | `/` | — | Enters insert mode |
-| Open/close view options | `v` | — | Theme, palette settings |
-| Toggle debug panel | `D` | — | Shift+D to avoid accidental triggers |
-| Return to search | `q` | — | From results page |
+| Action                  | Vim | Conventional | Notes                                |
+| ----------------------- | --- | ------------ | ------------------------------------ |
+| Open/close help         | `?` | `F1`         | Shows context-sensitive bindings     |
+| Focus search            | `/` | —            | Enters insert mode                   |
+| Open/close view options | `v` | —            | Theme, palette settings              |
+| Toggle debug panel      | `D` | —            | Shift+D to avoid accidental triggers |
+| Return to search        | `q` | —            | From results page                    |
 
 ### Search input (insert mode)
 
-| Action | Keys | Notes |
-|---|---|---|
-| Submit search | `Enter` | A blank or whitespace-only submission clears committed results and returns to the landing state. |
-| Exit to normal mode | `Escape` | Blurs input, text persists |
+| Action              | Keys     | Notes                                                                                            |
+| ------------------- | -------- | ------------------------------------------------------------------------------------------------ |
+| Submit search       | `Enter`  | A blank or whitespace-only submission clears committed results and returns to the landing state. |
+| Exit to normal mode | `Escape` | Blurs input, text persists                                                                       |
 
 Editing the field changes a draft. Existing results remain tied to the last submitted query,
 even if the draft is deleted completely. The visible trailing “Clear search and results”
@@ -46,81 +46,90 @@ and query URL, then returns focus to the input. Escape remains a mode-exit key a
 
 ### Search results (normal mode, search page)
 
-| Action | Vim | Conventional | Notes |
-|---|---|---|---|
-| Next result | `j` | `ArrowDown` | Clamps at the last result |
-| Previous result | `k` | `ArrowUp` | Clamps at the first result |
-| Open result | `l` or `Enter` | `Enter` | |
-| First result | `gg` | `Home` | Chord: `g` then `g` |
-| Last result | `G` | `End` | |
+| Action          | Vim            | Conventional | Notes                      |
+| --------------- | -------------- | ------------ | -------------------------- |
+| Next result     | `j`            | `ArrowDown`  | Clamps at the last result  |
+| Previous result | `k`            | `ArrowUp`    | Clamps at the first result |
+| Open result     | `l` or `Enter` | `Enter`      |                            |
+| First result    | `gg`           | `Home`       | Chord: `g` then `g`        |
+| Last result     | `G`            | `End`        |                            |
 
 ### Chart (normal mode, results page)
 
 On the results page, chart navigation is the default keyboard target in normal mode. The user does not need to tab into the chart before using chart navigation keys. Search, help, debug, and view options remain explicit modes that take over keyboard handling.
 
-The vim spatial metaphor: episodes within a season are characters within a line (`h`/`l`), seasons are lines (`j`/`k`). `w`/`b` (word jump) alias season jump since seasons are the natural grouping unit.
+The vim spatial metaphor: episodes within a season are characters within a line (`h`/`l`), and seasons are lines (`j`/`k`).
 
-| Action | Vim | Conventional | Notes |
-|---|---|---|---|
-| Previous episode | `h` | `ArrowLeft` | Wraps across season boundaries |
-| Next episode | `l` | `ArrowRight` | Wraps across season boundaries |
-| Previous season | `k` or `b` | `ArrowUp` or `Ctrl+ArrowLeft` | First episode of previous season |
-| Next season | `j` or `w` | `ArrowDown` or `Ctrl+ArrowRight` | First episode of next season |
-| First episode (series) | `gg` or `0` | `Home` | |
-| Last episode (series) | `G` or `$` | `End` | |
+| Action                 | Vim        | Conventional | Notes                                                                  |
+| ---------------------- | ---------- | ------------ | ---------------------------------------------------------------------- |
+| Previous episode       | `h`        | `ArrowLeft`  | Wraps across season boundaries                                         |
+| Next episode           | `l`        | `ArrowRight` | Wraps across season boundaries                                         |
+| Previous season        | `k`        | `ArrowUp`    | First episode of previous season                                       |
+| Next season            | `j`        | `ArrowDown`  | First episode of next season                                           |
+| First episode (series) | `gg`       | `Home`       |                                                                        |
+| Last episode (series)  | `G`        | `End`        |                                                                        |
+| Fit entire series      | `f`        | —            | Preserves the selected episode                                         |
+| Reset zoom             | `r`        | —            | Restores default density without losing the current location           |
+| Zoom out               | `-`        | —            | Anchors on the visible selected episode, otherwise the viewport center |
+| Zoom in                | `=` or `+` | —            | Anchors on the visible selected episode, otherwise the viewport center |
 
 #### Automatic behaviors
 
 - **Sidenote populates on focus.** Moving keyboard focus to an episode populates the sidenote (desktop) or inline detail (mobile) with that episode's metadata — identical to hover. Exiting the chart does not clear the sidenote; the last-focused episode persists.
 - **Viewport follows focus.** When focus moves past the visible viewport edge, the viewport pans smoothly to keep the focused episode visible. The sparkline brush position updates to match. Keyboard users never need to separately control the sparkline.
+- **Viewport commands preserve context.** Fitting and zooming never clear the selected episode. Reset zoom centers the default-width viewport on the selected episode when it is visible; if the selection is offscreen, it preserves the viewport center.
 - **Season jump behavior.** Jumping to the next/previous season lands on the first episode of that season. If already on the first episode of a season, `k`/`ArrowUp` jumps to the first episode of the previous season (not the last episode).
 - **Native-control suspension.** If focus is on a native interactive control such as a link, button, select, summary, or any editable field, page-level single-letter shortcuts are suspended. Only the focused control's own behavior and explicit overlay shortcuts apply.
 
 ### View options panel (overlay mode)
 
-Opened by `v` in normal mode. A compact panel for toggling theme and cycling the season palette.
+Opened by `v` in normal mode. A compact panel for changing theme, palette, trendline, rating-spread, and y-axis settings.
 
 The panel shows the available options as a short list. Each option displays its current value and its shortcut key as a visual hint.
 
-```
-View Options              [Escape to close]
-─────────────────────────
-  Theme        light ◉ / dark ○         t
-  Palette      subtle ○ / vivid ◉ / mono ○    c
-```
-
 #### Navigation
 
-| Action | Vim | Conventional | Notes |
-|---|---|---|---|
-| Move between options | `j`/`k` | `ArrowUp`/`ArrowDown` | |
-| Toggle/cycle focused option | `Enter` | `Enter` | Theme: toggles. Palette: cycles. |
-| Toggle theme directly | `t` | — | Works from anywhere in the panel |
-| Cycle palette directly | `c` | — | Works from anywhere in the panel |
-| Close panel | `v`, `q`, or `Escape` | `Escape` | |
+| Action                      | Vim                   | Conventional             | Notes                                            |
+| --------------------------- | --------------------- | ------------------------ | ------------------------------------------------ |
+| Move between options        | `j`/`k`               | `ArrowUp`/`ArrowDown`    |                                                  |
+| Change focused value        | `h`/`l`               | `ArrowLeft`/`ArrowRight` | Left selects Off/previous; right selects On/next |
+| Toggle/cycle focused option | `Enter`               | `Enter` or `Space`       | Theme and palette cycle; boolean settings toggle |
+| Close panel                 | `v`, `q`, or `Escape` | `Escape`                 |                                                  |
+
+#### Direct accelerators
+
+| Key | Action                          |
+| --- | ------------------------------- |
+| `t` | Toggle theme                    |
+| `c` | Cycle color palette             |
+| `s` | Toggle season trendlines        |
+| `f` | Toggle full-show trendline      |
+| `r` | Toggle rating source spread     |
+| `y` | Toggle the absolute 0–10 y-axis |
 
 #### Interaction model
 
 - **Click:** Clicking a specific value (e.g., "dark" or "vivid") selects it directly.
-- **j/k + Enter:** Navigate to the option row, press Enter to toggle or cycle.
-- **Direct keys:** `t` toggles theme and `c` cycles palette regardless of which row is focused — the hint keys are always active while the panel is open.
+- **Spatial editing:** Navigate to a row, then use left/right to set its value or Enter/Space to toggle or cycle it.
+- **Direct keys:** An accelerator toggles its option and focuses the corresponding row, enabling quick modal sequences such as `v`, `y`, `v`.
+- **Key repeat:** Direct toggles ignore repeated keydown events so holding a key cannot toggle twice.
 - **Immediate feedback:** Changes apply instantly as the user toggles. No "apply" step.
 - Changes persist to `localStorage`.
 
 ### Help overlay (overlay mode)
 
-| Action | Keys | Notes |
-|---|---|---|
-| Close | `?`, `F1`, `q`, or `Escape` | |
+| Action         | Keys                           | Notes                |
+| -------------- | ------------------------------ | -------------------- |
+| Close          | `?`, `F1`, `q`, or `Escape`    |                      |
 | Scroll content | `j`/`k`, `ArrowUp`/`ArrowDown` | If content overflows |
 
 The help overlay is context-sensitive: it shows bindings relevant to the current screen with global bindings always visible. Both conventional and vim keys are shown, conventional listed first. Non-vim users should not have to parse vim notation to find their key.
 
 ### Debug panel (overlay mode)
 
-| Action | Keys | Notes |
-|---|---|---|
-| Close | `D`, `q`, or `Escape` | |
+| Action         | Keys                           | Notes                |
+| -------------- | ------------------------------ | -------------------- |
+| Close          | `D`, `q`, or `Escape`          |                      |
 | Scroll content | `j`/`k`, `ArrowUp`/`ArrowDown` | If content overflows |
 
 ## Focus management
@@ -196,4 +205,4 @@ Overlay ──[Escape, q, toggle key, or outside click]──→ Normal (focus r
 - In overlay mode, only the overlay's own bindings are active. Background keys are suppressed.
 - `?` only triggers help when no text input is focused. Inside the search input, `?` types normally. To open help from insert mode: `Escape` first, then `?`.
 - If focus is on a native interactive control such as a link, button, select, summary, or editable field, page-level single-letter shortcuts do not fire.
-- Browser defaults (e.g., `Ctrl+F` for find, `Ctrl+L` for address bar) are never intercepted.
+- Shortcuts do not fire while `Ctrl`, `Command`, or `Alt` is held. Browser and operating-system commands such as reload, address-bar focus, bookmarks, and browser zoom are never intercepted. Shift remains available for intentional keys such as `?`, `D`, `G`, and `+`.
