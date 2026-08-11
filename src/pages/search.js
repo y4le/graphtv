@@ -1,4 +1,4 @@
-import { getActiveProvider, getProviderCatalog, getProviderLabel, searchShows } from '../data/provider.js'
+import { getActiveProvider, getProviderCatalog, searchShows } from '../data/provider.js'
 import { buildUrl, getUrlParams, preserveDebugParams } from '../lib/url.js'
 import { createPlaceholderRotation } from '../ui/placeholderRotation.js'
 import { renderEmpty, renderError, renderLoading, renderPublisherBrand } from './shared.js'
@@ -68,9 +68,6 @@ export function renderSearchPage(container) {
             <button type="submit" class="search-submit">Search</button>
           </div>
         </form>
-        <p class="provider-note">
-          Searching with <span class="provider-inline configured">${escapeHtml(getProviderLabel(provider))}</span>.
-        </p>
         <section class="search-results-section" aria-busy="${query ? 'true' : 'false'}">
           <div class="results-status" aria-live="polite" aria-atomic="true">${query ? renderLoading('Searching…', { announce: false }) : ''}</div>
           <ol
@@ -176,12 +173,9 @@ export function renderSearchPage(container) {
     state.selectedIndex = -1
     updateSearchUrl(nextQuery)
     syncClearControl()
-    resultsStatus.innerHTML = renderLoading(
-      `Searching ${escapeHtml(getProviderLabel(provider))}…`,
-      {
-        announce: false
-      }
-    )
+    resultsStatus.innerHTML = renderLoading('Searching…', {
+      announce: false
+    })
     resultsRoot.replaceChildren()
     resultsRoot.setAttribute('aria-label', `Search results for ${nextQuery}`)
     resultsSection.setAttribute('aria-busy', 'true')
@@ -203,7 +197,11 @@ export function renderSearchPage(container) {
 
       state.results = results
       state.selectedIndex = 0
-      resultsStatus.innerHTML = renderResultsSummary(results.length, nextQuery)
+      resultsStatus.replaceChildren()
+      resultsRoot.setAttribute(
+        'aria-label',
+        `Search results for ${nextQuery}: ${results.length}`
+      )
       renderResultsList(resultsRoot, state.results, state.selectedIndex)
       syncEmptyLayout(false)
     } catch (error) {
@@ -318,11 +316,6 @@ function syncResultSelection(root, selectedIndex, { focus = false } = {}) {
     block: 'nearest',
     behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
   })
-}
-
-function renderResultsSummary(resultCount, query) {
-  const noun = resultCount === 1 ? 'result' : 'results'
-  return `<p class="state-copy">Showing ${resultCount} ${noun} for “${escapeHtml(query)}”.</p>`
 }
 
 function formatSearchResultMeta(show) {

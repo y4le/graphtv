@@ -135,7 +135,7 @@ describe('renderSearchPage', () => {
     page.destroy()
   })
 
-  it('renders a consistent clear affordance, mobile input hints, and active-provider copy', () => {
+  it('renders a consistent clear affordance and mobile input hints', () => {
     const { clearButton, container, input, page } = renderPage()
 
     expect(clearButton.hidden).toBe(true)
@@ -146,10 +146,7 @@ describe('renderSearchPage', () => {
     expect(input.getAttribute('autocapitalize')).toBe('off')
     expect(input.getAttribute('spellcheck')).toBe('false')
     expect(container.querySelector('.search-form').getAttribute('role')).toBe('search')
-    expect(container.querySelector('.provider-note').textContent).toContain('Searching with TVmaze')
-    expect(container.querySelector('.provider-note').textContent).not.toContain(
-      'Configured sources'
-    )
+    expect(container.querySelector('.provider-note')).toBeNull()
 
     input.value = 'wire'
     input.dispatchEvent(new Event('input', { bubbles: true }))
@@ -166,14 +163,14 @@ describe('renderSearchPage', () => {
     form.requestSubmit()
     await vi.waitFor(() => expect(results.children).toHaveLength(1))
 
-    expect(status.textContent).toBe('Showing 1 result for “wire”.')
+    expect(status.textContent).toBe('')
     expect(new URL(window.location.href).searchParams.get('q')).toBe('wire')
 
     input.value = ''
     input.dispatchEvent(new Event('input', { bubbles: true }))
 
     expect(results.children).toHaveLength(1)
-    expect(status.textContent).toBe('Showing 1 result for “wire”.')
+    expect(status.textContent).toBe('')
     expect(clearButton.hidden).toBe(false)
     expect(new URL(window.location.href).searchParams.get('q')).toBe('wire')
 
@@ -254,7 +251,7 @@ describe('renderSearchPage', () => {
 
     expect(results.textContent).toContain('Bravo')
     expect(results.textContent).not.toContain('Alpha')
-    expect(status.textContent).toBe('Showing 1 result for “bravo”.')
+    expect(status.textContent).toBe('')
 
     page.destroy()
   })
@@ -279,7 +276,7 @@ describe('renderSearchPage', () => {
     page.destroy()
   })
 
-  it('scopes announcements to status and moves real focus with result selection', async () => {
+  it('keeps status semantics scoped and moves real focus with result selection', async () => {
     vi.mocked(searchShows).mockResolvedValue([
       createSearchResult(),
       createSearchResult({ id: 'tvmaze:2', title: 'The Wire UK', year: '2005' })
@@ -293,7 +290,10 @@ describe('renderSearchPage', () => {
     expect(container.querySelector('.search-results-section').hasAttribute('aria-live')).toBe(false)
     expect(status.getAttribute('aria-live')).toBe('polite')
     expect(status.getAttribute('aria-atomic')).toBe('true')
-    expect(status.textContent).toBe('Showing 2 results for “wire”.')
+    expect(status.textContent).toBe('')
+    expect(results.getAttribute('aria-label')).toBe(
+      'Search results for wire: 2'
+    )
     expect(results.querySelector('[aria-current]')).toBeNull()
     expect(results.querySelector('.search-result-meta').textContent).toBe('2002 · Crime · Drama')
     expect(results.querySelector('img').getAttribute('loading')).toBe('lazy')
