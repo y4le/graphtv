@@ -57,7 +57,32 @@ describe('rating scale domains', () => {
     expect(model.seasonTrendlines[0].endX).toBe(3)
   })
 
-  it('includes source-spread endpoints in the y-axis domain only while they are visible', () => {
+  it('keeps the adaptive y-axis stable across viewports', () => {
+    const model = buildChartModel([
+      {
+        number: 1,
+        episodes: [6, 6.5, 8, 8.5].map((rating, index) =>
+          createEpisode(`episode-${index}`, [{ source: 'tmdb', rating }])
+        )
+      }
+    ])
+    const dimensions = { width: 600, height: 400 }
+    const earlyScales = createMainScales(
+      model,
+      { start: 1, end: 2 },
+      dimensions
+    )
+    const lateScales = createMainScales(
+      model,
+      { start: 3, end: 4 },
+      dimensions
+    )
+
+    expect(earlyScales.yDomain).toEqual([5.625, 8.875])
+    expect(lateScales.yDomain).toEqual(earlyScales.yDomain)
+  })
+
+  it('includes show-wide source-spread endpoints when the spread is enabled', () => {
     const model = buildChartModel([
       {
         number: 1,
@@ -79,13 +104,13 @@ describe('rating scale domains', () => {
     ])
     const primaryOnlyScales = createMainScales(
       model,
-      { start: 1, end: 3 },
+      { start: 1, end: 1 },
       { width: 600, height: 400 },
       { showSourceSpread: false }
     )
     const spreadScales = createMainScales(
       model,
-      { start: 1, end: 3 },
+      { start: 1, end: 1 },
       { width: 600, height: 400 },
       { showSourceSpread: true }
     )

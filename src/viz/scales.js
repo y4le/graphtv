@@ -196,8 +196,7 @@ export function createSparklineScales(model, dimensions, options = {}) {
 }
 
 export function createMainScales(model, viewport, dimensions, options = {}) {
-  const visibleRatedPoints = getVisibleRatedPoints(model, viewport)
-  const domain = resolveRatingDomain(visibleRatedPoints.length ? visibleRatedPoints : model.ratedPoints, options)
+  const domain = resolveRatingDomain(model.ratedPoints, options)
 
   return {
     xScale: scaleLinear().domain([viewport.start, viewport.end]).range(resolveXRange(dimensions.width)),
