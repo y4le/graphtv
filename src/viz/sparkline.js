@@ -15,9 +15,7 @@ export function createSparkline(svgNode, config) {
   const clipId = `sparkline-window-${++sparklineInstances}`
   const windowClipRect = svg.append('defs').append('clipPath').attr('id', clipId).append('rect')
   const brushLayer = svg.append('g').attr('class', 'viewport-brush')
-  const viewportIndicator = svg.append('rect').attr('class', 'mobile-viewport-indicator').attr('pointer-events', 'none')
   const marks = svg.append('g').attr('class', 'sparkline-marks').attr('pointer-events', 'none')
-  const touchSurface = svg.append('rect').attr('class', 'sparkline-touch-surface')
 
   let suppressBrushEvents = false
   let lastTapAt = 0
@@ -27,7 +25,7 @@ export function createSparkline(svgNode, config) {
 
   const brush = brushX()
     .handleSize(8)
-    .filter((event) => !config.mobileInteraction && !isTouchBrushEvent(event))
+    .filter((event) => !isTouchBrushEvent(event))
     .on('start', (event) => {
       // D3 uses handle mode for both edge drags and drawing a new selection.
       if (event.mode === 'handle') {
@@ -115,29 +113,6 @@ export function createSparkline(svgNode, config) {
       .attr('fill', config.theme.text)
       .attr('opacity', (point) => (isInWindow(point) ? 1 : INACTIVE_INK_OPACITY))
 
-    touchSurface
-      .attr('width', config.dimensions.width)
-      .attr('height', config.dimensions.height)
-      .attr('fill', 'transparent')
-      .attr('pointer-events', config.mobileInteraction ? 'all' : 'none')
-
-    if (config.mobileInteraction) {
-      brushLayer.style('display', 'none')
-      viewportIndicator
-        .attr('x', windowX1)
-        .attr('y', 0)
-        .attr('width', Math.max(0, windowX2 - windowX1))
-        .attr('height', config.dimensions.height)
-        .attr('fill', config.theme.spotColor)
-        .attr('fill-opacity', 0.12)
-        .attr('stroke', config.theme.spotColor)
-        .attr('stroke-opacity', 0.34)
-        .attr('stroke-width', 1)
-        .style('display', null)
-      return
-    }
-
-    viewportIndicator.style('display', 'none')
     brushLayer.style('display', null)
     brush.extent([
       [0, 0],
@@ -169,13 +144,13 @@ export function createSparkline(svgNode, config) {
   }
 
   function handleTouchStart(event) {
-    if (config.mobileInteraction) {
+    if (config.dimensions.width) {
       event.preventDefault()
     }
   }
 
   function handlePointerDown(event) {
-    if (!config.mobileInteraction || event.pointerType !== 'touch' || !config.dimensions.width) {
+    if (event.pointerType !== 'touch' || !config.dimensions.width) {
       return
     }
 
@@ -187,14 +162,16 @@ export function createSparkline(svgNode, config) {
       startY: event.clientY
     })
 
-    if (activePointers.size >= 2) {
+    if (activePointers.size === 1) {
+      centerViewportAt(activePointers.get(event.pointerId))
+    } else {
       hadMultiTouch = true
       applyMultiTouchBounds()
     }
   }
 
   function handlePointerMove(event) {
-    if (!config.mobileInteraction || event.pointerType !== 'touch' || !activePointers.has(event.pointerId)) {
+    if (event.pointerType !== 'touch' || !activePointers.has(event.pointerId)) {
       return
     }
 
@@ -211,7 +188,7 @@ export function createSparkline(svgNode, config) {
   }
 
   function handlePointerEnd(event) {
-    if (!config.mobileInteraction || event.pointerType !== 'touch') {
+    if (event.pointerType !== 'touch') {
       return
     }
 
@@ -220,7 +197,9 @@ export function createSparkline(svgNode, config) {
 
     activePointers.delete(event.pointerId)
     pointerGestureMeta.delete(event.pointerId)
-    svgNode.releasePointerCapture?.(event.pointerId)
+    if (svgNode.hasPointerCapture?.(event.pointerId)) {
+      svgNode.releasePointerCapture(event.pointerId)
+    }
 
     if (activePointers.size >= 2) {
       applyMultiTouchBounds()
@@ -282,7 +261,8 @@ export function createSparkline(svgNode, config) {
 
   function getLocalX(event) {
     const rect = svgNode.getBoundingClientRect()
-    return event.clientX - rect.left
+    const renderedWidth = rect.width || config.dimensions.width
+    return ((event.clientX - rect.left) / renderedWidth) * config.dimensions.width
   }
 
   function clampX(value) {

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
   createSparklineScales,
@@ -16,8 +16,7 @@ const MODEL = {
   }))
 }
 const THEME = {
-  text: '#1A1A1A',
-  spotColor: '#C1432E'
+  text: '#1A1A1A'
 }
 
 let sparkline
@@ -127,6 +126,59 @@ describe('createSparkline', () => {
 
     document.defaultView.dispatchEvent(mouseEvent('mouseup', 80))
   })
+
+  it('supports touch and cursor input through the same brush', () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    document.body.appendChild(svg)
+    const scales = createSparklineScales(MODEL, DIMENSIONS)
+    const onViewportChange = vi.fn()
+    sparkline = createSparkline(svg, {
+      ...createConfig(scales, { start: 2, end: 5 }),
+      onViewportChange
+    })
+
+    const selection = svg.querySelector('.selection')
+    selection.dispatchEvent(pointerEvent('pointerdown', 80, 1))
+    selection.dispatchEvent(pointerEvent('pointermove', 100, 1))
+    selection.dispatchEvent(pointerEvent('pointerup', 100, 1))
+
+    selection.dispatchEvent(mouseEvent('mousedown', 100))
+    document.defaultView.dispatchEvent(mouseEvent('mousemove', 120))
+    document.defaultView.dispatchEvent(mouseEvent('mouseup', 120))
+
+    expect(
+      onViewportChange.mock.calls.some(
+        ([, source]) => source === 'touch-center'
+      )
+    ).toBe(true)
+    expect(
+      onViewportChange.mock.calls.some(([, source]) => source === 'brush')
+    ).toBe(true)
+    expect(svg.querySelector('.viewport-brush').style.display).not.toBe('none')
+  })
+
+  it('maps touch coordinates through the rendered SVG width', () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    Object.defineProperty(svg, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ left: 20, width: 400 })
+    })
+    document.body.appendChild(svg)
+    const scales = createSparklineScales(MODEL, DIMENSIONS)
+    const onViewportChange = vi.fn()
+    sparkline = createSparkline(svg, {
+      ...createConfig(scales, { start: 2, end: 4 }),
+      onViewportChange
+    })
+
+    svg
+      .querySelector('.selection')
+      .dispatchEvent(pointerEvent('pointerdown', 220, 1))
+
+    const [viewport] = onViewportChange.mock.calls.at(-1)
+    const center = (viewport.start + viewport.end) / 2
+    expect(center).toBeCloseTo(scales.xScale.invert(100))
+  })
 })
 
 function renderSparkline(viewport = { start: 2, end: 3 }) {
@@ -143,7 +195,6 @@ function createConfig(scales, viewport) {
     model: MODEL,
     viewport,
     theme: THEME,
-    mobileInteraction: false,
     dimensions: DIMENSIONS,
     scales,
     onViewportChange() {},
@@ -158,5 +209,16 @@ function mouseEvent(type, clientX) {
     clientY: DIMENSIONS.height / 2
   })
   Object.defineProperty(event, 'view', { value: document.defaultView })
+  return event
+}
+
+function pointerEvent(type, clientX, pointerId) {
+  const event = new Event(type, { bubbles: true, cancelable: true })
+  Object.defineProperties(event, {
+    pointerType: { value: 'touch' },
+    pointerId: { value: pointerId },
+    clientX: { value: clientX },
+    clientY: { value: DIMENSIONS.height / 2 }
+  })
   return event
 }
