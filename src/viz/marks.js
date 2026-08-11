@@ -7,6 +7,7 @@ const Y_LABEL_INSET = 8
 const MIN_SOURCE_SPREAD_PIXELS = 3
 const SOURCE_SPREAD_OPACITY = 0.16
 const CLIPPED_SPREAD_NUB_WIDTH = 4
+const FALLBACK_POINT_FILL_OPACITY = 0.2
 
 export function renderRangeFrame(svg, scales, dimensions, theme) {
   const [minRating, maxRating] = scales.yDomain
@@ -195,6 +196,7 @@ export function renderSourceSpreads(svg, points, scales, dimensions, theme, visi
 export function renderPoints(svg, points, scales, theme, interactions) {
   const pointLayer = svg.selectAll('.point-layer').data([null]).join('g').attr('class', 'point-layer')
   const plottedPoints = points.filter((point) => isUsableRating(point.rating))
+  const pointColor = (point) => theme.seasonColor(point.seasonIndex, interactions.totalSeasons)
 
   pointLayer
     .selectAll('.episode-point')
@@ -208,14 +210,16 @@ export function renderPoints(svg, points, scales, theme, interactions) {
       if (point.id === interactions.activePointId) {
         return theme.spotColor
       }
-      return point.isFallbackRating
-        ? theme.textSecondary
-        : theme.seasonColor(point.seasonIndex, interactions.totalSeasons)
+      return pointColor(point)
     })
-    .attr('fill-opacity', (point) => (point.isFallbackRating && point.id !== interactions.activePointId ? 0.72 : 1))
-    .attr('stroke', (point) => (point.isFallbackRating ? theme.fallbackOutline : 'none'))
+    .attr('fill-opacity', (point) =>
+      point.isFallbackRating && point.id !== interactions.activePointId
+        ? FALLBACK_POINT_FILL_OPACITY
+        : 1
+    )
+    .attr('stroke', (point) => (point.isFallbackRating ? pointColor(point) : 'none'))
     .attr('stroke-width', (point) => (point.isFallbackRating ? 1.25 : 0))
-    .attr('stroke-opacity', (point) => (point.isFallbackRating ? 0.9 : 1))
+    .attr('stroke-opacity', 1)
     .attr('data-rating-source', (point) => point.ratingSource)
     .attr('data-rating-fallback', (point) => String(point.isFallbackRating))
     .on('mouseenter', (_, point) => interactions.hoverEnabled && interactions.onHover(point))

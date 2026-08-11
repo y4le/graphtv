@@ -13,7 +13,12 @@ beforeEach(() => {
       disconnect() {}
     }
   )
-  updateUiSettings({ absoluteYAxis: false, showSourceSpread: true })
+  updateUiSettings({
+    theme: 'light',
+    palette: 'monotone',
+    absoluteYAxis: false,
+    showSourceSpread: true
+  })
   vi.stubGlobal(
     'matchMedia',
     vi.fn((query) => ({
@@ -104,7 +109,7 @@ describe('createChart', () => {
     expect(getAxisLabels(container)).not.toContain('0.0')
   })
 
-  it('renders a borrowed provider rating as a muted neutral point', () => {
+  it('renders a borrowed provider rating as a deemphasized palette-colored point', () => {
     const container = document.createElement('div')
     Object.defineProperty(container, 'clientWidth', {
       configurable: true,
@@ -132,14 +137,16 @@ describe('createChart', () => {
       }
     ]
 
+    updateUiSettings({ palette: 'vivid' })
     chart = createChart(container, seasons)
 
     const fallback = container.querySelector('[data-rating-fallback="true"]')
     expect(fallback).not.toBeNull()
-    expect(fallback.getAttribute('fill')).toBe('#737373')
-    expect(fallback.getAttribute('fill-opacity')).toBe('0.72')
-    expect(fallback.getAttribute('stroke')).toBe('#FFFFFF')
+    expect(fallback.getAttribute('fill')).toBe('hsl(150 68% 42%)')
+    expect(fallback.getAttribute('fill-opacity')).toBe('0.2')
+    expect(fallback.getAttribute('stroke')).toBe('hsl(150 68% 42%)')
     expect(fallback.getAttribute('stroke-width')).toBe('1.25')
+    expect(fallback.getAttribute('stroke-opacity')).toBe('1')
   })
 
   it('preserves small horizontal trackpad deltas', () => {
