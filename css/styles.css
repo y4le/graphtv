@@ -680,14 +680,6 @@ kbd,
   line-height: 1.2;
 }
 
-.sidenote-rating {
-  margin: 0;
-  color: var(--spotColor);
-  font-family: var(--font-sans);
-  font-size: 1rem;
-  font-variant-numeric: tabular-nums;
-}
-
 .sidenote-meta {
   margin: 0;
   color: var(--textSecondary);
@@ -697,12 +689,17 @@ kbd,
 
 .sidenote-ratings {
   margin: 0.55rem 0 0;
-  padding-left: 1rem;
   color: var(--textSecondary);
   font-family: var(--font-sans);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 1.2rem;
+}
+
+.sidenote-rating-primary {
+  font-weight: 700;
+}
+
+.sidenote-rating-primary-value {
+  color: var(--spotColor);
+  font-variant-numeric: tabular-nums;
 }
 
 .sidenote-body {

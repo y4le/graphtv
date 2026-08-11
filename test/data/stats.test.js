@@ -83,15 +83,16 @@ describe('data/stats', () => {
     })
   })
 
-  it('uses the next preferred provider when IMDb coverage is too sparse', () => {
+  it('prefers TVmaze to TMDB when IMDb coverage is too sparse', () => {
     const episodes = Array.from({ length: 5 }, (_, index) => ({
       ratings: [
+        { source: 'tvmaze', rating: 7.5 + index / 10 },
         { source: 'tmdb', rating: 8 + index / 10 },
         ...(index < 2 ? [{ source: 'omdb', rating: 8.5 + index / 10 }] : [])
       ]
     }))
 
-    expect(selectPrimaryRatingSource(episodes).source).toBe('tmdb')
+    expect(selectPrimaryRatingSource(episodes).source).toBe('tvmaze')
   })
 
   it('does not count episodes with no provider rating against source coverage', () => {
@@ -120,8 +121,8 @@ describe('data/stats', () => {
         'omdb'
       )
     ).toEqual({
-      rating: 8.4,
-      ratingSource: 'tmdb',
+      rating: 8.1,
+      ratingSource: 'tvmaze',
       isFallbackRating: true
     })
   })

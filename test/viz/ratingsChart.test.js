@@ -330,7 +330,10 @@ describe('createChart', () => {
     expect(container.querySelector('.reading-pane-shell')).toBeNull()
     expect(detailRoot.querySelector('.sidenote-card')).not.toBeNull()
     expect(detailRoot.textContent).toContain('Episode 2')
-    expect(detailRoot.textContent).toContain('TEST: 7.0 · plotted')
+    expect(detailRoot.textContent).toContain('TEST 7.0')
+    expect(detailRoot.querySelector('.sidenote-rating-primary').textContent).toBe(
+      'TEST 7.0'
+    )
   })
 
   it('updates provider ratings in place while preserving the selected episode', () => {
@@ -357,7 +360,7 @@ describe('createChart', () => {
     chart.updateSeasons(updatedSeasons)
 
     expect(chart.getDebugState().selectedPointId).toBe(selectedPointId)
-    expect(detailRoot.textContent).toContain('TMDB: 9.0 · 500 votes')
+    expect(detailRoot.textContent).toContain('TMDB 9.0 (500 votes)')
   })
 
   it('merges late episode details into the newest provider snapshot', async () => {
@@ -402,8 +405,8 @@ describe('createChart', () => {
     resolveDetails()
     await Promise.resolve()
 
-    expect(detailRoot.textContent).toContain('TEST: 6.0 · 123 votes')
-    expect(detailRoot.textContent).toContain('TMDB: 9.0 · 500 votes')
+    expect(detailRoot.textContent).toContain('TEST 6.0 (123 votes)')
+    expect(detailRoot.textContent).toContain('TMDB 9.0 (500 votes)')
   })
 
   it('debounces selection-only episode detail loading', async () => {
@@ -433,9 +436,7 @@ describe('createChart', () => {
     await vi.advanceTimersByTimeAsync(1)
     expect(loadEpisodeDetails).toHaveBeenCalledTimes(1)
     expect(loadEpisodeDetails.mock.calls[0][0].title).toBe('Episode 3')
-    expect(detailRoot.textContent).toContain(
-      'IMDb (via OMDb): n/a · 3,379 votes'
-    )
+    expect(detailRoot.textContent).toContain('IMDb n/a (3.4k votes)')
   })
 
   it('does not load episode details from hover', async () => {

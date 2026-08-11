@@ -93,7 +93,7 @@ export function isUsableRating(value) {
 }
 
 // These are explicit product-policy choices, not statistical weights.
-export const RATING_SOURCE_PRIORITY = ['omdb', 'tmdb', 'tvmaze']
+export const RATING_SOURCE_PRIORITY = ['omdb', 'tvmaze', 'tmdb']
 export const MIN_PRIMARY_RATING_COVERAGE = 0.6
 
 export function isTrustedRating(rating) {

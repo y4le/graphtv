@@ -1,32 +1,65 @@
 import {
+  RATING_SOURCE_PRIORITY,
   getRatingSourceLabel,
   isTrustedRating,
   isUsableRating
 } from '../data/stats.js'
 
 function formatRatingList(point) {
-  return point.ratings
+  return [...point.ratings]
     .filter(isTrustedRating)
-    .map((rating) => {
+    .sort(compareRatingSources)
+    .map((rating, index) => {
+      const isPrimary = rating.source === point.ratingSource
       const votes =
         typeof rating.votes === 'number'
-          ? ` · ${rating.votes.toLocaleString('en-US')} votes`
+          ? ` (${formatVoteCount(rating.votes)} ${rating.votes === 1 ? 'vote' : 'votes'})`
           : ''
+      const label = getEpisodeRatingSourceLabel(rating.source)
+      const value = isUsableRating(rating.rating)
+        ? `${
+            isPrimary
+              ? `<span class="sidenote-rating-primary-value">${rating.rating.toFixed(1)}</span>`
+              : rating.rating.toFixed(1)
+          }${votes}`
+        : `n/a${votes}`
+      const content = `${escapeHtml(label)} ${value}`
+      const entry = isPrimary
+        ? `<strong class="sidenote-rating-primary">${content}</strong>`
+        : `<span>${content}</span>`
+      const separator =
+        index === 0
+          ? ''
+          : '<span class="sidenote-rating-separator" aria-hidden="true"> · </span>'
 
-      if (!isUsableRating(rating.rating)) {
-        return `<li>${getRatingSourceLabel(rating.source)}: n/a${votes}</li>`
-      }
-
-      const plotted =
-        rating.source === point.ratingSource
-          ? point.isFallbackRating
-            ? ' · plotted fallback'
-            : ' · plotted'
-          : ''
-
-      return `<li>${getRatingSourceLabel(rating.source)}: ${rating.rating.toFixed(1)}${votes}${plotted}</li>`
+      return `${separator}${entry}`
     })
     .join('')
+}
+
+function compareRatingSources(left, right) {
+  return getRatingSourceRank(left.source) - getRatingSourceRank(right.source)
+}
+
+function getRatingSourceRank(source) {
+  const index = RATING_SOURCE_PRIORITY.indexOf(source)
+  return index === -1 ? Number.MAX_SAFE_INTEGER : index
+}
+
+function getEpisodeRatingSourceLabel(source) {
+  return source === 'omdb' ? 'IMDb' : getRatingSourceLabel(source)
+}
+
+function formatVoteCount(votes) {
+  return new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    maximumFractionDigits: 1
+  })
+    .format(votes)
+    .replaceAll('K', 'k')
+    .replaceAll('M', 'm')
+    .replaceAll('B', 'b')
+    .replaceAll('T', 't')
 }
 
 export function createSidenote({ desktopRoot, mobileRoot }) {
@@ -48,15 +81,10 @@ export function createSidenote({ desktopRoot, mobileRoot }) {
               <p class="sidenote-caption">
                 <span class="sidenote-kicker">S${String(point.season).padStart(2, '0')}E${String(point.episode).padStart(2, '0')}</span>
                 <span class="sidenote-title">${escapeHtml(point.title)}</span>
-                ${
-                  isUsableRating(point.rating)
-                    ? `<span class="sidenote-rating">${point.rating.toFixed(1)}</span>`
-                    : '<span class="sidenote-rating">n/a</span>'
-                }
                 <span class="sidenote-meta">${escapeHtml(point.date ?? 'Unknown air date')}</span>
               </p>
             </div>
-            <ul class="sidenote-ratings">${formatRatingList(point)}</ul>
+            <p class="sidenote-ratings">${formatRatingList(point)}</p>
             ${
               point.plot
                 ? `<p class="sidenote-body">${escapeHtml(point.plot)}</p>`
