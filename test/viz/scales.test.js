@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildChartModel,
   clampViewport,
+  createDefaultViewport,
   createFullSeriesScales,
   createMainScales,
   createSparklineScales
@@ -106,6 +107,26 @@ describe('rating scale domains', () => {
 })
 
 describe('viewport clamping', () => {
+  it('uses available laptop width for long-running shows', () => {
+    const model = { xMax: 331 }
+
+    expect(createDefaultViewport(model, 1200, false)).toEqual({
+      start: 1,
+      end: 60
+    })
+    expect(createDefaultViewport(model, 1800, false)).toEqual({
+      start: 1,
+      end: 72
+    })
+  })
+
+  it('retains the compact default window on mobile', () => {
+    expect(createDefaultViewport({ xMax: 331 }, 600, true)).toEqual({
+      start: 1,
+      end: 18
+    })
+  })
+
   it('preserves fractional movement while keeping the viewport in bounds', () => {
     const model = { xMax: 72 }
 

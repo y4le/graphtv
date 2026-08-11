@@ -107,7 +107,7 @@ export function createDefaultViewport(model, width, isMobile) {
   const axisWidth = isMobile ? 44 : 0
   const availableWidth = Math.max(width - axisWidth, 240)
   const preferredWindow = Math.floor(availableWidth / targetSpacing)
-  const episodeCount = clamp(preferredWindow, isMobile ? 12 : 18, isMobile ? 18 : 34)
+  const episodeCount = clamp(preferredWindow, isMobile ? 12 : 18, isMobile ? 18 : 72)
 
   return {
     start: 1,
