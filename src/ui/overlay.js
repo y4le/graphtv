@@ -122,7 +122,7 @@ export function openHelpOverlay(overlayController, page) {
                   ${section.items
                     .map(
                       (item) => `
-                        <dt>${item.keys}</dt>
+                        <dt class="help-keys">${renderHelpKeys(item.keys)}</dt>
                         <dd>${item.action}</dd>
                       `
                     )
@@ -591,21 +591,21 @@ function resultsHelpSections() {
     {
       title: 'Global',
       items: [
-        { keys: '/, q', action: 'Return to search' },
-        { keys: 'v', action: 'Open view options' },
-        { keys: '?, F1', action: 'Open help' },
-        { keys: 'd / D', action: 'Toggle debug overlay' }
+        { keys: ['/', 'q'], action: 'Return to search' },
+        { keys: ['v'], action: 'Open view options' },
+        { keys: ['?', 'F1'], action: 'Open help' },
+        { keys: ['d', 'D'], action: 'Toggle debug overlay' }
       ]
     },
     {
       title: 'Chart',
       items: [
-        { keys: 'ArrowLeft / h', action: 'Previous episode' },
-        { keys: 'ArrowRight / l', action: 'Next episode' },
-        { keys: 'ArrowUp / k / b', action: 'Previous season' },
-        { keys: 'ArrowDown / j / w', action: 'Next season' },
-        { keys: 'Home / 0 / gg', action: 'First episode' },
-        { keys: 'End / $ / G', action: 'Last episode' }
+        { keys: ['ArrowLeft', 'h'], action: 'Previous episode' },
+        { keys: ['ArrowRight', 'l'], action: 'Next episode' },
+        { keys: ['ArrowUp', 'k', 'b'], action: 'Previous season' },
+        { keys: ['ArrowDown', 'j', 'w'], action: 'Next season' },
+        { keys: ['Home', '0', 'gg'], action: 'First episode' },
+        { keys: ['End', '$', 'G'], action: 'Last episode' }
       ]
     }
   ]
@@ -616,23 +616,40 @@ function searchHelpSections() {
     {
       title: 'Global',
       items: [
-        { keys: '/', action: 'Focus search input' },
-        { keys: 'v', action: 'Open view options' },
-        { keys: '?, F1', action: 'Open help' },
-        { keys: 'd / D', action: 'Toggle debug overlay' }
+        { keys: ['/'], action: 'Focus search input' },
+        { keys: ['v'], action: 'Open view options' },
+        { keys: ['?', 'F1'], action: 'Open help' },
+        { keys: ['d', 'D'], action: 'Toggle debug overlay' }
       ]
     },
     {
       title: 'Results list',
       items: [
-        { keys: 'ArrowDown / j', action: 'Next result' },
-        { keys: 'ArrowUp / k', action: 'Previous result' },
-        { keys: 'Enter / l', action: 'Open result' },
-        { keys: 'Home / gg', action: 'First result' },
-        { keys: 'End / G', action: 'Last result' }
+        { keys: ['ArrowDown', 'j'], action: 'Next result' },
+        { keys: ['ArrowUp', 'k'], action: 'Previous result' },
+        { keys: ['Enter', 'l'], action: 'Open result' },
+        { keys: ['Home', 'gg'], action: 'First result' },
+        { keys: ['End', 'G'], action: 'Last result' }
       ]
     }
   ]
+}
+
+function renderHelpKeys(keys) {
+  const labels = {
+    ArrowDown: { glyph: '↓', name: 'Down arrow' },
+    ArrowLeft: { glyph: '←', name: 'Left arrow' },
+    ArrowRight: { glyph: '→', name: 'Right arrow' },
+    ArrowUp: { glyph: '↑', name: 'Up arrow' }
+  }
+
+  return keys
+    .map((key) => {
+      const label = labels[key]
+      const accessibleName = label ? ` aria-label="${label.name}" title="${label.name}"` : ''
+      return `<kbd class="help-key"${accessibleName}>${escapeHtml(label?.glyph ?? key)}</kbd>`
+    })
+    .join('<span class="help-key-separator" aria-hidden="true">/</span>')
 }
 
 function focusInitial(panel) {

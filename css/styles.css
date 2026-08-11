@@ -1027,6 +1027,31 @@ kbd,
   font-family: var(--font-sans);
 }
 
+.help-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.help-key {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.75rem;
+  min-height: 1.6rem;
+  padding-inline: 0.42rem;
+  border-radius: 0.3rem;
+  background: var(--canvasSubtle);
+  box-shadow: 0 1px 0 var(--lineStrong);
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.help-key-separator {
+  color: var(--textMuted);
+  font-size: var(--type-size-utility);
+}
+
 .help-grid dd {
   color: var(--textSecondary);
 }

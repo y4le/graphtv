@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { createOverlayController, openViewOptionsOverlay } from '../../src/ui/overlay.js'
+import {
+  createOverlayController,
+  openHelpOverlay,
+  openViewOptionsOverlay
+} from '../../src/ui/overlay.js'
 import { getUiSettings, initializeTheme } from '../../src/viz/theme.js'
 
 beforeEach(() => {
@@ -50,5 +54,25 @@ describe('view options overlay', () => {
     row.focus()
     row.dispatchEvent(new KeyboardEvent('keydown', { key: 'r', bubbles: true }))
     expect(getUiSettings().showSourceSpread).toBe(true)
+  })
+})
+
+describe('keyboard help overlay', () => {
+  it('renders shortcuts as keycaps and uses glyphs for arrow keys', () => {
+    const overlayController = createOverlayController()
+    openHelpOverlay(overlayController, { kind: 'results' })
+
+    const keycaps = Array.from(document.querySelectorAll('.help-key'))
+    const keycapLabels = keycaps.map((keycap) => keycap.textContent)
+
+    expect(keycapLabels).toEqual(
+      expect.arrayContaining(['←', '→', '↑', '↓', 'Home', 'End'])
+    )
+    expect(document.querySelector('.help-sections').textContent).not.toMatch(
+      /Arrow(?:Left|Right|Up|Down)/
+    )
+    expect(document.querySelector('.help-key[aria-label="Left arrow"]').textContent).toBe(
+      '←'
+    )
   })
 })
