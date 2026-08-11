@@ -19,6 +19,10 @@
   --font-sans: var(--font-app);
   --font-mono: var(--font-app);
   --font-editorial-serif: Georgia, 'Times New Roman', 'Liberation Serif', serif;
+  --type-size-heading: 1.2rem;
+  --type-size-body: 1rem;
+  --type-size-meta: 0.875rem;
+  --type-size-utility: 0.78rem;
   --pageMaxWidth: 75rem;
   --searchMaxWidth: 39rem;
   --columnGap: clamp(2rem, 4vw, 4rem);
@@ -111,7 +115,7 @@ button {
   min-height: 24px;
   color: var(--textPrimary);
   font-family: var(--font-mono);
-  font-size: max(0.78rem, 12px);
+  font-size: max(var(--type-size-utility), 12px);
   font-weight: 500;
   letter-spacing: 0;
   line-height: 1.25;
@@ -153,7 +157,7 @@ button {
   background: transparent;
   color: var(--textSecondary);
   font-family: var(--font-sans);
-  font-size: 0.84rem;
+  font-size: var(--type-size-utility);
   line-height: 1.2;
 }
 
@@ -171,7 +175,7 @@ button {
   margin: 0;
   color: var(--textSecondary);
   font-family: var(--font-sans);
-  font-size: 0.88rem;
+  font-size: var(--type-size-utility);
 }
 
 kbd,
@@ -180,7 +184,7 @@ kbd,
   border: 1px solid var(--lineStrong);
   border-radius: 999px;
   font-family: var(--font-sans);
-  font-size: 0.78rem;
+  font-size: var(--type-size-utility);
 }
 
 .shortcut-action {
@@ -456,7 +460,7 @@ kbd,
   margin: 0;
   color: var(--textSecondary);
   font-family: var(--font-sans);
-  font-size: 0.9rem;
+  font-size: var(--type-size-meta);
 }
 
 .results-layout {
@@ -485,7 +489,7 @@ kbd,
   margin: 0.45rem 1.25rem 0;
   color: var(--textSecondary);
   font-family: var(--font-sans);
-  font-size: 0.78rem;
+  font-size: var(--type-size-utility);
 }
 
 .results-data .chart-root > .state-copy {
@@ -519,6 +523,7 @@ kbd,
 .back-link {
   display: inline-block;
   margin-bottom: 1.25rem;
+  font-size: var(--type-size-meta);
   text-decoration: none;
 }
 
@@ -535,13 +540,18 @@ kbd,
 
 .show-meta {
   margin: 0;
+  font-size: var(--type-size-meta);
+}
+
+.mismatch-note {
+  font-size: var(--type-size-meta);
 }
 
 .show-metrics,
 .rating-badge {
   color: var(--textSecondary);
   font-family: var(--font-sans);
-  font-size: 0.9rem;
+  font-size: var(--type-size-meta);
 }
 
 .show-metrics {
@@ -571,7 +581,7 @@ kbd,
 .show-plot {
   margin-top: 0.85rem;
   font-family: var(--font-editorial-serif);
-  font-size: 1rem;
+  font-size: var(--type-size-body);
 }
 
 .chart-kicker {
@@ -593,7 +603,7 @@ kbd,
   padding-left: 0.9rem;
   color: var(--textSecondary);
   font-family: var(--font-sans);
-  font-size: 0.72rem;
+  font-size: var(--type-size-utility);
 }
 
 .sparkline-chart,
@@ -679,7 +689,7 @@ kbd,
 .sidenote-kicker {
   color: var(--textSecondary);
   font-family: var(--font-sans);
-  font-size: 0.84rem;
+  font-size: var(--type-size-meta);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -691,7 +701,7 @@ kbd,
 .sidenote-title {
   margin: 0;
   font-family: var(--font-editorial-serif);
-  font-size: 1.2rem;
+  font-size: var(--type-size-heading);
   font-weight: 400;
   line-height: 1.2;
 }
@@ -700,13 +710,14 @@ kbd,
   margin: 0;
   color: var(--textSecondary);
   font-family: var(--font-sans);
-  font-size: 0.92rem;
+  font-size: var(--type-size-meta);
 }
 
 .sidenote-ratings {
   margin: 0.55rem 0 0;
   color: var(--textSecondary);
   font-family: var(--font-sans);
+  font-size: var(--type-size-meta);
 }
 
 .sidenote-rating-primary {
@@ -751,6 +762,7 @@ kbd,
   margin: 0.55rem 0 0;
   color: var(--textSecondary);
   font-family: var(--font-editorial-serif);
+  font-size: var(--type-size-body);
 }
 
 .point-layer .episode-point {
@@ -1099,7 +1111,7 @@ kbd,
   }
 
   .publisher-brand {
-    font-size: max(0.75rem, 12px);
+    font-size: max(var(--type-size-utility), 12px);
   }
 
   .masthead-hint {

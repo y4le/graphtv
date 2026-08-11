@@ -35,6 +35,11 @@ describe('createSidenote', () => {
     expect(root.querySelector('.sidenote-caption').textContent).not.toContain(
       '8.2'
     )
+    expect(
+      Array.from(root.querySelector('.sidenote-caption').children).map(
+        (item) => item.textContent
+      )
+    ).toEqual(['A Great Episode', 'S01E02', '2026-08-11'])
   })
 
   it('shows a vote-count placeholder while IMDb details load', () => {

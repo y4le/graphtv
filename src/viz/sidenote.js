@@ -62,8 +62,8 @@ export function createSidenote({ desktopRoot, mobileRoot }) {
           <div class="sidenote-card">
             <div class="sidenote-header">
               <p class="sidenote-caption">
-                <span class="sidenote-kicker">S${String(point.season).padStart(2, '0')}E${String(point.episode).padStart(2, '0')}</span>
                 <span class="sidenote-title">${escapeHtml(point.title)}</span>
+                <span class="sidenote-kicker">S${String(point.season).padStart(2, '0')}E${String(point.episode).padStart(2, '0')}</span>
                 <span class="sidenote-meta">${escapeHtml(point.date ?? 'Unknown air date')}</span>
               </p>
             </div>
