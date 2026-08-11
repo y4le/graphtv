@@ -101,7 +101,7 @@ describe('createChart', () => {
     expect(getAxisLabels(container)).not.toContain('0.0')
   })
 
-  it('renders a borrowed provider rating as a hollow point', () => {
+  it('renders a borrowed provider rating as a muted neutral point', () => {
     const container = document.createElement('div')
     Object.defineProperty(container, 'clientWidth', {
       configurable: true,
@@ -133,8 +133,10 @@ describe('createChart', () => {
 
     const fallback = container.querySelector('[data-rating-fallback="true"]')
     expect(fallback).not.toBeNull()
-    expect(fallback.getAttribute('fill')).toBe('#FDFCF8')
-    expect(fallback.getAttribute('stroke')).not.toBe('none')
+    expect(fallback.getAttribute('fill')).toBe('#737373')
+    expect(fallback.getAttribute('fill-opacity')).toBe('0.72')
+    expect(fallback.getAttribute('stroke')).toBe('#FFFFFF')
+    expect(fallback.getAttribute('stroke-width')).toBe('1.25')
   })
 
   it('preserves small horizontal trackpad deltas', () => {

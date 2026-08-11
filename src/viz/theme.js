@@ -19,6 +19,7 @@ const THEME_TOKENS = {
     trendMicro: '#A3A3A3',
     spotColor: '#C1432E',
     spotColorMuted: '#C1432E',
+    fallbackOutline: '#FFFFFF',
     publisherAccent: '#C1432E'
   },
   dark: {
@@ -33,6 +34,7 @@ const THEME_TOKENS = {
     trendMicro: '#777269',
     spotColor: '#C1432E',
     spotColorMuted: '#C1432E',
+    fallbackOutline: '#FFFFFF',
     publisherAccent: '#C1432E'
   }
 }
@@ -225,6 +227,7 @@ export function getChartTheme(settings = uiSettings) {
     trendMicro: themeTokens.trendMicro,
     spotColor: themeTokens.spotColor,
     spotColorMuted: themeTokens.spotColorMuted,
+    fallbackOutline: themeTokens.fallbackOutline,
     canvasSubtle: themeTokens.canvasSubtle,
     seasonColor: (seasonIndex, totalSeasons) => seasonColor(settings.palette, seasonIndex, totalSeasons, settings.theme)
   }

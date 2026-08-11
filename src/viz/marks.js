@@ -205,22 +205,17 @@ export function renderPoints(svg, points, scales, theme, interactions) {
     .attr('cy', (point) => scales.yScale(point.rating))
     .attr('r', (point) => (point.id === interactions.activePointId ? 4.5 : 3))
     .attr('fill', (point) => {
-      if (point.isFallbackRating) {
-        return theme.background
+      if (point.id === interactions.activePointId) {
+        return theme.spotColor
       }
-      return point.id === interactions.activePointId
-        ? theme.spotColor
+      return point.isFallbackRating
+        ? theme.textSecondary
         : theme.seasonColor(point.seasonIndex, interactions.totalSeasons)
     })
-    .attr('stroke', (point) => {
-      if (!point.isFallbackRating) {
-        return 'none'
-      }
-      return point.id === interactions.activePointId
-        ? theme.spotColor
-        : theme.seasonColor(point.seasonIndex, interactions.totalSeasons)
-    })
-    .attr('stroke-width', (point) => (point.isFallbackRating ? 1.5 : 0))
+    .attr('fill-opacity', (point) => (point.isFallbackRating && point.id !== interactions.activePointId ? 0.72 : 1))
+    .attr('stroke', (point) => (point.isFallbackRating ? theme.fallbackOutline : 'none'))
+    .attr('stroke-width', (point) => (point.isFallbackRating ? 1.25 : 0))
+    .attr('stroke-opacity', (point) => (point.isFallbackRating ? 0.9 : 1))
     .attr('data-rating-source', (point) => point.ratingSource)
     .attr('data-rating-fallback', (point) => String(point.isFallbackRating))
     .on('mouseenter', (_, point) => interactions.hoverEnabled && interactions.onHover(point))
