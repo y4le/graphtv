@@ -103,9 +103,30 @@ describe('createChart', () => {
       expect.arrayContaining(['0.0', '10.0'])
     )
 
+    chart.moveEpisode(0)
+
+    expect(container.querySelectorAll('.crosshair')).toHaveLength(2)
+    expect(
+      container.querySelector('.source-spread.is-active').getAttribute(
+        'stroke-opacity'
+      )
+    ).toBe('0.72')
+    expect(container.querySelectorAll('.source-spread-whisker')).toHaveLength(
+      2
+    )
+    expect(container.querySelectorAll('.source-rating-point')).toHaveLength(1)
+    expect(
+      container.querySelector('.source-rating-point').getAttribute(
+        'data-rating-source'
+      )
+    ).toBe('tmdb')
+
     updateUiSettings({ showSourceSpread: false })
 
     expect(container.querySelectorAll('.source-spread')).toHaveLength(0)
+    expect(container.querySelectorAll('.source-spread-whisker')).toHaveLength(0)
+    expect(container.querySelectorAll('.source-rating-point')).toHaveLength(0)
+    expect(container.querySelectorAll('.crosshair')).toHaveLength(1)
     expect(getAxisLabels(container)).not.toContain('0.0')
   })
 

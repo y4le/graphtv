@@ -560,7 +560,10 @@ export function createChart(container, seasons, options = {}) {
       mainScales,
       { width: chartWidth, height: chartHeight },
       chartTheme,
-      uiSettings.showSourceSpread
+      {
+        visible: uiSettings.showSourceSpread,
+        activePointId: getActivePoint()?.id ?? null
+      }
     )
     renderSeasonLabels(
       mainSvg,
@@ -575,7 +578,8 @@ export function createChart(container, seasons, options = {}) {
       getActivePoint(),
       mainScales,
       { width: chartWidth, height: chartHeight },
-      chartTheme
+      chartTheme,
+      uiSettings.showSourceSpread
     )
     renderPoints(
       mainSvg,
@@ -699,7 +703,10 @@ export function createChart(container, seasons, options = {}) {
       fullScales,
       { width: contentWidth, height: chartHeight },
       chartTheme,
-      uiSettings.showSourceSpread
+      {
+        visible: uiSettings.showSourceSpread,
+        activePointId: getActivePoint()?.id ?? null
+      }
     )
     renderSeasonLabels(
       mainSvg,
@@ -714,7 +721,8 @@ export function createChart(container, seasons, options = {}) {
       getActivePoint(),
       fullScales,
       { width: contentWidth, height: chartHeight },
-      chartTheme
+      chartTheme,
+      uiSettings.showSourceSpread
     )
     renderPoints(mainSvg, model.points, fullScales, chartTheme, {
       activePointId: getActivePoint()?.id ?? null,

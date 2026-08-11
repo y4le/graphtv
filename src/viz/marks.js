@@ -1,12 +1,15 @@
 import { format, line } from 'd3'
 
-import { isUsableRating } from '../data/stats.js'
+import { isUsableProviderRating, isUsableRating } from '../data/stats.js'
 
 const formatRating = format('.1f')
 const Y_LABEL_INSET = 8
 const MIN_SOURCE_SPREAD_PIXELS = 3
 const SOURCE_SPREAD_OPACITY = 0.16
+const ACTIVE_SOURCE_SPREAD_OPACITY = 0.72
 const CLIPPED_SPREAD_NUB_WIDTH = 4
+const SOURCE_SPREAD_WHISKER_WIDTH = 7
+const SOURCE_RATING_OPACITY = 0.68
 const FALLBACK_POINT_FILL_OPACITY = 0.2
 
 export function renderRangeFrame(svg, scales, dimensions, theme) {
@@ -100,19 +103,33 @@ export function renderTrendlines(svg, trendlines, macroTrendline, scales, theme)
     .attr('d', (trendline) => generator(trendline.points))
 }
 
-export function renderCrosshair(svg, point, scales, dimensions, theme) {
+export function renderCrosshair(
+  svg,
+  point,
+  scales,
+  dimensions,
+  theme,
+  showSourceSpread = false
+) {
   const crosshairLayer = svg.selectAll('.crosshair-layer').data([null]).join('g').attr('class', 'crosshair-layer')
+  const spread = showSourceSpread
+    ? createSourceSpreadMark(point, scales)
+    : null
+  const x = point ? scales.xScale(point.x) : 0
 
   const lines = point
-    ? [
-        {
-          key: 'vertical',
-          x1: scales.xScale(point.x),
-          x2: scales.xScale(point.x),
-          y1: 0,
-          y2: dimensions.height
-        }
-      ]
+    ? spread
+      ? [
+          { key: 'vertical-before', x1: x, x2: x, y1: 0, y2: Math.min(spread.y1, spread.y2) },
+          {
+            key: 'vertical-after',
+            x1: x,
+            x2: x,
+            y1: Math.max(spread.y1, spread.y2),
+            y2: dimensions.height
+          }
+        ].filter((lineData) => lineData.y2 > lineData.y1)
+      : [{ key: 'vertical', x1: x, x2: x, y1: 0, y2: dimensions.height }]
     : []
 
   crosshairLayer
@@ -129,28 +146,19 @@ export function renderCrosshair(svg, point, scales, dimensions, theme) {
     .attr('stroke-dasharray', '3 4')
 }
 
-export function renderSourceSpreads(svg, points, scales, dimensions, theme, visible = true) {
+export function renderSourceSpreads(
+  svg,
+  points,
+  scales,
+  dimensions,
+  theme,
+  { visible = true, activePointId = null } = {}
+) {
   const [domainMin, domainMax] = scales.yDomain
   const spreads = visible
     ? points
-        .filter((point) => point.ratingSpread)
-        .map((point) => {
-          const min = clamp(point.ratingSpread.min, domainMin, domainMax)
-          const max = clamp(point.ratingSpread.max, domainMin, domainMax)
-          return {
-            ...point.ratingSpread,
-            id: point.id,
-            x: scales.xScale(point.x),
-            y1: scales.yScale(min),
-            y2: scales.yScale(max),
-            clippedMin: point.ratingSpread.min < domainMin,
-            clippedMax: point.ratingSpread.max > domainMax
-          }
-        })
-        .filter(
-          (spread) =>
-            Math.abs(spread.y2 - spread.y1) >= MIN_SOURCE_SPREAD_PIXELS || spread.clippedMin || spread.clippedMax
-        )
+        .map((point) => createSourceSpreadMark(point, scales))
+        .filter(Boolean)
     : []
 
   const spreadLayer = svg
@@ -164,15 +172,45 @@ export function renderSourceSpreads(svg, points, scales, dimensions, theme, visi
     .selectAll('.source-spread')
     .data(spreads, (spread) => spread.id)
     .join('line')
-    .attr('class', 'source-spread')
+    .attr('class', (spread) =>
+      spread.id === activePointId
+        ? 'source-spread is-active'
+        : 'source-spread'
+    )
     .attr('x1', (spread) => spread.x)
     .attr('x2', (spread) => spread.x)
     .attr('y1', (spread) => spread.y1)
     .attr('y2', (spread) => spread.y2)
     .attr('stroke', theme.textSecondary)
-    .attr('stroke-opacity', SOURCE_SPREAD_OPACITY)
-    .attr('stroke-width', 1.25)
+    .attr('stroke-opacity', (spread) =>
+      spread.id === activePointId
+        ? ACTIVE_SOURCE_SPREAD_OPACITY
+        : SOURCE_SPREAD_OPACITY
+    )
+    .attr('stroke-width', (spread) =>
+      spread.id === activePointId ? 1.5 : 1.25
+    )
     .attr('stroke-linecap', 'round')
+
+  const activeWhiskers = spreads
+    .filter((spread) => spread.id === activePointId)
+    .flatMap((spread) => [
+      { id: `${spread.id}:min-whisker`, x: spread.x, y: spread.y1 },
+      { id: `${spread.id}:max-whisker`, x: spread.x, y: spread.y2 }
+    ])
+
+  spreadLayer
+    .selectAll('.source-spread-whisker')
+    .data(activeWhiskers, (whisker) => whisker.id)
+    .join('line')
+    .attr('class', 'source-spread-whisker')
+    .attr('x1', (whisker) => whisker.x - SOURCE_SPREAD_WHISKER_WIDTH / 2)
+    .attr('x2', (whisker) => whisker.x + SOURCE_SPREAD_WHISKER_WIDTH / 2)
+    .attr('y1', (whisker) => whisker.y)
+    .attr('y2', (whisker) => whisker.y)
+    .attr('stroke', theme.textSecondary)
+    .attr('stroke-opacity', ACTIVE_SOURCE_SPREAD_OPACITY)
+    .attr('stroke-width', 1.25)
 
   const clippedEnds = spreads.flatMap((spread) => [
     ...(spread.clippedMin ? [{ id: `${spread.id}:min`, x: spread.x, y: dimensions.height }] : []),
@@ -191,6 +229,62 @@ export function renderSourceSpreads(svg, points, scales, dimensions, theme, visi
     .attr('stroke', theme.textSecondary)
     .attr('stroke-opacity', SOURCE_SPREAD_OPACITY)
     .attr('stroke-width', 1.25)
+
+  const secondaryRatings = spreads
+    .filter((spread) => spread.id === activePointId)
+    .flatMap((spread) =>
+      (spread.ratings ?? [])
+        .filter(
+          (rating) =>
+            isUsableProviderRating(rating) &&
+            rating.source !== spread.ratingSource
+        )
+        .map((rating) => ({
+          id: `${spread.id}:${rating.source}`,
+          source: rating.source,
+          x: spread.x,
+          y: scales.yScale(clamp(rating.rating, domainMin, domainMax))
+        }))
+    )
+
+  spreadLayer
+    .selectAll('.source-rating-point')
+    .data(secondaryRatings, (rating) => rating.id)
+    .join('circle')
+    .attr('class', 'source-rating-point')
+    .attr('cx', (rating) => rating.x)
+    .attr('cy', (rating) => rating.y)
+    .attr('r', 2.25)
+    .attr('fill', theme.textSecondary)
+    .attr('fill-opacity', SOURCE_RATING_OPACITY)
+    .attr('data-rating-source', (rating) => rating.source)
+}
+
+function createSourceSpreadMark(point, scales) {
+  if (!point?.ratingSpread) {
+    return null
+  }
+
+  const [domainMin, domainMax] = scales.yDomain
+  const min = clamp(point.ratingSpread.min, domainMin, domainMax)
+  const max = clamp(point.ratingSpread.max, domainMin, domainMax)
+  const spread = {
+    ...point.ratingSpread,
+    id: point.id,
+    ratingSource: point.ratingSource,
+    ratings: point.ratings,
+    x: scales.xScale(point.x),
+    y1: scales.yScale(min),
+    y2: scales.yScale(max),
+    clippedMin: point.ratingSpread.min < domainMin,
+    clippedMax: point.ratingSpread.max > domainMax
+  }
+
+  return Math.abs(spread.y2 - spread.y1) >= MIN_SOURCE_SPREAD_PIXELS ||
+    spread.clippedMin ||
+    spread.clippedMax
+    ? spread
+    : null
 }
 
 export function renderPoints(svg, points, scales, theme, interactions) {
