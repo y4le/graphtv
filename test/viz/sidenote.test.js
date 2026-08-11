@@ -36,4 +36,27 @@ describe('createSidenote', () => {
       '8.2'
     )
   })
+
+  it('shows a vote-count placeholder while IMDb details load', () => {
+    const root = document.createElement('section')
+    const sidenote = createSidenote({ desktopRoot: root })
+
+    sidenote.renderPoint(
+      {
+        title: 'A Great Episode',
+        season: 1,
+        episode: 2,
+        date: '2026-08-11',
+        rating: 8.2,
+        ratingSource: 'omdb',
+        ratings: [{ source: 'omdb', rating: 8.2, votes: null }]
+      },
+      { loadingDetails: true }
+    )
+
+    const loading = root.querySelector('.sidenote-votes-loading')
+    expect(loading).not.toBeNull()
+    expect(loading.getAttribute('aria-label')).toBe('Loading IMDb vote count')
+    expect(loading.querySelector('.sidenote-votes-loading-dot')).not.toBeNull()
+  })
 })

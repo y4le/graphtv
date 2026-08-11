@@ -83,9 +83,11 @@ export function createChart(container, seasons, options = {}) {
   let suppressScrollSync = false
   let suppressScrollSyncFrame = null
   let detailLoadTimer = null
+  let scheduledDetailPointId = null
   let destroyed = false
   const detailCache = new Map()
   const detailErrors = []
+  const loadingDetailPointIds = new Set()
 
   function setScrollLeftSuppressed(scrollLeft) {
     suppressScrollSync = true
@@ -185,17 +187,21 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function scheduleDetailLoad(point) {
-    if (detailLoadTimer) {
-      clearTimeout(detailLoadTimer)
-      detailLoadTimer = null
-    }
+    cancelScheduledDetailLoad()
 
-    if (!options.loadEpisodeDetails || detailCache.has(point.id)) {
+    if (
+      !options.loadEpisodeDetails ||
+      detailCache.has(point.id) ||
+      loadingDetailPointIds.has(point.id)
+    ) {
       return
     }
 
+    scheduledDetailPointId = point.id
+    loadingDetailPointIds.add(point.id)
     detailLoadTimer = setTimeout(async () => {
       detailLoadTimer = null
+      scheduledDetailPointId = null
 
       try {
         const enrichedPoint = await options.loadEpisodeDetails(point)
@@ -208,9 +214,6 @@ export function createChart(container, seasons, options = {}) {
           ? mergeEpisodeDetails(currentPoint, enrichedPoint)
           : enrichedPoint
         detailCache.set(point.id, mergedPoint)
-        if (getActivePoint()?.id === point.id) {
-          sidenote.renderPoint(mergedPoint)
-        }
       } catch (error) {
         if (error?.name !== 'AbortError') {
           detailErrors.push({ episodeId: point.id, reason: error.message })
@@ -218,25 +221,49 @@ export function createChart(container, seasons, options = {}) {
             detailErrors.shift()
           }
         }
+      } finally {
+        loadingDetailPointIds.delete(point.id)
+        if (!destroyed && getActivePoint()?.id === point.id) {
+          const currentPoint = getPointById(point.id)
+          sidenote.renderPoint(detailCache.get(point.id) ?? currentPoint)
+        }
       }
     }, DETAIL_LOAD_DELAY_MS)
   }
 
+  function cancelScheduledDetailLoad() {
+    if (!detailLoadTimer) {
+      return
+    }
+
+    clearTimeout(detailLoadTimer)
+    detailLoadTimer = null
+    loadingDetailPointIds.delete(scheduledDetailPointId)
+    scheduledDetailPointId = null
+  }
+
+  function leaveHoveredPoint() {
+    hoverPointId = null
+    cancelScheduledDetailLoad()
+    const selectedPoint = getPointById(selectedPointId)
+    updateDetail(selectedPoint, { load: Boolean(selectedPoint) })
+    render()
+  }
+
   function updateDetail(point, { load = false } = {}) {
     if (!point) {
-      if (detailLoadTimer) {
-        clearTimeout(detailLoadTimer)
-        detailLoadTimer = null
-      }
+      cancelScheduledDetailLoad()
       sidenote.renderPlaceholder()
       shell.style.removeProperty('--reading-pane-marker')
       return
     }
 
-    sidenote.renderPoint(detailCache.get(point.id) ?? point)
     if (load) {
       scheduleDetailLoad(point)
     }
+    sidenote.renderPoint(detailCache.get(point.id) ?? point, {
+      loadingDetails: loadingDetailPointIds.has(point.id)
+    })
   }
 
   function ensureSelectedPoint() {
@@ -592,13 +619,10 @@ export function createChart(container, seasons, options = {}) {
         totalSeasons: model.totalSeasons,
         onHover(point) {
           hoverPointId = point.id
-          updateDetail(point)
+          updateDetail(point, { load: true })
           render()
         },
-        onLeave() {
-          hoverPointId = null
-          render()
-        },
+        onLeave: leaveHoveredPoint,
         onSelect(point) {
           hoverPointId = null
           setSelectedPoint(point, 'pointer')
@@ -730,13 +754,10 @@ export function createChart(container, seasons, options = {}) {
       totalSeasons: model.totalSeasons,
       onHover(point) {
         hoverPointId = point.id
-        updateDetail(point)
+        updateDetail(point, { load: true })
         render()
       },
-      onLeave() {
-        hoverPointId = null
-        render()
-      },
+      onLeave: leaveHoveredPoint,
       onSelect(point) {
         hoverPointId = null
         setSelectedPoint(point, 'pointer')
@@ -1193,9 +1214,8 @@ export function createChart(container, seasons, options = {}) {
     },
     destroy() {
       destroyed = true
-      if (detailLoadTimer) {
-        clearTimeout(detailLoadTimer)
-      }
+      cancelScheduledDetailLoad()
+      loadingDetailPointIds.clear()
       resizeObserver.disconnect()
       document.removeEventListener('graphtv:settings-change', settingsListener)
       bodyShell.removeEventListener('wheel', handleBodyWheel)

@@ -409,7 +409,7 @@ describe('createChart', () => {
     expect(detailRoot.textContent).toContain('TMDB 9.0 (500 votes)')
   })
 
-  it('debounces selection-only episode detail loading', async () => {
+  it('debounces selected episode detail loading', async () => {
     vi.useFakeTimers()
     const container = document.createElement('div')
     const detailRoot = document.createElement('section')
@@ -439,23 +439,50 @@ describe('createChart', () => {
     expect(detailRoot.textContent).toContain('IMDb n/a (3.4k votes)')
   })
 
-  it('does not load episode details from hover', async () => {
+  it('debounces episode detail loading while hovering', async () => {
     vi.useFakeTimers()
     const container = document.createElement('div')
-    const loadEpisodeDetails = vi.fn()
+    const loadEpisodeDetails = vi.fn(async (point) => ({
+      ...point,
+      ratings: point.ratings.map((rating) =>
+        rating.source === 'omdb' ? { ...rating, votes: 4200 } : rating
+      )
+    }))
     Object.defineProperty(container, 'clientWidth', {
       configurable: true,
       value: 600
     })
     document.body.appendChild(container)
 
-    chart = createChart(container, createSeasons(), { loadEpisodeDetails })
-    container
-      .querySelector('.episode-point')
-      .dispatchEvent(new MouseEvent('mouseenter'))
-    await vi.advanceTimersByTimeAsync(300)
-
+    const seasons = createSeasons()
+    seasons[0].episodes.slice(0, 2).forEach((episode, index) => {
+      episode.ratings.push({
+        source: 'omdb',
+        rating: 8.2 + index / 10,
+        votes: null
+      })
+    })
+    chart = createChart(container, seasons, { loadEpisodeDetails })
+    const firstPoint = container.querySelector('.episode-point')
+    firstPoint.dispatchEvent(new MouseEvent('mouseenter'))
+    expect(container.querySelector('.sidenote-votes-loading')).not.toBeNull()
+    await vi.advanceTimersByTimeAsync(249)
     expect(loadEpisodeDetails).not.toHaveBeenCalled()
+
+    firstPoint.dispatchEvent(new MouseEvent('mouseleave'))
+    expect(container.querySelector('.sidenote-votes-loading')).toBeNull()
+    await vi.advanceTimersByTimeAsync(1)
+    expect(loadEpisodeDetails).not.toHaveBeenCalled()
+
+    container
+      .querySelectorAll('.episode-point')[1]
+      .dispatchEvent(new MouseEvent('mouseenter'))
+    await vi.advanceTimersByTimeAsync(250)
+
+    expect(loadEpisodeDetails).toHaveBeenCalledTimes(1)
+    expect(loadEpisodeDetails.mock.calls[0][0].title).toBe('Episode 2')
+    expect(container.querySelector('.sidenote-votes-loading')).toBeNull()
+    expect(container.textContent).toContain('IMDb 8.3 (4.2k votes)')
   })
 
   it('destroys the detail loader and suppresses abort errors from an in-flight request', async () => {

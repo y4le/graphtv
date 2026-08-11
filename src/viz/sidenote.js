@@ -5,7 +5,7 @@ import {
   isUsableRating
 } from '../data/stats.js'
 
-function formatRatingList(point) {
+function formatRatingList(point, { loadingDetails = false } = {}) {
   return [...point.ratings]
     .filter(isTrustedRating)
     .sort(compareRatingSources)
@@ -14,6 +14,8 @@ function formatRatingList(point) {
       const votes =
         typeof rating.votes === 'number'
           ? ` (${formatVoteCount(rating.votes)} ${rating.votes === 1 ? 'vote' : 'votes'})`
+          : loadingDetails && rating.source === 'omdb'
+            ? ` (${renderVotesLoading()})`
           : ''
       const label = getEpisodeRatingSourceLabel(rating.source)
       const value = isUsableRating(rating.rating)
@@ -35,6 +37,10 @@ function formatRatingList(point) {
       return `${separator}${entry}`
     })
     .join('')
+}
+
+function renderVotesLoading() {
+  return '<span class="sidenote-votes-loading" role="status" aria-label="Loading IMDb vote count"><span class="sidenote-votes-loading-dot" aria-hidden="true"></span><span aria-hidden="true">votes</span></span>'
 }
 
 function compareRatingSources(left, right) {
@@ -73,7 +79,7 @@ export function createSidenote({ desktopRoot, mobileRoot }) {
     }
   }
 
-  function renderPoint(point) {
+  function renderPoint(point, { loadingDetails = false } = {}) {
     const markup = point
       ? `
           <div class="sidenote-card">
@@ -84,7 +90,7 @@ export function createSidenote({ desktopRoot, mobileRoot }) {
                 <span class="sidenote-meta">${escapeHtml(point.date ?? 'Unknown air date')}</span>
               </p>
             </div>
-            <p class="sidenote-ratings">${formatRatingList(point)}</p>
+            <p class="sidenote-ratings">${formatRatingList(point, { loadingDetails })}</p>
             ${
               point.plot
                 ? `<p class="sidenote-body">${escapeHtml(point.plot)}</p>`
