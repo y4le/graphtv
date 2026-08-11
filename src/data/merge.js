@@ -22,13 +22,14 @@ function mergeEpisode(primaryEpisode, alignmentMatch, provider) {
     return createEpisode(primaryEpisode)
   }
 
-  const { supplementalEpisode, strategy, confidence } = alignmentMatch
+  const { supplementalEpisode, strategy, confidence, evidence } = alignmentMatch
   const supplementalRatings = supplementalEpisode.ratings.map((rating) => ({
     ...rating,
     provenance: {
       providerEpisodeId: supplementalEpisode.id,
       strategy,
       confidence,
+      evidence,
       relation: 'one-to-one'
     }
   }))

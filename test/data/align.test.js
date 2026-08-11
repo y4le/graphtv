@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { alignSupplementalRecord, normalizeEpisodeTitle } from '../../src/data/align.js'
+import {
+  alignSupplementalRecord,
+  normalizeEpisodeTitle,
+  parseEpisodeTitle
+} from '../../src/data/align.js'
 
 function episode(provider, id, season, number, title, date, rating = 8) {
   return {
@@ -25,6 +29,34 @@ describe('episode title normalization', () => {
     expect(normalizeEpisodeTitle('  L’Épisode — Rock & Roll! ')).toBe(
       'lepisode rock and roll'
     )
+  })
+
+  it.each([
+    ['Bargaining (1)', 'bargaining', 1],
+    ['Bargaining - Part 1', 'bargaining', 1],
+    ['Bargaining: Part I', 'bargaining', 1],
+    ['Bargaining, Part Two', 'bargaining', 2],
+    ['Bargaining Pt. 3', 'bargaining', 3]
+  ])('parses explicit part markers in %s', (title, base, part) => {
+    expect(parseEpisodeTitle(title)).toMatchObject({ base, part, titled: true })
+  })
+
+  it.each([
+    'The One with Two Parts',
+    'Episode #2.2',
+    'Live Free or Die Hard 4',
+    'Class of 1999 (2019)',
+    'Chapter Two: The Weirdo on Maple Street'
+  ])('does not treat ordinary title text as a part marker in %s', (title) => {
+    expect(parseEpisodeTitle(title).part).toBeNull()
+  })
+
+  it('does not expose an empty base for titles made entirely from a part marker', () => {
+    expect(parseEpisodeTitle('Part Two')).toMatchObject({
+      base: 'part two',
+      part: 2,
+      titled: false
+    })
   })
 })
 
@@ -118,8 +150,191 @@ describe('cross-provider episode alignment', () => {
 
     expect(alignment.matches.get('tvmaze:episode:one')).toMatchObject({
       strategy: 'date',
-      confidence: 'moderate'
+      confidence: 'moderate',
+      evidence: { title: 'none', part: 'absent', date: 'exact' }
     })
+  })
+
+  it('matches unique base titles when one provider decorates a same-date premiere with parts', () => {
+    const primary = [
+      season(1, [
+        episode(
+          'tvmaze',
+          'hellmouth',
+          1,
+          1,
+          'Welcome to the Hellmouth',
+          '1997-03-10'
+        ),
+        episode('tvmaze', 'harvest', 1, 2, 'The Harvest', '1997-03-10')
+      ])
+    ]
+    const supplemental = {
+      provider: 'tmdb',
+      seasons: [
+        season(1, [
+          episode(
+            'tmdb',
+            'hellmouth',
+            1,
+            1,
+            'Welcome to the Hellmouth (1)',
+            '1997-03-10'
+          ),
+          episode('tmdb', 'harvest', 1, 2, 'The Harvest (2)', '1997-03-10')
+        ])
+      ]
+    }
+
+    const alignment = alignSupplementalRecord(primary, supplemental)
+
+    expect(alignment.matches.get('tvmaze:episode:hellmouth')).toMatchObject({
+      supplementalEpisode: { id: 'tmdb:episode:hellmouth' },
+      strategy: 'base-title-date',
+      confidence: 'strong',
+      evidence: { title: 'base', part: 'ignored', date: 'exact' }
+    })
+    expect(alignment.matches.get('tvmaze:episode:harvest')).toMatchObject({
+      supplementalEpisode: { id: 'tmdb:episode:harvest' },
+      strategy: 'base-title-date',
+      confidence: 'strong'
+    })
+    expect(
+      alignment.report.entries.some((entry) => entry.type === 'ambiguous')
+    ).toBe(false)
+  })
+
+  it('matches same-date multipart titles by their explicit part markers', () => {
+    const primary = [
+      season(6, [
+        episode('tvmaze', 'one', 6, 1, 'Bargaining - Part 1', '2001-10-02'),
+        episode('tvmaze', 'two', 6, 2, 'Bargaining - Part 2', '2001-10-02')
+      ])
+    ]
+    const supplemental = {
+      provider: 'tmdb',
+      seasons: [
+        season(6, [
+          episode('tmdb', 'one', 6, 1, 'Bargaining (1)', '2001-10-02'),
+          episode('tmdb', 'two', 6, 2, 'Bargaining (2)', '2001-10-02')
+        ])
+      ]
+    }
+
+    const alignment = alignSupplementalRecord(primary, supplemental)
+
+    expect(alignment.matches.get('tvmaze:episode:one')).toMatchObject({
+      supplementalEpisode: { id: 'tmdb:episode:one' },
+      strategy: 'part-title-date',
+      confidence: 'strong',
+      evidence: { title: 'base', part: 'exact', date: 'exact' }
+    })
+    expect(alignment.matches.get('tvmaze:episode:two')).toMatchObject({
+      supplementalEpisode: { id: 'tmdb:episode:two' },
+      strategy: 'part-title-date',
+      confidence: 'strong'
+    })
+  })
+
+  it('matches multipart titles by base and part when provider air dates disagree', () => {
+    const primary = [
+      season(1, [
+        episode('tvmaze', 'one', 1, 1, 'Story - Part 1', '2020-01-01'),
+        episode('tvmaze', 'two', 1, 2, 'Story - Part 2', '2020-01-08')
+      ])
+    ]
+    const supplemental = {
+      provider: 'tmdb',
+      seasons: [
+        season(1, [
+          episode('tmdb', 'one', 1, 1, 'Story (1)', '2019-12-01'),
+          episode('tmdb', 'two', 1, 2, 'Story (2)', '2019-12-08')
+        ])
+      ]
+    }
+
+    const alignment = alignSupplementalRecord(primary, supplemental)
+
+    expect(alignment.matches.get('tvmaze:episode:one')).toMatchObject({
+      supplementalEpisode: { id: 'tmdb:episode:one' },
+      strategy: 'part-title',
+      confidence: 'strong',
+      evidence: { title: 'base', part: 'exact', date: 'none' }
+    })
+    expect(alignment.matches.get('tvmaze:episode:two')).toMatchObject({
+      supplementalEpisode: { id: 'tmdb:episode:two' },
+      strategy: 'part-title',
+      confidence: 'strong'
+    })
+  })
+
+  it('never matches explicitly conflicting part numbers through a weaker strategy', () => {
+    const primary = [
+      season(1, [
+        episode('tvmaze', 'conflict', 1, 1, 'Story - Part 1', '2020-01-01'),
+        episode('tvmaze', 'clean', 1, 2, 'Clean Match', '2020-01-02')
+      ])
+    ]
+    const supplemental = {
+      provider: 'tmdb',
+      seasons: [
+        season(1, [
+          episode('tmdb', 'conflict', 1, 1, 'Story (2)', '2020-01-01'),
+          episode('tmdb', 'clean', 1, 2, 'Clean Match', '2020-01-02')
+        ])
+      ]
+    }
+
+    const alignment = alignSupplementalRecord(primary, supplemental)
+
+    expect(alignment.matches.has('tvmaze:episode:conflict')).toBe(false)
+    expect(
+      alignment.matches.get('tvmaze:episode:clean')?.supplementalEpisode.id
+    ).toBe('tmdb:episode:clean')
+    expect(alignment.report.entries).toContainEqual(
+      expect.objectContaining({
+        type: 'ambiguous',
+        primary: expect.objectContaining({ id: 'tvmaze:episode:conflict' })
+      })
+    )
+  })
+
+  it('keeps split-versus-combined episodes unmatched', () => {
+    const primary = [
+      season(1, [
+        episode('tvmaze', 'one', 1, 1, 'Fun Run (1)', '2020-01-01'),
+        episode('tvmaze', 'two', 1, 2, 'Fun Run (2)', '2020-01-01')
+      ])
+    ]
+    const supplemental = {
+      provider: 'tmdb',
+      seasons: [
+        season(1, [episode('tmdb', 'combined', 1, 1, 'Fun Run', '2020-01-01')])
+      ]
+    }
+
+    expect(alignSupplementalRecord(primary, supplemental).matches.size).toBe(0)
+  })
+
+  it('consumes an exact title before a broader base-title group can claim it', () => {
+    const primary = [
+      season(1, [
+        episode('tvmaze', 'exact', 1, 1, 'The Test', '2020-01-01'),
+        episode('tvmaze', 'part', 1, 2, 'The Test (2)', '2020-01-01')
+      ])
+    ]
+    const supplemental = {
+      provider: 'tmdb',
+      seasons: [season(1, [episode('tmdb', 'exact', 1, 1, 'The Test', '2020-01-01')])]
+    }
+
+    const alignment = alignSupplementalRecord(primary, supplemental)
+
+    expect(alignment.matches.get('tvmaze:episode:exact')).toMatchObject({
+      supplementalEpisode: { id: 'tmdb:episode:exact' },
+      strategy: 'title-date'
+    })
+    expect(alignment.matches.has('tvmaze:episode:part')).toBe(false)
   })
 
   it('never aligns episodes across season boundaries', () => {

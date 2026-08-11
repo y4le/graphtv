@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { mergeShowRecords } from '../../src/data/merge.js'
+import { isUsableProviderRating } from '../../src/data/stats.js'
 
 const primaryRecord = {
   provider: 'tvmaze',
@@ -140,6 +141,11 @@ describe('data/merge', () => {
           providerEpisodeId: 'tmdb:episode:66454',
           strategy: 'title-date',
           confidence: 'strong',
+          evidence: {
+            title: 'exact',
+            part: 'absent',
+            date: 'exact'
+          },
           relation: 'one-to-one'
         }
       }
@@ -180,6 +186,29 @@ describe('data/merge', () => {
         })
       ])
     )
+  })
+
+  it('trusts a unique same-date base-title match and preserves its evidence', () => {
+    const decoratedRecord = structuredClone(supplementalRecord)
+    decoratedRecord.seasons[0].episodes[0].title = 'The Target (1)'
+
+    const merged = mergeShowRecords(primaryRecord, [decoratedRecord])
+    const rating = merged.seasons[0].episodes[0].ratings.find(
+      (item) => item.source === 'tmdb'
+    )
+
+    expect(rating.provenance).toEqual({
+      providerEpisodeId: 'tmdb:episode:66452',
+      strategy: 'base-title-date',
+      confidence: 'strong',
+      evidence: {
+        title: 'base',
+        part: 'ignored',
+        date: 'exact'
+      },
+      relation: 'one-to-one'
+    })
+    expect(isUsableProviderRating(rating)).toBe(true)
   })
 
   it('captures episode mismatches for debug mode', () => {
