@@ -10,31 +10,46 @@
     and season trendlines.
   </desc>
   <style>
+    :root {
+      color-scheme: light dark;
+      --card-ink: light-dark(#1a1814, #e8e3d5);
+      --card-muted: light-dark(#6f6a5e, #8a857a);
+      --card-accent: #c1432e;
+    }
+
+    :root[data-color-scheme="light"] {
+      color-scheme: only light;
+    }
+
+    :root[data-color-scheme="dark"] {
+      color-scheme: only dark;
+    }
+
     .word {
-      fill: #e8e3d5;
+      fill: var(--card-ink);
       font-family: Geist, Inter, 'Helvetica Neue', Arial, sans-serif;
-      font-size: 318px;
+      font-size: 236px;
       font-weight: 720;
       letter-spacing: -0.06em;
     }
 
     .season-trendline {
-      stroke: #777269;
-      stroke-width: 2;
+      stroke: var(--card-muted);
+      stroke-width: 4;
     }
 
     .source-hairline {
-      stroke: #8a857a;
+      stroke: var(--card-muted);
       stroke-opacity: 0.42;
       stroke-width: 2;
     }
 
     .episode-point {
-      fill: #e8e3d5;
+      fill: var(--card-ink);
     }
 
     .episode-point-active {
-      fill: #c1432e;
+      fill: var(--card-accent);
     }
 
     .rolling-trend {
@@ -65,19 +80,19 @@
         <line class="source-hairline" x1="1208" y1="368" x2="1208" y2="433" />
       </g>
       <g class="episode-points">
-        <circle class="episode-point" cx="0" cy="508" r="6" />
-        <circle class="episode-point" cx="112" cy="472" r="6" />
-        <circle class="episode-point" cx="220" cy="533" r="6" />
-        <circle class="episode-point" cx="328" cy="382" r="6" />
-        <circle class="episode-point" cx="442" cy="427" r="6" />
-        <circle class="episode-point" cx="550" cy="346" r="6" />
-        <circle class="episode-point-active" cx="660" cy="501" r="7" />
-        <circle class="episode-point" cx="766" cy="462" r="6" />
-        <circle class="episode-point" cx="878" cy="560" r="6" />
-        <circle class="episode-point" cx="988" cy="486" r="6" />
-        <circle class="episode-point" cx="1098" cy="526" r="6" />
-        <circle class="episode-point" cx="1208" cy="399" r="6" />
-        <circle class="episode-point" cx="1310" cy="438" r="6" />
+        <circle class="episode-point" cx="0" cy="508" r="9" />
+        <circle class="episode-point" cx="112" cy="472" r="9" />
+        <circle class="episode-point" cx="220" cy="533" r="9" />
+        <circle class="episode-point" cx="328" cy="382" r="9" />
+        <circle class="episode-point" cx="442" cy="427" r="9" />
+        <circle class="episode-point" cx="550" cy="346" r="9" />
+        <circle class="episode-point-active" cx="660" cy="501" r="11" />
+        <circle class="episode-point" cx="766" cy="462" r="9" />
+        <circle class="episode-point" cx="878" cy="560" r="9" />
+        <circle class="episode-point" cx="988" cy="486" r="9" />
+        <circle class="episode-point" cx="1098" cy="526" r="9" />
+        <circle class="episode-point" cx="1208" cy="399" r="9" />
+        <circle class="episode-point" cx="1310" cy="438" r="9" />
       </g>
     </g>
   </defs>
@@ -87,5 +102,5 @@
     <use href="#trend-segment" x="1370" />
     <use href="#trend-segment" x="2740" />
   </g>
-  <text class="word" x="809" y="602" text-anchor="middle">graphtv</text>
+  <text class="word" x="809" y="585" text-anchor="middle">graphtv</text>
 </svg>
