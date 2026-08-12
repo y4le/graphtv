@@ -54,6 +54,17 @@ and query URL, then returns focus to the input. Escape remains a mode-exit key a
 | First result    | `gg`           | `Home`       | Chord: `g` then `g`        |
 | Last result     | `G`            | `End`        |                            |
 
+### Browse collections (focused rail)
+
+Collection rails use native Tab navigation for show links. When a rail itself is focused, it handles these keys locally without changing the selected search result.
+
+| Action                | Keys         |
+| --------------------- | ------------ |
+| Scroll backward       | `ArrowLeft`  |
+| Scroll forward        | `ArrowRight` |
+| Jump to start of rail | `Home`       |
+| Jump to end of rail   | `End`        |
+
 ### Chart (normal mode, results page)
 
 On the results page, chart navigation is the default keyboard target in normal mode. The user does not need to tab into the chart before using chart navigation keys. Search, help, debug, and view options remain explicit modes that take over keyboard handling.
@@ -205,4 +216,5 @@ Overlay ──[Escape, q, toggle key, or outside click]──→ Normal (focus r
 - In overlay mode, only the overlay's own bindings are active. Background keys are suppressed.
 - `?` only triggers help when no text input is focused. Inside the search input, `?` types normally. To open help from insert mode: `Escape` first, then `?`.
 - If focus is on a native interactive control such as a link, button, select, summary, or editable field, page-level single-letter shortcuts do not fire.
+- Composite widgets marked for local keyboard handling suppress page-level navigation while focused; their own documented keys continue to work.
 - Shortcuts do not fire while `Ctrl`, `Command`, or `Alt` is held. Browser and operating-system commands such as reload, address-bar focus, bookmarks, and browser zoom are never intercepted. Shift remains available for intentional keys such as `?`, `D`, `G`, and `+`.

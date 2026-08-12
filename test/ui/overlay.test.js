@@ -151,4 +151,15 @@ describe('keyboard help overlay', () => {
       expect.arrayContaining(['b', 'w', '0', '$', 'd'])
     )
   })
+
+  it('documents collection navigation on the search page', () => {
+    const overlayController = createOverlayController()
+    openHelpOverlay(overlayController, { kind: 'search' })
+
+    const helpText = document.querySelector('.help-sections').textContent
+
+    expect(helpText).toContain('Browse collections')
+    expect(helpText).toContain('Scroll collection backward')
+    expect(helpText).toContain('Scroll collection forward')
+  })
 })

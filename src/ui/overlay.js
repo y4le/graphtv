@@ -729,6 +729,15 @@ function searchHelpSections() {
         { keys: ['Home', 'gg'], action: 'First result' },
         { keys: ['End', 'G'], action: 'Last result' }
       ]
+    },
+    {
+      title: 'Browse collections',
+      items: [
+        { keys: ['ArrowLeft'], action: 'Scroll collection backward' },
+        { keys: ['ArrowRight'], action: 'Scroll collection forward' },
+        { keys: ['Home'], action: 'Start of collection' },
+        { keys: ['End'], action: 'End of collection' }
+      ]
     }
   ]
 }
