@@ -37,6 +37,9 @@ export function createKeyboardController({ page, overlayController }) {
       page.kind === 'search' &&
         activeElement?.closest?.('[data-focus-zone="search-results"]')
     )
+    const isLocalKeyboardTarget = Boolean(
+      activeElement?.closest?.('[data-keyboard-local]')
+    )
 
     if (isEditableElement(activeElement)) {
       chordTracker.reset()
@@ -48,7 +51,8 @@ export function createKeyboardController({ page, overlayController }) {
     }
 
     if (
-      isSuppressedInteractiveElement(activeElement) &&
+      (isSuppressedInteractiveElement(activeElement) ||
+        isLocalKeyboardTarget) &&
       !isSearchResultTarget
     ) {
       chordTracker.reset()

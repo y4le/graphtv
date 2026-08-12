@@ -452,6 +452,190 @@ button {
   font-size: 1.26rem;
 }
 
+.collection-rails {
+  display: grid;
+  width: min(100%, var(--pageMaxWidth));
+  gap: clamp(2rem, 4vw, 3rem);
+  margin: clamp(3.5rem, 9vh, 6rem) auto 0;
+}
+
+.collection-rail {
+  min-width: 0;
+}
+
+.collection-rail-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.collection-rail-title {
+  margin: 0;
+  font-size: var(--type-size-heading);
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.collection-rail-controls {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.collection-rail-controls[hidden] {
+  display: none;
+}
+
+.collection-step {
+  display: grid;
+  width: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0;
+  border: 1px solid var(--lineSoft);
+  background: transparent;
+  color: var(--textSecondary);
+  cursor: pointer;
+  place-items: center;
+  line-height: 1;
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.collection-step:hover,
+.collection-step:focus-visible {
+  border-color: var(--spotColor);
+  color: var(--spotColor);
+  outline: none;
+}
+
+.collection-step:focus-visible,
+.collection-track:focus-visible,
+.collection-card-link:focus-visible {
+  outline: 2px solid var(--spotColor);
+  outline-offset: 2px;
+}
+
+.collection-step[aria-disabled='true'] {
+  border-color: var(--lineSoft);
+  color: var(--textMuted);
+  cursor: default;
+  opacity: 0.45;
+}
+
+.collection-track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: clamp(7rem, 20vw, 10.5rem);
+  gap: var(--tight);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding: 0 0 0.65rem;
+  margin: 0;
+  list-style: none;
+  scroll-padding-inline: 0.15rem;
+  scroll-snap-type: x proximity;
+  scrollbar-color: var(--lineStrong) transparent;
+  scrollbar-width: thin;
+}
+
+.collection-card {
+  min-width: 0;
+  scroll-snap-align: start;
+}
+
+.collection-card-link {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--textPrimary);
+  line-height: 1.25;
+  text-decoration: none;
+}
+
+.collection-card-link:hover .collection-card-title,
+.collection-card-link:focus-visible .collection-card-title {
+  color: var(--spotColor);
+}
+
+.collection-card-artwork {
+  display: grid;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  background: var(--canvasSubtle);
+  place-items: center;
+}
+
+.collection-card-poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.collection-card-artwork-fallback {
+  color: var(--textMuted);
+  font-family: var(--font-sans);
+  font-size: var(--type-size-utility);
+}
+
+.collection-card-title {
+  transition: color var(--transition-fast);
+}
+
+.collection-card-meta,
+.collection-attribution {
+  color: var(--textSecondary);
+  font-family: var(--font-sans);
+  font-size: var(--type-size-utility);
+}
+
+.collection-card-meta {
+  margin-top: -0.15rem;
+}
+
+.collection-track-loading {
+  overflow: hidden;
+}
+
+.collection-rail-controls-loading {
+  pointer-events: none;
+}
+
+.collection-card-skeleton .collection-card-artwork,
+.collection-skeleton-line {
+  background: var(--canvasSubtle);
+}
+
+.collection-step-skeleton {
+  border-color: transparent;
+  background: var(--canvasSubtle);
+  cursor: default;
+}
+
+.collection-skeleton-line {
+  display: block;
+  width: 72%;
+  height: 0.8rem;
+  margin-top: 0.45rem;
+}
+
+.collection-skeleton-line + .collection-skeleton-line {
+  width: 35%;
+  height: 0.65rem;
+  margin-top: -0.05rem;
+}
+
+.collection-attribution {
+  margin: -0.5rem 0 0;
+  line-height: 1.5;
+}
+
+.collection-attribution a:hover,
+.collection-attribution a:focus-visible {
+  color: var(--spotColor);
+}
+
 .results-document {
   padding-bottom: 3rem;
 }
@@ -1197,6 +1381,18 @@ button {
 
   .search-document-has-results .search-submit {
     display: none;
+  }
+
+  .collection-track {
+    width: calc(100% + 2rem);
+    margin-inline: -1rem;
+    padding-inline: 1rem;
+    scroll-padding-inline: 1rem;
+  }
+
+  .collection-step {
+    width: 2.5rem;
+    min-height: 2.5rem;
   }
 
   .show-poster-shell {

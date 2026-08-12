@@ -3,8 +3,18 @@ import {
   getProviderCatalog,
   searchShows
 } from '../data/provider.js'
+import {
+  SEARCH_PAGE_COLLECTIONS,
+  canLoadSearchCollections,
+  loadSearchCollections
+} from '../data/collections.js'
 import { buildUrl, getUrlParams, preserveDebugParams } from '../lib/url.js'
 import { createPlaceholderRotation } from '../ui/placeholderRotation.js'
+import {
+  createShowCarousel,
+  renderCollectionError,
+  renderCollectionRailsShell
+} from '../ui/showCarousel.js'
 import {
   renderEmpty,
   renderError,
@@ -38,12 +48,23 @@ export function renderSearchPage(container) {
   const provider = getActiveProvider(params)
   const query = params.get('q') ?? ''
   const debugEnabled = true
+  const collectionsEnabled = canLoadSearchCollections()
+  const collectionsAbortController = collectionsEnabled
+    ? new AbortController()
+    : null
+  const carouselControllers = []
+  let destroyed = false
   const state = {
     committedQuery: query,
     requestId: 0,
     abortController: null,
     results: [],
-    selectedIndex: -1
+    selectedIndex: -1,
+    collections: SEARCH_PAGE_COLLECTIONS.map(({ id }) => ({
+      id,
+      status: collectionsEnabled ? 'loading' : 'unavailable',
+      count: 0
+    }))
   }
 
   container.innerHTML = `
@@ -87,6 +108,7 @@ export function renderSearchPage(container) {
           ></ol>
         </section>
       </section>
+      ${collectionsEnabled ? renderCollectionRailsShell(SEARCH_PAGE_COLLECTIONS) : ''}
     </main>
   `
 
@@ -97,7 +119,65 @@ export function renderSearchPage(container) {
   const resultsSection = container.querySelector('.search-results-section')
   const resultsRoot = container.querySelector('.search-results-list')
   const searchDocument = container.querySelector('.search-document')
+  const collectionRailsRoot = container.querySelector('.collection-rails')
   const placeholderRotation = createPlaceholderRotation(input)
+
+  async function initializeCollectionRails() {
+    let collections
+    try {
+      collections = await loadSearchCollections({
+        signal: collectionsAbortController.signal
+      })
+    } catch (error) {
+      if (error?.name === 'AbortError' || destroyed) {
+        return
+      }
+      collections = SEARCH_PAGE_COLLECTIONS.map((collection) => ({
+        ...collection,
+        status: 'error',
+        shows: [],
+        reason: error?.message ?? String(error)
+      }))
+    }
+
+    if (destroyed) {
+      return
+    }
+
+    state.collections = collections.map(({ id, status, shows }) => ({
+      id,
+      status,
+      count: shows.length
+    }))
+
+    for (const collection of collections) {
+      const rail = Array.from(
+        collectionRailsRoot.querySelectorAll('.collection-rail')
+      ).find((candidate) => candidate.dataset.collectionId === collection.id)
+
+      if (!rail) {
+        continue
+      }
+
+      if (collection.status === 'ready' && collection.shows.length > 0) {
+        carouselControllers.push(
+          createShowCarousel(rail, {
+            collection,
+            buildHref: (showId) =>
+              buildShowLink(showId, { includeQuery: false })
+          })
+        )
+      } else if (collection.status === 'error') {
+        renderCollectionError(rail, collection)
+      } else {
+        rail.remove()
+      }
+    }
+
+    if (!collectionRailsRoot.querySelector('.collection-rail')) {
+      collectionRailsRoot.remove()
+    }
+  }
 
   function syncEmptyLayout(isEmpty) {
     searchDocument.classList.toggle('search-document-empty', isEmpty)
@@ -242,6 +322,9 @@ export function renderSearchPage(container) {
   if (query) {
     form.requestSubmit()
   }
+  if (collectionsEnabled) {
+    void initializeCollectionRails()
+  }
 
   return {
     kind: 'search',
@@ -286,11 +369,18 @@ export function renderSearchPage(container) {
             results: state.results.length,
             selectedIndex: state.selectedIndex
           }
+        },
+        {
+          title: 'Collections',
+          data: state.collections
         }
       ]
     },
     destroy() {
+      destroyed = true
       invalidateActiveRequest()
+      collectionsAbortController?.abort()
+      carouselControllers.forEach((controller) => controller.destroy())
       placeholderRotation.destroy()
     }
   }
@@ -347,11 +437,11 @@ function formatSearchResultMeta(show) {
     .join(' · ')
 }
 
-function buildShowLink(showId) {
+export function buildShowLink(showId, { includeQuery = true } = {}) {
   const params = preserveDebugParams(new URLSearchParams())
   const currentParams = getUrlParams()
   params.set('show', showId)
-  if (currentParams.has('q')) {
+  if (includeQuery && currentParams.has('q')) {
     params.set('q', currentParams.get('q'))
   }
   return buildUrl(params)

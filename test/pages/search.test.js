@@ -8,7 +8,20 @@ vi.mock('../../src/data/provider.js', async (importOriginal) => {
   }
 })
 
+vi.mock('../../src/data/collections.js', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    canLoadSearchCollections: vi.fn(),
+    loadSearchCollections: vi.fn()
+  }
+})
+
 import { POPULAR_SHOW_TITLES } from '../../src/data/popularShows.js'
+import {
+  canLoadSearchCollections,
+  loadSearchCollections
+} from '../../src/data/collections.js'
 import { searchShows } from '../../src/data/provider.js'
 import {
   renderSearchMasthead,
@@ -27,6 +40,23 @@ beforeEach(() => {
   window.sessionStorage.clear()
   vi.mocked(searchShows).mockReset()
   vi.mocked(searchShows).mockResolvedValue([])
+  vi.mocked(canLoadSearchCollections).mockReset()
+  vi.mocked(canLoadSearchCollections).mockReturnValue(true)
+  vi.mocked(loadSearchCollections).mockReset()
+  vi.mocked(loadSearchCollections).mockResolvedValue([
+    {
+      id: 'trending',
+      title: 'Trending this week',
+      status: 'unavailable',
+      shows: []
+    },
+    {
+      id: 'popular',
+      title: 'Popular',
+      status: 'unavailable',
+      shows: []
+    }
+  ])
 })
 
 afterEach(() => {
@@ -108,6 +138,85 @@ describe('renderSearchPage', () => {
 
     page.destroy()
     expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('renders collection shells synchronously and fills independent rails', async () => {
+    const pending = createDeferred()
+    vi.mocked(loadSearchCollections).mockReturnValue(pending.promise)
+    const { container, page } = renderPage()
+
+    expect(container.querySelectorAll('.collection-rail')).toHaveLength(2)
+    expect(
+      container.querySelectorAll('.collection-card-skeleton')
+    ).toHaveLength(16)
+
+    pending.resolve([
+      {
+        id: 'trending',
+        title: 'Trending this week',
+        status: 'ready',
+        shows: [createCollectionShow()]
+      },
+      {
+        id: 'popular',
+        title: 'Popular',
+        status: 'error',
+        shows: [],
+        reason: 'Unavailable'
+      }
+    ])
+
+    await vi.waitFor(() =>
+      expect(container.querySelectorAll('.collection-card-link')).toHaveLength(
+        1
+      )
+    )
+    expect(container.querySelector('.collection-card-title').textContent).toBe(
+      'Reacher'
+    )
+    expect(
+      new URL(
+        container.querySelector('.collection-card-link').href
+      ).searchParams.get('show')
+    ).toBe('tmdb:108978')
+    expect(container.querySelector('.collection-card-link').href).not.toContain(
+      'q='
+    )
+    expect(container.querySelector('.error-state').textContent).toBe(
+      'Popular is unavailable right now.'
+    )
+
+    page.destroy()
+  })
+
+  it('omits collection UI when TMDB is not configured', () => {
+    vi.mocked(canLoadSearchCollections).mockReturnValue(false)
+    const { container, page } = renderPage()
+
+    expect(container.querySelector('.collection-rails')).toBeNull()
+    expect(loadSearchCollections).not.toHaveBeenCalled()
+
+    page.destroy()
+  })
+
+  it('removes collection UI when every configured rail is unavailable', async () => {
+    const { container, page } = renderPage()
+
+    await vi.waitFor(() =>
+      expect(container.querySelector('.collection-rails')).toBeNull()
+    )
+
+    page.destroy()
+  })
+
+  it('aborts collection loading when the search page is destroyed', () => {
+    vi.mocked(loadSearchCollections).mockReturnValue(new Promise(() => {}))
+    const { page } = renderPage()
+    const signal = vi.mocked(loadSearchCollections).mock.calls[0][0].signal
+
+    expect(signal.aborted).toBe(false)
+    page.destroy()
+    expect(signal.aborted).toBe(true)
   })
 
   it('leaves the empty landing search unfocused so its placeholder can rotate', () => {
@@ -378,6 +487,16 @@ function createSearchResult(overrides = {}) {
     year: '2002',
     genres: ['Crime', 'Drama', 'Thriller'],
     poster: 'https://example.com/wire.jpg',
+    ...overrides
+  }
+}
+
+function createCollectionShow(overrides = {}) {
+  return {
+    id: 'tmdb:108978',
+    title: 'Reacher',
+    year: '2022',
+    poster: 'https://image.tmdb.org/t/p/w342/reacher.jpg',
     ...overrides
   }
 }

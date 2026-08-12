@@ -106,6 +106,31 @@ describe('createKeyboardController', () => {
     expect(page.moveSelection).toHaveBeenCalledWith(1)
   })
 
+  it('does not leak local widget keys into search-result navigation', () => {
+    document.body.innerHTML = `
+      <ul tabindex="0" data-keyboard-local><li>Collection</li></ul>
+    `
+    const page = {
+      kind: 'search',
+      jumpSelection: vi.fn(),
+      moveSelection: vi.fn(),
+      openSelection: vi.fn()
+    }
+    keyboardController = createKeyboardController({
+      page,
+      overlayController: createClosedOverlayController()
+    })
+    document.querySelector('[data-keyboard-local]').focus()
+
+    for (const key of ['Home', 'End', 'ArrowDown', 'j', 'G', 'Enter']) {
+      pressKey(key)
+    }
+
+    expect(page.jumpSelection).not.toHaveBeenCalled()
+    expect(page.moveSelection).not.toHaveBeenCalled()
+    expect(page.openSelection).not.toHaveBeenCalled()
+  })
+
   it('closes view options with v without reopening it as the event bubbles', () => {
     const overlayController = createOverlayController()
     keyboardController = createKeyboardController({
