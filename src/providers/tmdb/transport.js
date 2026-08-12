@@ -5,6 +5,7 @@ import {
   requestJson
 } from '../../data/apiCache.js'
 import {
+  normalizeTmdbCollection,
   normalizeTmdbExternalIds,
   normalizeTmdbSearch,
   normalizeTmdbSeason,
@@ -52,6 +53,41 @@ export async function search(query, options = {}) {
     options
   )
   return normalizeTmdbSearch(data)
+}
+
+export async function getTrendingShows(options = {}) {
+  const data = await tmdbFetch(
+    '/trending/tv/week',
+    {
+      kind: 'collection',
+      id: 'trending-tv-week',
+      ttlMs: API_CACHE_TTL.collection
+    },
+    options
+  )
+  return normalizeTmdbCollection(data)
+}
+
+export async function getPopularShows(options = {}) {
+  const minVotes = 50
+  const params = new URLSearchParams({
+    include_adult: 'false',
+    language: 'en-US',
+    page: '1',
+    sort_by: 'popularity.desc',
+    'vote_count.gte': String(minVotes)
+  })
+  const data = await tmdbFetch(
+    `/discover/tv?${params}`,
+    {
+      kind: 'collection',
+      id: 'popular-tv',
+      params: Object.fromEntries(params),
+      ttlMs: API_CACHE_TTL.popularCollection
+    },
+    options
+  )
+  return normalizeTmdbCollection(data, { minVotes })
 }
 
 export async function getShow(id, options = {}) {

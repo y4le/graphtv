@@ -3,6 +3,8 @@ import { createCacheStore } from './cacheStore.js'
 export const DAY_MS = 24 * 60 * 60 * 1000
 export const API_CACHE_TTL = Object.freeze({
   search: DAY_MS,
+  collection: DAY_MS,
+  popularCollection: 3 * DAY_MS,
   show: DAY_MS,
   episodes: DAY_MS,
   season: DAY_MS,

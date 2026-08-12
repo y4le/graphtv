@@ -2,18 +2,53 @@ import { createEpisode, createSeason, createShow } from '../../data/schema.js'
 import { buildImageUrl, createRatings, getYear } from '../shared.js'
 
 const IMAGE_ROOT = 'https://image.tmdb.org/t/p/w780'
+const CARD_IMAGE_ROOT = 'https://image.tmdb.org/t/p/w342'
+
+function normalizeTmdbShowList(
+  results,
+  {
+    imageRoot = IMAGE_ROOT,
+    limit = 10,
+    minVotes = 0,
+    requirePoster = false,
+    excludeMature = false
+  } = {}
+) {
+  return (results ?? [])
+    .filter(
+      (show) =>
+        (!requirePoster || show.poster_path) &&
+        (!excludeMature || !show.adult) &&
+        (show.vote_count ?? 0) >= minVotes
+    )
+    .slice(0, limit)
+    .map((show) =>
+      createShow({
+        id: `tmdb:${show.id}`,
+        title: show.name,
+        year: getYear(show.first_air_date),
+        plot: show.overview || null,
+        poster: buildImageUrl(show.poster_path, imageRoot),
+        ratings: createRatings('tmdb', show.vote_average, show.vote_count)
+      })
+    )
+}
 
 export function normalizeTmdbSearch(results) {
-  return (results?.results ?? []).slice(0, 10).map((show) =>
-    createShow({
-      id: `tmdb:${show.id}`,
-      title: show.name,
-      year: getYear(show.first_air_date),
-      plot: show.overview || null,
-      poster: buildImageUrl(show.poster_path, IMAGE_ROOT),
-      ratings: createRatings('tmdb', show.vote_average, show.vote_count)
-    })
-  )
+  return normalizeTmdbShowList(results?.results)
+}
+
+export function normalizeTmdbCollection(
+  results,
+  { limit = 20, minVotes = 0 } = {}
+) {
+  return normalizeTmdbShowList(results?.results, {
+    imageRoot: CARD_IMAGE_ROOT,
+    limit,
+    minVotes,
+    requirePoster: true,
+    excludeMature: true
+  })
 }
 
 export function normalizeTmdbExternalIds(data) {
@@ -49,7 +84,11 @@ export function normalizeTmdbSeason(season) {
         season: episode.season_number,
         episode: episode.episode_number,
         date: episode.air_date ?? null,
-        ratings: createRatings('tmdb', episode.vote_average, episode.vote_count),
+        ratings: createRatings(
+          'tmdb',
+          episode.vote_average,
+          episode.vote_count
+        ),
         poster: buildImageUrl(episode.still_path, IMAGE_ROOT),
         sourceIds: { tmdb: String(episode.id) }
       })

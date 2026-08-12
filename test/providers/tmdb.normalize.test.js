@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  normalizeTmdbCollection,
   normalizeTmdbExternalIds,
   normalizeTmdbSearch,
   normalizeTmdbSeason,
   normalizeTmdbShow
 } from '../../src/providers/tmdb/normalize.js'
 import {
+  tmdbCollectionFixture,
   tmdbExternalIdsFixture,
   tmdbSearchFixture,
   tmdbSeasonFixture,
@@ -21,7 +23,8 @@ describe('tmdb normalization', () => {
         title: 'The Wire',
         year: '2002',
         plot: 'The Baltimore drug war through detectives and dealers.',
-        poster: 'https://image.tmdb.org/t/p/w780/4lbclFySvugI51fwsyxBTOm4DqK.jpg',
+        poster:
+          'https://image.tmdb.org/t/p/w780/4lbclFySvugI51fwsyxBTOm4DqK.jpg',
         totalSeasons: 0,
         genres: [],
         ratings: [{ source: 'tmdb', rating: 8.6, votes: 2000 }],
@@ -30,9 +33,49 @@ describe('tmdb normalization', () => {
     ])
   })
 
+  it('normalizes collection cards with compact artwork and content filters', () => {
+    expect(normalizeTmdbCollection(tmdbCollectionFixture)).toEqual([
+      expect.objectContaining({
+        id: 'tmdb:108978',
+        title: 'Reacher',
+        year: '2022',
+        poster: 'https://image.tmdb.org/t/p/w342/reacher.jpg'
+      }),
+      expect.objectContaining({
+        id: 'tmdb:222',
+        title: 'New Show',
+        poster: 'https://image.tmdb.org/t/p/w342/new-show.jpg'
+      })
+    ])
+  })
+
+  it('applies the popular vote threshold before limiting results', () => {
+    const results = Array.from({ length: 23 }, (_, index) => ({
+      id: index,
+      name: `Show ${index}`,
+      first_air_date: '2020-01-01',
+      poster_path: `/show-${index}.jpg`,
+      vote_average: 7,
+      vote_count: index < 3 ? 1 : 100,
+      adult: false
+    }))
+
+    const normalized = normalizeTmdbCollection(
+      { results },
+      { minVotes: 50, limit: 20 }
+    )
+
+    expect(normalized).toHaveLength(20)
+    expect(normalized[0].id).toBe('tmdb:3')
+    expect(normalized.at(-1).id).toBe('tmdb:22')
+  })
+
   it('normalizes show details and external ids', () => {
     expect(
-      normalizeTmdbShow(tmdbShowFixture, normalizeTmdbExternalIds(tmdbExternalIdsFixture))
+      normalizeTmdbShow(
+        tmdbShowFixture,
+        normalizeTmdbExternalIds(tmdbExternalIdsFixture)
+      )
     ).toEqual({
       id: 'tmdb:1438',
       title: 'The Wire',
