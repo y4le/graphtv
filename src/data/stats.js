@@ -12,7 +12,10 @@ export function linearRegression(values) {
 
 export function linearRegressionFromPoints(values) {
   const points = values.filter(
-    (point) => typeof point?.x === 'number' && Number.isFinite(point.x) && typeof point?.y === 'number'
+    (point) =>
+      typeof point?.x === 'number' &&
+      Number.isFinite(point.x) &&
+      typeof point?.y === 'number'
   )
 
   if (points.length === 0) {
@@ -78,7 +81,10 @@ export function trendline(values, startX) {
 
 export function trendlineFromPoints(values) {
   const points = values.filter(
-    (point) => typeof point?.x === 'number' && Number.isFinite(point.x) && typeof point?.y === 'number'
+    (point) =>
+      typeof point?.x === 'number' &&
+      Number.isFinite(point.x) &&
+      typeof point?.y === 'number'
   )
   const regression = linearRegressionFromPoints(points)
 
@@ -95,8 +101,88 @@ export function trendlineFromPoints(values) {
   ]
 }
 
+export function summarizeTrendScope(
+  points,
+  { totalEpisodes = points.length, source = null } = {}
+) {
+  const excludedFallback = points.filter(
+    (point) => point.isFallbackRating && isUsableRating(point.rating)
+  ).length
+  const ratedPoints = points
+    .filter((point) => !point.isFallbackRating && isUsableRating(point.rating))
+    .sort((left, right) => left.x - right.x)
+
+  if (ratedPoints.length === 0) {
+    return null
+  }
+
+  const regression = linearRegressionFromPoints(
+    ratedPoints.map((point) => ({ x: point.x, y: point.rating }))
+  )
+  const values = ratedPoints.map((point) => point.rating)
+  const mean = values.reduce((sum, value) => sum + value, 0) / values.length
+  const high = ratedPoints.reduce((current, point) =>
+    point.rating > current.rating ? point : current
+  )
+  const low = ratedPoints.reduce((current, point) =>
+    point.rating < current.rating ? point : current
+  )
+  const firstRatedX = ratedPoints[0].x
+  const lastRatedX = ratedPoints.at(-1).x
+  const delta = regression.slope * (lastRatedX - firstRatedX)
+  const meanX =
+    ratedPoints.reduce((sum, point) => sum + point.x, 0) / ratedPoints.length
+  const sumSquaredX = ratedPoints.reduce(
+    (sum, point) => sum + (point.x - meanX) ** 2,
+    0
+  )
+  const sumSquaredErrors = ratedPoints.reduce((sum, point) => {
+    const projected = regression.slope * point.x + regression.intercept
+    return sum + (point.rating - projected) ** 2
+  }, 0)
+  const slopeStandardError =
+    ratedPoints.length > 2 && sumSquaredX > 0
+      ? Math.sqrt(sumSquaredErrors / (ratedPoints.length - 2) / sumSquaredX)
+      : null
+  const signalRatio =
+    slopeStandardError === 0
+      ? regression.slope === 0
+        ? 0
+        : Number.POSITIVE_INFINITY
+      : slopeStandardError
+        ? Math.abs(regression.slope) / slopeStandardError
+        : 0
+  const hasClearDirection =
+    ratedPoints.length >= 5 && signalRatio >= 2 && Math.abs(delta) >= 0.1
+
+  return {
+    n: ratedPoints.length,
+    totalEpisodes,
+    excludedFallback,
+    source,
+    mean,
+    high: { value: high.rating, point: high },
+    low: { value: low.rating, point: low },
+    firstRatedX,
+    lastRatedX,
+    slope: regression.slope,
+    delta,
+    slopeStandardError,
+    direction: hasClearDirection
+      ? regression.slope > 0
+        ? 'up'
+        : 'down'
+      : 'unclear'
+  }
+}
+
 export function isUsableRating(value) {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 && value <= 10
+  return (
+    typeof value === 'number' &&
+    Number.isFinite(value) &&
+    value > 0 &&
+    value <= 10
+  )
 }
 
 export const MIN_PRIMARY_RATING_COVERAGE = 0.6
@@ -106,7 +192,10 @@ export function isTrustedRating(rating) {
     return true
   }
 
-  return rating.provenance.relation === 'one-to-one' && rating.provenance.confidence === 'strong'
+  return (
+    rating.provenance.relation === 'one-to-one' &&
+    rating.provenance.confidence === 'strong'
+  )
 }
 
 export function isUsableProviderRating(rating) {
@@ -115,13 +204,22 @@ export function isUsableProviderRating(rating) {
 
 export function selectPrimaryRatingSource(
   episodes = [],
-  { priority = RATING_SOURCE_PRIORITY, minimumCoverage = MIN_PRIMARY_RATING_COVERAGE } = {}
+  {
+    priority = RATING_SOURCE_PRIORITY,
+    minimumCoverage = MIN_PRIMARY_RATING_COVERAGE
+  } = {}
 ) {
-  const eligibleEpisodes = episodes.filter((episode) => episode.ratings?.some(isUsableProviderRating))
+  const eligibleEpisodes = episodes.filter((episode) =>
+    episode.ratings?.some(isUsableProviderRating)
+  )
   const counts = new Map()
 
   for (const episode of eligibleEpisodes) {
-    const sources = new Set(episode.ratings.filter(isUsableProviderRating).map((rating) => rating.source))
+    const sources = new Set(
+      episode.ratings
+        .filter(isUsableProviderRating)
+        .map((rating) => rating.source)
+    )
     for (const source of sources) {
       counts.set(source, (counts.get(source) ?? 0) + 1)
     }
@@ -139,11 +237,17 @@ export function selectPrimaryRatingSource(
       return coverageDifference
     }
 
-    return sourceRank(left.source, priority) - sourceRank(right.source, priority)
+    return (
+      sourceRank(left.source, priority) - sourceRank(right.source, priority)
+    )
   })
 
   const source =
-    priority.find((candidate) => (counts.get(candidate) ?? 0) / Math.max(eligibleCount, 1) >= minimumCoverage) ??
+    priority.find(
+      (candidate) =>
+        (counts.get(candidate) ?? 0) / Math.max(eligibleCount, 1) >=
+        minimumCoverage
+    ) ??
     coverage[0]?.source ??
     null
 
@@ -155,14 +259,24 @@ export function selectPrimaryRatingSource(
   }
 }
 
-export function resolveEpisodeRating(ratings = [], primarySource, priority = RATING_SOURCE_PRIORITY) {
+export function resolveEpisodeRating(
+  ratings = [],
+  primarySource,
+  priority = RATING_SOURCE_PRIORITY
+) {
   const usableRatings = ratings.filter(isUsableProviderRating)
-  const sources = [primarySource, ...priority, ...usableRatings.map((rating) => rating.source)].filter(
+  const sources = [
+    primarySource,
+    ...priority,
+    ...usableRatings.map((rating) => rating.source)
+  ].filter(
     (source, index, values) => source && values.indexOf(source) === index
   )
 
   for (const source of sources) {
-    const providerRating = usableRatings.find((rating) => rating.source === source)
+    const providerRating = usableRatings.find(
+      (rating) => rating.source === source
+    )
     if (providerRating) {
       return {
         rating: providerRating.rating,

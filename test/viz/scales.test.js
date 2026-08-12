@@ -12,10 +12,22 @@ import {
 describe('rating scale domains', () => {
   it('excludes missing and zero ratings from primary selection and the y-axis domain', () => {
     const model = createModel()
-    const scales = createMainScales(model, { start: 1, end: 4 }, { width: 600, height: 400 })
+    const scales = createMainScales(
+      model,
+      { start: 1, end: 4 },
+      { width: 600, height: 400 }
+    )
 
-    expect(model.points.map((point) => point.rating)).toEqual([null, null, 8.2, 8.6])
-    expect(model.ratedPoints.map((point) => point.id)).toEqual(['rated', 'also-rated'])
+    expect(model.points.map((point) => point.rating)).toEqual([
+      null,
+      null,
+      8.2,
+      8.6
+    ])
+    expect(model.ratedPoints.map((point) => point.id)).toEqual([
+      'rated',
+      'also-rated'
+    ])
     expect(scales.yDomain[0]).toBeGreaterThan(0)
     expect(scales.yDomain).toEqual([8.02, 8.78])
   })
@@ -34,10 +46,30 @@ describe('rating scale domains', () => {
     ])
 
     expect(model.primaryRatingSource).toBe('omdb')
-    expect(model.points.map((point) => point.rating)).toEqual([9, 9.1, 9.2, 7.3, 7.4])
-    expect(model.points.map((point) => point.isFallbackRating)).toEqual([false, false, false, true, true])
+    expect(model.points.map((point) => point.rating)).toEqual([
+      9, 9.1, 9.2, 7.3, 7.4
+    ])
+    expect(model.points.map((point) => point.isFallbackRating)).toEqual([
+      false,
+      false,
+      false,
+      true,
+      true
+    ])
     expect(model.primaryRatedPoints).toHaveLength(3)
     expect(model.seasonTrendlines).toHaveLength(1)
+    expect(model.trendSummaries['season:1']).toMatchObject({
+      label: 'Season 1',
+      n: 3,
+      totalEpisodes: 5,
+      excludedFallback: 2,
+      source: 'omdb'
+    })
+    expect(model.trendSummaries.series).toMatchObject({
+      label: 'Full series',
+      n: 3,
+      totalEpisodes: 5
+    })
   })
 
   it('does not let fallback values influence trendline regression', () => {
@@ -72,11 +104,7 @@ describe('rating scale domains', () => {
       { start: 1, end: 2 },
       dimensions
     )
-    const lateScales = createMainScales(
-      model,
-      { start: 3, end: 4 },
-      dimensions
-    )
+    const lateScales = createMainScales(model, { start: 3, end: 4 }, dimensions)
 
     expect(earlyScales.yDomain).toEqual([5.625, 8.875])
     expect(lateScales.yDomain).toEqual(earlyScales.yDomain)
@@ -125,9 +153,15 @@ describe('rating scale domains', () => {
     const dimensions = { width: 600, height: 400 }
     const options = { absoluteYAxis: true }
 
-    expect(createMainScales(model, { start: 1, end: 4 }, dimensions, options).yDomain).toEqual([0, 10])
-    expect(createFullSeriesScales(model, dimensions, options).yDomain).toEqual([0, 10])
-    expect(createSparklineScales(model, dimensions, options).yDomain).toEqual([0, 10])
+    expect(
+      createMainScales(model, { start: 1, end: 4 }, dimensions, options).yDomain
+    ).toEqual([0, 10])
+    expect(createFullSeriesScales(model, dimensions, options).yDomain).toEqual([
+      0, 10
+    ])
+    expect(createSparklineScales(model, dimensions, options).yDomain).toEqual([
+      0, 10
+    ])
   })
 })
 

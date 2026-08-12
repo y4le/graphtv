@@ -6,6 +6,7 @@ import {
   linearRegressionFromPoints,
   resolveEpisodeRating,
   selectPrimaryRatingSource,
+  summarizeTrendScope,
   trendline,
   trendlineFromPoints
 } from '../../src/data/stats.js'
@@ -67,6 +68,57 @@ describe('data/stats', () => {
       { x: 3, y: 8 },
       { x: 7, y: 10 }
     ])
+  })
+
+  it('summarizes the exact primary-source points used by a trendline', () => {
+    const summary = summarizeTrendScope(
+      [
+        createTrendPoint('one', 1, 6),
+        createTrendPoint('two', 2, 7),
+        createTrendPoint('fallback', 3, 10, true),
+        createTrendPoint('three', 4, 8),
+        createTrendPoint('four', 5, 9),
+        createTrendPoint('five', 6, 10)
+      ],
+      { totalEpisodes: 7, source: 'omdb' }
+    )
+
+    expect(summary).toMatchObject({
+      n: 5,
+      totalEpisodes: 7,
+      excludedFallback: 1,
+      source: 'omdb',
+      mean: 8,
+      direction: 'up',
+      firstRatedX: 1,
+      lastRatedX: 6
+    })
+    expect(summary.delta).toBeCloseTo(3.779)
+    expect(summary.high.point.id).toBe('five')
+    expect(summary.low.point.id).toBe('one')
+  })
+
+  it('does not claim a direction for sparse or noisy fits', () => {
+    const sparse = summarizeTrendScope([
+      createTrendPoint('one', 1, 6),
+      createTrendPoint('two', 2, 7),
+      createTrendPoint('three', 3, 8),
+      createTrendPoint('four', 4, 9)
+    ])
+    const flat = summarizeTrendScope(
+      Array.from({ length: 6 }, (_, index) =>
+        createTrendPoint(String(index), index + 1, 8)
+      )
+    )
+    const noisy = summarizeTrendScope(
+      [6, 10, 6, 10, 6, 10].map((rating, index) =>
+        createTrendPoint(String(index), index + 1, rating)
+      )
+    )
+
+    expect(sparse.direction).toBe('unclear')
+    expect(flat.direction).toBe('unclear')
+    expect(noisy.direction).toBe('unclear')
   })
 
   it('selects IMDb when it covers at least 60% of rateable episodes', () => {
@@ -138,7 +190,10 @@ describe('data/stats', () => {
     }
     const tmdbRating = { source: 'tmdb', rating: 8.2 }
 
-    expect(selectPrimaryRatingSource([{ ratings: [weakOmdbRating, tmdbRating] }]).source).toBe('tmdb')
+    expect(
+      selectPrimaryRatingSource([{ ratings: [weakOmdbRating, tmdbRating] }])
+        .source
+    ).toBe('tmdb')
     expect(getRatingSpread([weakOmdbRating, tmdbRating])).toBeNull()
   })
 
@@ -156,3 +211,14 @@ describe('data/stats', () => {
     })
   })
 })
+
+function createTrendPoint(id, x, rating, isFallbackRating = false) {
+  return {
+    id,
+    x,
+    rating,
+    isFallbackRating,
+    season: 1,
+    episode: x
+  }
+}

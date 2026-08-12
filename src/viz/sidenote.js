@@ -14,7 +14,7 @@ function formatRatingList(point, { loadingDetails = false } = {}) {
           ? ` (${formatCompactNumber(rating.votes)} ${rating.votes === 1 ? 'vote' : 'votes'})`
           : loadingDetails && rating.source === 'omdb'
             ? ` (${renderVotesLoading()})`
-          : ''
+            : ''
       const label = getEpisodeRatingSourceLabel(rating.source)
       const value = isUsableRating(rating.rating)
         ? `${
@@ -45,15 +45,22 @@ function getEpisodeRatingSourceLabel(source) {
   return getRatingSourceLabel(source)
 }
 
-export function createSidenote({ desktopRoot, mobileRoot }) {
-  function renderPlaceholder() {
-    if (desktopRoot) {
-      desktopRoot.innerHTML = ''
-    }
+export function createSidenote({ desktopRoot, mobileRoot, onSelectPoint }) {
+  const roots = Array.from(new Set([desktopRoot, mobileRoot].filter(Boolean)))
 
-    if (mobileRoot) {
-      mobileRoot.innerHTML = ''
+  function setMarkup(markup) {
+    for (const root of roots) {
+      root.innerHTML = markup
+      root.querySelectorAll('[data-trend-point-id]').forEach((button) => {
+        button.addEventListener('click', () => {
+          onSelectPoint?.(button.dataset.trendPointId)
+        })
+      })
     }
+  }
+
+  function renderPlaceholder() {
+    setMarkup('')
   }
 
   function renderPoint(point, { loadingDetails = false } = {}) {
@@ -77,25 +84,86 @@ export function createSidenote({ desktopRoot, mobileRoot }) {
         `
       : ''
 
-    if (desktopRoot) {
-      desktopRoot.innerHTML = markup
+    setMarkup(markup)
+  }
+
+  function renderTrendSummary(summary) {
+    if (!summary) {
+      renderPlaceholder()
+      return
     }
 
-    if (mobileRoot) {
-      mobileRoot.innerHTML = markup
-    }
+    const fallbackCopy = summary.excludedFallback
+      ? `${summary.excludedFallback} ${summary.excludedFallback === 1 ? 'episode uses' : 'episodes use'} other sources and ${summary.excludedFallback === 1 ? 'is' : 'are'} excluded`
+      : null
+    const trendCopy =
+      summary.direction === 'up'
+        ? `Trending up ${formatSignedDelta(summary.delta)}`
+        : summary.direction === 'down'
+          ? `Trending down ${formatSignedDelta(summary.delta)}`
+          : 'No clear trend'
+    const provenanceNotes = [
+      fallbackCopy,
+      summary.n < 5 ? 'too few rated episodes for a trend' : null
+    ].filter(Boolean)
+    const provenance = `${summary.n} of ${summary.totalEpisodes} rated · ${escapeHtml(getRatingSourceLabel(summary.source))}${
+      provenanceNotes.length > 0
+        ? ` — ${escapeHtml(provenanceNotes.join('; '))}`
+        : ''
+    }`
+
+    setMarkup(`
+      <div class="sidenote-card sidenote-trend-card">
+        <div class="sidenote-header">
+          <p class="sidenote-caption">
+            <span class="sidenote-title">${escapeHtml(summary.label)}</span>
+            <span class="sidenote-kicker">${summary.totalEpisodes} ${summary.totalEpisodes === 1 ? 'episode' : 'episodes'}</span>
+          </p>
+        </div>
+        <dl class="trend-summary-metrics">
+          <div class="trend-summary-metric">
+            <dt>Mean</dt>
+            <dd>${summary.mean.toFixed(1)}</dd>
+          </div>
+          <div class="trend-summary-metric">
+            <dt>Trend</dt>
+            <dd>${trendCopy}</dd>
+          </div>
+        </dl>
+        <div class="trend-summary-extremes" aria-label="Highest and lowest rated episodes">
+          ${renderExtreme('High', summary.high)}
+          <span aria-hidden="true">·</span>
+          ${renderExtreme('Low', summary.low)}
+        </div>
+        <p class="trend-summary-provenance">${provenance}</p>
+      </div>
+    `)
   }
 
   renderPlaceholder()
 
   return {
     renderPoint,
+    renderTrendSummary,
     renderPlaceholder
   }
 }
 
+function renderExtreme(label, extreme) {
+  const point = extreme.point
+  const episodeNumber = point.episode ?? point.number
+  const episodeLabel = `S${String(point.season).padStart(2, '0')}E${String(episodeNumber).padStart(2, '0')}`
+
+  return `<button type="button" class="trend-summary-extreme" data-trend-point-id="${escapeHtml(point.id)}"><span>${label}</span> ${episodeLabel} ${extreme.value.toFixed(1)}</button>`
+}
+
+function formatSignedDelta(value) {
+  const rounded = Math.abs(value).toFixed(1)
+  return value >= 0 ? `+${rounded}` : `−${rounded}`
+}
+
 function escapeHtml(value) {
-  return value
+  return String(value)
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
