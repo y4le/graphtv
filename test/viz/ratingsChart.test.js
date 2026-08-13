@@ -79,7 +79,7 @@ describe('createChart', () => {
       hasUserInteracted: false
     })
     expect(detailRoot.querySelector('.sidenote-nav-label').textContent).toBe(
-      'Browse the full series'
+      'Full Series'
     )
     expect(detailRoot.textContent).toContain('Full series')
     expect(container.querySelector('.chart-selection-status').textContent).toBe(
@@ -129,7 +129,7 @@ describe('createChart', () => {
     )
   })
 
-  it('navigates rated episodes without wrapping while hover only previews detail', () => {
+  it('wraps rated episodes through the same buttons and shortcut handler while hover only previews detail', () => {
     const container = document.createElement('div')
     const detailRoot = document.createElement('section')
     Object.defineProperty(container, 'clientWidth', {
@@ -147,15 +147,30 @@ describe('createChart', () => {
 
     expect(chart.getDebugState().selectedTrendId).toBe('season:1')
     expect(detailRoot.querySelector('.sidenote-nav-label').textContent).toBe(
-      'Browse Season 1'
+      'Season 1'
     )
-    expect(previous.getAttribute('aria-disabled')).toBe('true')
-    expect(next.getAttribute('aria-label')).toBe('First episode of Season 1')
+    expect(previous.getAttribute('aria-disabled')).toBe('false')
+    expect(next.getAttribute('aria-disabled')).toBe('false')
+    expect(previous.getAttribute('aria-label')).toBe(
+      'Last rated episode of Season 1'
+    )
+    expect(next.getAttribute('aria-label')).toBe(
+      'First rated episode of Season 1'
+    )
+    expect(
+      detailRoot.querySelector('.sidenote-nav').getAttribute('aria-label')
+    ).toBe('Episode navigation')
 
-    next.focus()
     next.click()
     expect(chart.getDebugState().selectedPointId).toBe('episode-1')
-    expect(document.activeElement).toBe(next)
+    previous.focus()
+    previous.click()
+    expect(chart.getDebugState().selectedPointId).toBe('episode-4')
+    expect(document.activeElement).toBe(previous)
+
+    next.click()
+    expect(chart.getDebugState().selectedPointId).toBe('episode-1')
+    expect(next.getAttribute('aria-disabled')).toBe('false')
 
     const thirdPoint = Array.from(
       container.querySelectorAll('.episode-point')
@@ -174,13 +189,131 @@ describe('createChart', () => {
     )
     previous.click()
     expect(chart.getDebugState().selectedPointId).toBe('episode-1')
-    next.click()
-    next.click()
+    previous.click()
     expect(chart.getDebugState().selectedPointId).toBe('episode-4')
-    expect(next.getAttribute('aria-disabled')).toBe('true')
     next.click()
+    expect(chart.getDebugState().selectedPointId).toBe('episode-1')
+
+    chart.moveEpisode(-1)
     expect(chart.getDebugState().selectedPointId).toBe('episode-4')
-    expect(document.activeElement).toBe(next)
+    chart.moveEpisode(1)
+    expect(chart.getDebugState().selectedPointId).toBe('episode-1')
+  })
+
+  it('wraps selected season trendlines through buttons and season shortcuts without entering the series trend', () => {
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+    const seasons = Array.from({ length: 3 }, (_, seasonIndex) => ({
+      number: seasonIndex + 1,
+      episodes: Array.from({ length: 3 }, (_, episodeIndex) => ({
+        id: `season-${seasonIndex + 1}-episode-${episodeIndex + 1}`,
+        title: `Season ${seasonIndex + 1} Episode ${episodeIndex + 1}`,
+        season: seasonIndex + 1,
+        number: episodeIndex + 1,
+        ratings: [
+          { source: 'test', rating: 6 + seasonIndex + episodeIndex / 10 }
+        ]
+      }))
+    }))
+
+    chart = createChart(container, seasons, { detailRoot })
+    updateUiSettings({ fullShowTrendline: true })
+    const previous = detailRoot.querySelector('[data-sidenote-nav="previous"]')
+    const next = detailRoot.querySelector('[data-sidenote-nav="next"]')
+
+    expect(chart.getDebugState().selectedTrendId).toBe('season:1')
+    expect(container.querySelector('.macro-trendline')).not.toBeNull()
+    expect(previous.getAttribute('aria-label')).toBe(
+      'Previous season trendline'
+    )
+    expect(next.getAttribute('aria-label')).toBe('Next season trendline')
+
+    previous.click()
+    expect(chart.getDebugState().selectedTrendId).toBe('season:3')
+    next.click()
+    expect(chart.getDebugState().selectedTrendId).toBe('season:1')
+
+    chart.moveSeason(1)
+    expect(chart.getDebugState().selectedTrendId).toBe('season:2')
+    chart.moveSeason(1)
+    expect(chart.getDebugState().selectedTrendId).toBe('season:3')
+    chart.moveSeason(1)
+    expect(chart.getDebugState().selectedTrendId).toBe('season:1')
+    expect(chart.getDebugState().selectedPointId).toBeNull()
+
+    chart.moveSeason(1)
+    expect(chart.getDebugState().selectedTrendId).toBe('season:2')
+    expect(chart.toggleSeasonTrend()).toBe(true)
+    expect(chart.getDebugState().selectedTrendId).toBe('season:1')
+    expect(chart.toggleSeasonTrend()).toBe(true)
+    expect(chart.getDebugState().selectedTrendId).toBe('season:1')
+
+    chart.toggleSeriesTrend()
+    expect(chart.getDebugState().selectedTrendId).toBe('series')
+    expect(chart.toggleSeasonTrend()).toBe(true)
+    expect(chart.getDebugState().selectedTrendId).toBe('season:1')
+  })
+
+  it('resets T to the first available season trend when Season 1 has no trendline', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+    const seasons = Array.from({ length: 3 }, (_, seasonIndex) => ({
+      number: seasonIndex + 1,
+      episodes: Array.from(
+        { length: seasonIndex === 0 ? 2 : 3 },
+        (_, episodeIndex) => ({
+          id: `season-${seasonIndex + 1}-episode-${episodeIndex + 1}`,
+          title: `Season ${seasonIndex + 1} Episode ${episodeIndex + 1}`,
+          season: seasonIndex + 1,
+          number: episodeIndex + 1,
+          ratings: [
+            { source: 'test', rating: 6 + seasonIndex + episodeIndex / 10 }
+          ]
+        })
+      )
+    }))
+
+    chart = createChart(container, seasons)
+
+    expect(chart.getDebugState().selectedTrendId).toBe('season:2')
+    chart.moveSeason(1)
+    expect(chart.getDebugState().selectedTrendId).toBe('season:3')
+    expect(chart.toggleSeasonTrend()).toBe(true)
+    expect(chart.getDebugState().selectedTrendId).toBe('season:2')
+
+    expect(chart.toggleSeriesTrend()).toBe(true)
+    expect(chart.getDebugState().selectedTrendId).toBe('series')
+    expect(chart.toggleSeasonTrend()).toBe(true)
+    expect(chart.getDebugState().selectedTrendId).toBe('season:2')
+  })
+
+  it('re-enables season trendlines when T resets from the series trend', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    expect(chart.toggleSeriesTrend()).toBe(true)
+    updateUiSettings({ seasonTrendlines: false })
+
+    expect(chart.getDebugState().selectedTrendId).toBe('series')
+    expect(chart.toggleSeasonTrend()).toBe(true)
+    expect(chart.getDebugState()).toMatchObject({
+      selectedTrendId: 'season:1',
+      uiSettings: { seasonTrendlines: true }
+    })
   })
 
   it('keeps the detail region open after clearing and enters browsing forward', () => {
@@ -461,9 +594,7 @@ describe('createChart', () => {
     expect(chart.getDebugState().selectedTrendId).toBe('season:1')
     expect(chart.getDebugState().selectedPointId).toBeNull()
     expect(container.querySelector('.micro-trendline.is-active')).not.toBeNull()
-    expect(container.querySelector('.trend-label').textContent).toContain(
-      'Season 1'
-    )
+    expect(container.querySelector('.trend-label')).toBeNull()
     expect(detailRoot.textContent).toContain('Mean')
     expect(detailRoot.textContent).toContain('72 of 72 rated · TEST')
     expect(
@@ -619,6 +750,23 @@ describe('createChart', () => {
 
     expect(chart.getDebugState().selectedTrendId).toBe('series')
     expect(container.querySelector('.macro-trendline.is-active')).not.toBeNull()
+    expect(container.querySelector('.trend-label')).toBeNull()
+
+    const previous = container.querySelector('[data-sidenote-nav="previous"]')
+    const next = container.querySelector('[data-sidenote-nav="next"]')
+    previous.click()
+    expect(chart.getDebugState().selectedPointId).toBe('episode-72')
+    next.click()
+    expect(chart.getDebugState().selectedTrendId).toBe('series')
+    next.click()
+    expect(chart.getDebugState().selectedPointId).toBe('episode-1')
+    previous.click()
+    expect(chart.getDebugState().selectedTrendId).toBe('series')
+
+    chart.moveEpisode(-1)
+    expect(chart.getDebugState().selectedPointId).toBe('episode-72')
+    chart.moveEpisode(1)
+    expect(chart.getDebugState().selectedTrendId).toBe('series')
   })
 
   it('does not enable keyboard trend settings when no trend is available', () => {

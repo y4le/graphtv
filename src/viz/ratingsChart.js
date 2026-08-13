@@ -128,6 +128,9 @@ export function createChart(container, seasons, options = {}) {
     onInteract() {
       hasUserInteracted = true
     },
+    onNavigate(delta) {
+      navigateDetail(delta)
+    },
     onSelectPoint(pointId) {
       setSelectedPoint(getPointById(pointId), 'pointer')
     }
@@ -216,6 +219,17 @@ export function createChart(container, seasons, options = {}) {
     return getScopeRatedPoints(summary)[0] ?? model.ratedPoints[0] ?? null
   }
 
+  function getSeriesNavigationStop() {
+    const summary = getTrendSummary('series')
+    return summary && isTrendEnabled('series') ? summary : null
+  }
+
+  function getSeasonTrendSummaries() {
+    return model.seasonTrendlines
+      .map((trendline) => getTrendSummary(trendline.id))
+      .filter(Boolean)
+  }
+
   function resolveDefaultSelection(settings = getUiSettings()) {
     selectedPointId = null
     selectedTrendId = null
@@ -245,45 +259,66 @@ export function createChart(container, seasons, options = {}) {
         mode: 'empty',
         label: 'No rated episodes',
         meta: '',
-        previousPointId: null,
-        nextPointId: null
+        previousAvailable: false,
+        nextAvailable: false
       }
     }
 
     const selectedPoint = getPointById(selectedPointId)
     if (selectedPoint) {
       const index = points.findIndex((point) => point.id === selectedPoint.id)
+      const hasSeriesStop = Boolean(getSeriesNavigationStop())
+      const canNavigate = points.length > 1 || hasSeriesStop
       return {
         mode: 'point',
         label: formatEpisodeCode(selectedPoint),
         meta: `${index + 1} of ${points.length} rated ${points.length === 1 ? 'episode' : 'episodes'}`,
-        previousPointId: points[index - 1]?.id ?? null,
-        nextPointId: points[index + 1]?.id ?? null
+        previousAvailable: canNavigate,
+        nextAvailable: canNavigate,
+        previousLabel:
+          index === 0
+            ? hasSeriesStop
+              ? 'Full series trend'
+              : 'Last rated episode'
+            : 'Previous episode',
+        nextLabel:
+          index === points.length - 1
+            ? hasSeriesStop
+              ? 'Full series trend'
+              : 'First rated episode'
+            : 'Next episode'
       }
     }
 
     const summary = getTrendSummary(selectedTrendId)
     const scopePoints = getScopeRatedPoints(summary)
     if (summary?.kind === 'season') {
+      const seasonTrends = getSeasonTrendSummaries()
+      const canNavigateTrends = seasonTrends.length > 1
+      const canNavigateEpisodes = scopePoints.length > 0
       return {
         mode: 'season',
-        label: `Browse Season ${summary.seasonNumber}`,
+        navigationKind: canNavigateTrends ? 'season' : 'episode',
+        label: `Season ${summary.seasonNumber}`,
         meta: `${scopePoints.length} rated ${scopePoints.length === 1 ? 'episode' : 'episodes'} in Season ${summary.seasonNumber}`,
-        previousPointId: null,
-        nextPointId: scopePoints[0]?.id ?? null,
-        nextLabel: `First episode of Season ${summary.seasonNumber}`
+        previousAvailable: canNavigateTrends || canNavigateEpisodes,
+        nextAvailable: canNavigateTrends || canNavigateEpisodes,
+        previousLabel: canNavigateTrends
+          ? 'Previous season trendline'
+          : `Last rated episode of Season ${summary.seasonNumber}`,
+        nextLabel: canNavigateTrends
+          ? 'Next season trendline'
+          : `First rated episode of Season ${summary.seasonNumber}`
       }
     }
 
     return {
       mode: summary?.kind === 'series' ? 'series' : 'browse',
-      label:
-        summary?.kind === 'series'
-          ? 'Browse the full series'
-          : 'Browse episodes',
+      label: summary?.kind === 'series' ? 'Full Series' : 'Browse episodes',
       meta: `${scopePoints.length} rated ${scopePoints.length === 1 ? 'episode' : 'episodes'}`,
-      previousPointId: null,
-      nextPointId: scopePoints[0]?.id ?? null,
+      previousAvailable: scopePoints.length > 0,
+      nextAvailable: scopePoints.length > 0,
+      previousLabel: 'Last rated episode',
       nextLabel: 'First rated episode'
     }
   }
@@ -462,8 +497,8 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function updateActiveDetail() {
-    sidenote.renderNavigator(getNavigatorViewModel())
     const activePoint = getActivePoint()
+    sidenote.renderNavigator(getNavigatorViewModel())
     if (activePoint) {
       shell.dataset.detailKind = 'point'
       updateDetail(activePoint, { load: true })
@@ -579,31 +614,80 @@ export function createChart(container, seasons, options = {}) {
 
   function moveEpisode(delta) {
     hasUserInteracted = true
+    if (!Number.isInteger(delta) || delta === 0) {
+      return
+    }
+
     const points = getRatedPoints()
+    if (points.length === 0) {
+      return
+    }
+
     const selectedPoint = getPointById(selectedPointId)
     if (!selectedPoint) {
-      if (delta >= 0) {
-        setSelectedPoint(
-          getFirstRatedPointInScope(getTrendSummary(selectedTrendId))
-        )
-      }
+      const scopePoints = getScopeRatedPoints(getTrendSummary(selectedTrendId))
+      setSelectedPoint(delta < 0 ? scopePoints.at(-1) : scopePoints[0])
       return
     }
 
     const currentIndex = points.findIndex(
       (point) => point.id === selectedPoint.id
     )
-    const nextIndex = clamp(currentIndex + delta, 0, points.length - 1)
-    if (nextIndex !== currentIndex) {
-      setSelectedPoint(points[nextIndex])
+    const seriesStop = getSeriesNavigationStop()
+    const sequenceLength = points.length + (seriesStop ? 1 : 0)
+    const currentSequenceIndex = currentIndex + (seriesStop ? 1 : 0)
+    const nextSequenceIndex = modulo(
+      currentSequenceIndex + delta,
+      sequenceLength
+    )
+
+    if (seriesStop && nextSequenceIndex === 0) {
+      setSelectedTrend('series')
+      return
     }
+
+    const nextPoint = points[nextSequenceIndex - (seriesStop ? 1 : 0)]
+    if (nextPoint?.id !== selectedPoint.id) {
+      setSelectedPoint(nextPoint)
+    }
+  }
+
+  function navigateDetail(delta) {
+    const selectedTrend = getTrendSummary(selectedTrendId)
+    if (selectedTrend?.kind === 'season') {
+      if (getSeasonTrendSummaries().length > 1) {
+        moveSeason(delta)
+      } else {
+        moveEpisode(delta)
+      }
+      return
+    }
+
+    moveEpisode(delta)
   }
 
   function moveSeason(delta) {
     hasUserInteracted = true
+    if (!Number.isInteger(delta) || delta === 0) {
+      return
+    }
+
+    const selectedTrend = getTrendSummary(selectedTrendId)
+    if (selectedTrend?.kind === 'season') {
+      const seasonTrends = getSeasonTrendSummaries()
+      const currentIndex = seasonTrends.findIndex(
+        (summary) => summary.id === selectedTrend.id
+      )
+      const nextTrend =
+        seasonTrends[modulo(currentIndex + delta, seasonTrends.length)]
+      if (nextTrend?.id !== selectedTrend.id) {
+        setSelectedTrend(nextTrend.id)
+      }
+      return
+    }
+
     const activePoint =
-      getPointById(selectedPointId) ||
-      getFirstRatedPointInScope(getTrendSummary(selectedTrendId))
+      getPointById(selectedPointId) || getFirstRatedPointInScope(selectedTrend)
     if (!activePoint) {
       return
     }
@@ -840,6 +924,20 @@ export function createChart(container, seasons, options = {}) {
     hasUserInteracted = true
     const activePoint = getActivePoint()
     const selectedTrend = getTrendSummary(selectedTrendId)
+    if (selectedTrend) {
+      const firstSeasonTrend = getSeasonTrendSummaries()[0]
+      if (!firstSeasonTrend) {
+        return false
+      }
+      if (!getUiSettings().seasonTrendlines) {
+        updateUiSettings({ seasonTrendlines: true })
+      }
+      if (selectedTrend.id !== firstSeasonTrend.id) {
+        setSelectedTrend(firstSeasonTrend.id)
+      }
+      return true
+    }
+
     const viewportCenter = viewport.start + (viewport.end - viewport.start) / 2
     const visibleTrends = getVisibleSeasonTrendlines(model, viewport)
     const nearestVisibleTrend = visibleTrends.sort(
@@ -847,14 +945,11 @@ export function createChart(container, seasons, options = {}) {
         Math.abs((left.visibleStartX + left.visibleEndX) / 2 - viewportCenter) -
         Math.abs((right.visibleStartX + right.visibleEndX) / 2 - viewportCenter)
     )[0]
-    const seasonNumber =
-      selectedTrend?.kind === 'season'
-        ? selectedTrend.seasonNumber
-        : visibleTrends.some(
-              (trendline) => trendline.seasonNumber === activePoint?.season
-            )
-          ? activePoint.season
-          : nearestVisibleTrend?.seasonNumber
+    const seasonNumber = visibleTrends.some(
+      (trendline) => trendline.seasonNumber === activePoint?.season
+    )
+      ? activePoint.season
+      : nearestVisibleTrend?.seasonNumber
 
     if (seasonNumber == null || !getTrendSummary(`season:${seasonNumber}`)) {
       return false
@@ -958,7 +1053,6 @@ export function createChart(container, seasons, options = {}) {
     const activeTrendId = getActiveTrendId()
     return {
       activeTrendId,
-      summary: getTrendSummary(activeTrendId),
       hoverEnabled: finePointerQuery.matches,
       hitTolerance: coarsePointerQuery.matches ? 14 : 7,
       onHover: previewTrend,
@@ -1772,6 +1866,10 @@ function formatViewportAnnouncement(viewport, episodeCount) {
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max)
+}
+
+function modulo(value, divisor) {
+  return ((value % divisor) + divisor) % divisor
 }
 
 function getEventXRatio(event, element) {

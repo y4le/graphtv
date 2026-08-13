@@ -3,41 +3,53 @@ import { describe, expect, it, vi } from 'vitest'
 import { createSidenote } from '../../src/viz/sidenote.js'
 
 describe('createSidenote', () => {
-  it('keeps navigator controls stable and focusable at episode boundaries', () => {
+  it('keeps circular navigator controls stable and routes both directions through one callback', () => {
     const root = document.createElement('section')
     const onInteract = vi.fn()
-    const onSelectPoint = vi.fn()
+    const onNavigate = vi.fn()
     document.body.appendChild(root)
-    const sidenote = createSidenote({ root, onInteract, onSelectPoint })
+    const sidenote = createSidenote({ root, onInteract, onNavigate })
     const previous = root.querySelector('[data-sidenote-nav="previous"]')
     const next = root.querySelector('[data-sidenote-nav="next"]')
 
+    expect(previous.classList).toContain('keycap')
+    expect(previous.classList).toContain('shortcut-action')
+    expect(next.classList).toContain('keycap')
+    expect(next.classList).toContain('shortcut-action')
+
     sidenote.renderNavigator({
       mode: 'season',
-      label: 'Browse Season 2',
+      label: 'Season 2',
       meta: '3 rated episodes in Season 2',
-      previousPointId: null,
-      nextPointId: 'episode-1',
-      nextLabel: 'First episode of Season 2'
+      previousAvailable: true,
+      nextAvailable: true,
+      previousLabel: 'Previous season trendline',
+      nextLabel: 'Next season trendline'
     })
 
-    expect(previous.getAttribute('aria-disabled')).toBe('true')
-    expect(next.getAttribute('aria-label')).toBe('First episode of Season 2')
+    expect(previous.getAttribute('aria-disabled')).toBe('false')
+    expect(root.querySelector('.sidenote-nav').getAttribute('aria-label')).toBe(
+      'Season trend navigation'
+    )
+    expect(previous.getAttribute('aria-label')).toBe(
+      'Previous season trendline'
+    )
+    expect(next.getAttribute('aria-label')).toBe('Next season trendline')
     previous.focus()
     previous.click()
     expect(document.activeElement).toBe(previous)
     expect(onInteract).toHaveBeenCalledTimes(1)
-    expect(onSelectPoint).not.toHaveBeenCalled()
+    expect(onNavigate).toHaveBeenLastCalledWith(-1)
 
     next.click()
-    expect(onSelectPoint).toHaveBeenCalledWith('episode-1')
+    expect(onNavigate).toHaveBeenLastCalledWith(1)
 
     sidenote.renderNavigator({
       mode: 'point',
       label: 'S02E01',
       meta: '1 of 3 rated episodes',
-      previousPointId: null,
-      nextPointId: 'episode-3'
+      previousAvailable: true,
+      nextAvailable: true
     })
 
     expect(root.querySelector('[data-sidenote-nav="previous"]')).toBe(previous)
@@ -96,7 +108,7 @@ describe('createSidenote', () => {
       Array.from(root.querySelector('.sidenote-caption').children).map(
         (item) => item.textContent
       )
-    ).toEqual(['A Great Episode', 'S01E02', '2026-08-11'])
+    ).toEqual(['A Great Episode', '2026-08-11'])
   })
 
   it('shows a vote-count placeholder while IMDb details load', () => {

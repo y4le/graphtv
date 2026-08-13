@@ -880,25 +880,8 @@ button {
 }
 
 .sidenote-nav-button {
-  display: inline-grid;
   width: 1.75rem;
-  min-height: 1.75rem;
-  padding: 0;
-  border: 1px solid var(--lineSoft);
-  border-radius: 50%;
-  place-items: center;
-  background: transparent;
-  color: var(--textPrimary);
-  font: inherit;
-  font-size: 1.1rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.sidenote-nav-button:hover,
-.sidenote-nav-button:focus-visible {
-  border-color: var(--spotColor);
-  color: var(--spotColor);
+  padding-inline: 0;
 }
 
 .sidenote-nav-button[aria-disabled='true'] {

@@ -691,8 +691,8 @@ function resultsHelpSections() {
       items: [
         { keys: ['ArrowLeft', 'h'], action: 'Previous episode' },
         { keys: ['ArrowRight', 'l'], action: 'Next episode' },
-        { keys: ['ArrowUp', 'k'], action: 'Previous season' },
-        { keys: ['ArrowDown', 'j'], action: 'Next season' },
+        { keys: ['ArrowUp', 'k'], action: 'Previous season or trendline' },
+        { keys: ['ArrowDown', 'j'], action: 'Next season or trendline' },
         { keys: ['Home', 'gg'], action: 'First episode' },
         { keys: ['End', 'G'], action: 'Last episode' }
       ]
@@ -710,7 +710,10 @@ function resultsHelpSections() {
       title: 'Trend selection',
       items: [
         { keys: ['t'], action: 'Select full-series trend' },
-        { keys: ['T'], action: 'Select current season trend' },
+        {
+          keys: ['T'],
+          action: 'Select current season / reset to first available'
+        },
         { keys: ['Escape'], action: 'Clear chart selection' }
       ]
     }

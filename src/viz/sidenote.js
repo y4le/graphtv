@@ -45,17 +45,22 @@ function getEpisodeRatingSourceLabel(source) {
   return getRatingSourceLabel(source)
 }
 
-export function createSidenote({ root, onInteract, onSelectPoint }) {
+export function createSidenote({
+  root,
+  onInteract,
+  onNavigate,
+  onSelectPoint
+}) {
   root.innerHTML = `
     <div class="sidenote-nav" role="group" aria-label="Episode navigation">
-      <button type="button" class="sidenote-nav-button" data-sidenote-nav="previous" aria-label="Previous episode" aria-disabled="true">
+      <button type="button" class="sidenote-nav-button shortcut-action keycap" data-sidenote-nav="previous" aria-label="Previous episode" aria-disabled="true">
         <span aria-hidden="true">‹</span>
       </button>
       <p class="sidenote-nav-status">
         <span class="sidenote-nav-label">Browse episodes</span>
         <span class="sidenote-nav-meta"></span>
       </p>
-      <button type="button" class="sidenote-nav-button" data-sidenote-nav="next" aria-label="Next episode" aria-disabled="true">
+      <button type="button" class="sidenote-nav-button shortcut-action keycap" data-sidenote-nav="next" aria-label="Next episode" aria-disabled="true">
         <span aria-hidden="true">›</span>
       </button>
     </div>
@@ -63,6 +68,7 @@ export function createSidenote({ root, onInteract, onSelectPoint }) {
   `
 
   const contentRoot = root.querySelector('.sidenote-content')
+  const navigatorRoot = root.querySelector('.sidenote-nav')
   const navigatorLabel = root.querySelector('.sidenote-nav-label')
   const navigatorMeta = root.querySelector('.sidenote-nav-meta')
   const previousButton = root.querySelector('[data-sidenote-nav="previous"]')
@@ -91,10 +97,12 @@ export function createSidenote({ root, onInteract, onSelectPoint }) {
   function renderNavigator(viewModel) {
     const key = [
       viewModel.mode,
+      viewModel.navigationKind,
       viewModel.label,
       viewModel.meta,
-      viewModel.previousPointId,
-      viewModel.nextPointId,
+      viewModel.previousAvailable,
+      viewModel.nextAvailable,
+      viewModel.previousLabel,
       viewModel.nextLabel
     ].join(':')
     if (key === navigatorKey) {
@@ -102,29 +110,33 @@ export function createSidenote({ root, onInteract, onSelectPoint }) {
     }
     navigatorKey = key
 
+    navigatorRoot.setAttribute(
+      'aria-label',
+      (viewModel.navigationKind ?? viewModel.mode) === 'season'
+        ? 'Season trend navigation'
+        : 'Episode navigation'
+    )
     navigatorLabel.textContent = viewModel.label
     navigatorMeta.textContent = viewModel.meta ?? ''
     updateNavigatorButton(
       previousButton,
-      viewModel.previousPointId,
-      'Previous episode'
+      viewModel.previousAvailable,
+      viewModel.previousLabel ?? 'Previous episode'
     )
     updateNavigatorButton(
       nextButton,
-      viewModel.nextPointId,
+      viewModel.nextAvailable,
       viewModel.nextLabel ?? 'Next episode'
     )
   }
 
   function renderPoint(point, { loadingDetails = false } = {}) {
-    const episodeNumber = point?.episode ?? point?.number
     const markup = point
       ? `
           <div class="sidenote-card">
             <div class="sidenote-header">
               <p class="sidenote-caption">
                 <span class="sidenote-title">${escapeHtml(point.title)}</span>
-                <span class="sidenote-kicker">S${String(point.season).padStart(2, '0')}E${String(episodeNumber).padStart(2, '0')}</span>
                 <span class="sidenote-meta">${escapeHtml(point.date ?? 'Unknown air date')}</span>
               </p>
             </div>
@@ -201,7 +213,7 @@ export function createSidenote({ root, onInteract, onSelectPoint }) {
       if (navigatorButton.getAttribute('aria-disabled') === 'true') {
         return
       }
-      onSelectPoint?.(navigatorButton.dataset.pointId)
+      onNavigate?.(navigatorButton.dataset.sidenoteNav === 'previous' ? -1 : 1)
       return
     }
 
@@ -222,15 +234,9 @@ export function createSidenote({ root, onInteract, onSelectPoint }) {
   }
 }
 
-function updateNavigatorButton(button, pointId, label) {
-  const available = Boolean(pointId)
+function updateNavigatorButton(button, available, label) {
   button.setAttribute('aria-disabled', String(!available))
   button.setAttribute('aria-label', label)
-  if (available) {
-    button.dataset.pointId = pointId
-  } else {
-    delete button.dataset.pointId
-  }
 }
 
 function renderExtreme(label, extreme) {

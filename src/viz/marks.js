@@ -14,8 +14,6 @@ const SOURCE_RATING_OPACITY = 0.68
 const FALLBACK_POINT_FILL_OPACITY = 0.2
 const DEFAULT_POINT_RADIUS = 3
 const ACTIVE_POINT_RADIUS_OFFSET = 1.5
-const TREND_LABEL_EDGE_BUFFER = 60
-const TREND_LABEL_INSET = 6
 
 export function renderRangeFrame(svg, scales, dimensions, theme) {
   const [minRating, maxRating] = scales.yDomain
@@ -186,31 +184,6 @@ export function renderTrendlines(
     )
     .attr('pointer-events', 'none')
     .attr('d', (trendline) => generator(trendline.points))
-
-  const activeTrendline = segments.find(
-    (trendline) => trendline.id === activeTrendId
-  )
-  const labelData = activeTrendline
-    ? [createTrendLabel(activeTrendline, interactions.summary, scales, dimensions)]
-    : []
-
-  trendlineLayer
-    .selectAll('.trend-label')
-    .data(labelData, (label) => label.id)
-    .join('text')
-    .attr('class', 'trend-label')
-    .attr('x', (label) => label.x)
-    .attr('y', (label) => label.y)
-    .attr('text-anchor', (label) => label.anchor)
-    .attr('fill', theme.spotColor)
-    .attr('stroke', theme.background)
-    .attr('stroke-width', 3)
-    .attr('paint-order', 'stroke')
-    .attr('font-family', 'var(--font-sans)')
-    .attr('font-size', 12)
-    .attr('pointer-events', 'none')
-    .attr('aria-hidden', 'true')
-    .text((label) => label.text)
 }
 
 export function resolveTrendHit([x, y], segments, scales, tolerance) {
@@ -243,29 +216,6 @@ export function resolveTrendHit([x, y], segments, scales, tolerance) {
 
 function trendHitRank(segment) {
   return segment.kind === 'season' ? 0 : 1
-}
-
-function createTrendLabel(trendline, summary, scales, dimensions) {
-  const [start, end] = trendline.points
-  const endX = scales.xScale(end.x)
-  const useStart = endX > dimensions.width - TREND_LABEL_EDGE_BUFFER
-  const point = useStart ? start : end
-  const direction =
-    summary?.direction === 'up'
-      ? ` ↑ +${Math.abs(summary.delta).toFixed(1)}`
-      : summary?.direction === 'down'
-        ? ` ↓ −${Math.abs(summary.delta).toFixed(1)}`
-        : ''
-
-  return {
-    id: trendline.id,
-    text: `${summary?.label ?? trendline.id}${direction}`,
-    x:
-      scales.xScale(point.x) +
-      (useStart ? TREND_LABEL_INSET : -TREND_LABEL_INSET),
-    y: clamp(scales.yScale(point.y) - 8, 12, dimensions.height - 6),
-    anchor: useStart ? 'start' : 'end'
-  }
 }
 
 export function renderCrosshair(
