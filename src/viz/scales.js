@@ -198,6 +198,8 @@ export function getVisibleSeasonTrendlines(model, viewport) {
 
       return {
         ...trendline,
+        visibleStartX: startX,
+        visibleEndX: endX,
         points: [
           {
             x: startX,
@@ -218,16 +220,34 @@ export function getMacroTrendline(model, viewport) {
     return null
   }
 
-  return [
-    {
-      x: viewport.start,
-      y: projectRegression(model.macroRegression, viewport.start)
-    },
-    {
-      x: viewport.end,
-      y: projectRegression(model.macroRegression, viewport.end)
-    }
-  ]
+  const firstRatedX = model.primaryRatedPoints[0].x
+  const lastRatedX = model.primaryRatedPoints.at(-1).x
+  const startX = Math.max(viewport.start, firstRatedX)
+  const endX = Math.min(viewport.end, lastRatedX)
+
+  if (endX <= startX) {
+    return null
+  }
+
+  return {
+    id: 'series',
+    kind: 'series',
+    startX: firstRatedX,
+    endX: lastRatedX,
+    visibleStartX: startX,
+    visibleEndX: endX,
+    regression: model.macroRegression,
+    points: [
+      {
+        x: startX,
+        y: projectRegression(model.macroRegression, startX)
+      },
+      {
+        x: endX,
+        y: projectRegression(model.macroRegression, endX)
+      }
+    ]
+  }
 }
 
 export function createSparklineScales(model, dimensions, options = {}) {

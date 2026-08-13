@@ -17,12 +17,14 @@ beforeEach(() => {
     theme: 'light',
     palette: 'monotone',
     absoluteYAxis: false,
+    seasonTrendlines: true,
+    fullShowTrendline: false,
     showSourceSpread: true
   })
   vi.stubGlobal(
     'matchMedia',
     vi.fn((query) => ({
-      matches: false,
+      matches: query === '(hover: hover) and (pointer: fine)',
       media: query,
       addEventListener() {},
       removeEventListener() {}
@@ -190,6 +192,251 @@ describe('createChart', () => {
       container.querySelector('.episode-point').getAttribute('r')
     )
     expect(activeRadius).toBe(restingRadius + 1.5)
+  })
+
+  it('selects trendlines through the plot surface and gives points priority', () => {
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+
+    chart = createChart(container, createSeasons(), { detailRoot })
+    const surface = container.querySelector('.chart-hit-surface')
+    const pointHit = container.querySelector('.episode-point-hit')
+    const trendPoint = getPathMidpoint(
+      container.querySelector('.micro-trendline').getAttribute('d')
+    )
+
+    dispatchSurfaceClick(surface, trendPoint)
+
+    expect(chart.getDebugState().selectedTrendId).toBe('season:1')
+    expect(chart.getDebugState().selectedPointId).toBeNull()
+    expect(container.querySelector('.micro-trendline.is-active')).not.toBeNull()
+    expect(container.querySelector('.trend-label').textContent).toContain(
+      'Season 1'
+    )
+    expect(detailRoot.textContent).toContain('Mean')
+    expect(detailRoot.textContent).toContain('72 of 72 rated · TEST')
+    expect(
+      surface.compareDocumentPosition(pointHit) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+
+    chart.fitSeries()
+    const lastHit = container.querySelectorAll('.episode-point-hit').item(71)
+    const firstMark = container.querySelector('.episode-point')
+    expect(
+      lastHit.compareDocumentPosition(firstMark) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+
+    pointHit.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    expect(chart.getDebugState().selectedTrendId).toBeNull()
+    expect(chart.getDebugState().selectedPointId).toBe('episode-1')
+    expect(detailRoot.textContent).toContain('Episode 1')
+  })
+
+  it('toggles a selected trendline off when it is clicked again', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    const surface = container.querySelector('.chart-hit-surface')
+    const trendPoint = getPathMidpoint(
+      container.querySelector('.micro-trendline').getAttribute('d')
+    )
+
+    dispatchSurfaceClick(surface, trendPoint)
+    dispatchSurfaceClick(surface, trendPoint)
+
+    expect(chart.getDebugState().selectedTrendId).toBeNull()
+    expect(container.querySelector('.micro-trendline.is-active')).toBeNull()
+  })
+
+  it('waits before previewing a trendline on fine-pointer hover', async () => {
+    vi.useFakeTimers()
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    const surface = container.querySelector('.chart-hit-surface')
+    const trendPoint = getPathMidpoint(
+      container.querySelector('.micro-trendline').getAttribute('d')
+    )
+
+    surface.dispatchEvent(
+      new MouseEvent('pointermove', {
+        bubbles: true,
+        clientX: trendPoint.x,
+        clientY: trendPoint.y
+      })
+    )
+    await vi.advanceTimersByTimeAsync(99)
+    expect(chart.getDebugState().hoverTrendId).toBeNull()
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(chart.getDebugState().hoverTrendId).toBe('season:1')
+    expect(container.textContent).toContain('Mean')
+
+    surface.dispatchEvent(new MouseEvent('pointerleave'))
+    expect(chart.getDebugState().hoverTrendId).toBeNull()
+  })
+
+  it('uses a wider tap tolerance without hover on coarse pointers', async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query) => ({
+        matches:
+          query === '(max-width: 767px)' ||
+          query === '(pointer: coarse)',
+        media: query,
+        addEventListener() {},
+        removeEventListener() {}
+      }))
+    )
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    const surface = container.querySelector('.chart-hit-surface')
+    const trendPoint = getPathMidpoint(
+      container.querySelector('.micro-trendline').getAttribute('d')
+    )
+    const coarseTarget = { x: trendPoint.x, y: trendPoint.y + 10 }
+
+    surface.dispatchEvent(
+      new MouseEvent('pointermove', {
+        bubbles: true,
+        clientX: coarseTarget.x,
+        clientY: coarseTarget.y
+      })
+    )
+    await vi.advanceTimersByTimeAsync(200)
+    expect(chart.getDebugState().hoverTrendId).toBeNull()
+
+    dispatchSurfaceClick(surface, coarseTarget)
+    expect(chart.getDebugState().selectedTrendId).toBe('season:1')
+  })
+
+  it('drops a selected season trend when refreshed data can no longer fit it', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    chart.toggleSeasonTrend()
+    expect(chart.getDebugState().selectedTrendId).toBe('season:1')
+
+    const nextSeasons = createSeasons()
+    nextSeasons[0].episodes = nextSeasons[0].episodes.slice(0, 2)
+    chart.updateSeasons(nextSeasons)
+
+    expect(chart.getDebugState().selectedTrendId).toBeNull()
+  })
+
+  it('reveals and selects the full-series trend from its keyboard action', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    expect(container.querySelector('.macro-trendline')).toBeNull()
+
+    chart.toggleSeriesTrend()
+
+    expect(chart.getDebugState().selectedTrendId).toBe('series')
+    expect(container.querySelector('.macro-trendline.is-active')).not.toBeNull()
+  })
+
+  it('does not enable keyboard trend settings when no trend is available', () => {
+    updateUiSettings({
+      seasonTrendlines: false,
+      fullShowTrendline: false
+    })
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+    const seasons = createSeasons()
+    seasons[0].episodes = seasons[0].episodes.slice(0, 2)
+
+    chart = createChart(container, seasons)
+
+    expect(chart.toggleSeriesTrend()).toBe(false)
+    expect(chart.toggleSeasonTrend()).toBe(false)
+    expect(chart.getDebugState().selectedTrendId).toBeNull()
+    expect(chart.getDebugState().uiSettings).toMatchObject({
+      seasonTrendlines: false,
+      fullShowTrendline: false
+    })
+  })
+
+  it('announces persistent trend selections and keyboard clearing', async () => {
+    vi.useFakeTimers()
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    chart.toggleSeasonTrend()
+    await vi.advanceTimersByTimeAsync(120)
+
+    expect(container.querySelector('.chart-selection-status').textContent).toContain(
+      'Season 1 trend selected. Mean'
+    )
+
+    expect(chart.clearSelection()).toBe(true)
+    await vi.advanceTimersByTimeAsync(120)
+    expect(container.querySelector('.chart-selection-status').textContent).toBe(
+      'Chart selection cleared.'
+    )
+    expect(chart.clearSelection()).toBe(false)
+  })
+
+  it('clears a selected trend when its view setting is disabled', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    chart.toggleSeasonTrend()
+    expect(chart.getDebugState().selectedTrendId).toBe('season:1')
+
+    updateUiSettings({ seasonTrendlines: false })
+
+    expect(chart.getDebugState().selectedTrendId).toBeNull()
+    expect(container.querySelector('.micro-trendline')).toBeNull()
   })
 
   it('preserves small horizontal trackpad deltas', () => {
@@ -404,11 +651,85 @@ describe('createChart', () => {
     const initialViewport = chart.getDebugState().viewport
 
     dispatchTouchPointer(body, 'pointerdown', { pointerId: 1, clientX: 100 })
-    dispatchTouchPointer(body, 'pointermove', { pointerId: 1, clientX: 95 })
+    dispatchTouchPointer(body, 'pointermove', { pointerId: 1, clientX: 90 })
 
     const nextViewport = chart.getDebugState().viewport
     expect(nextViewport.start).toBeGreaterThan(initialViewport.start)
     expect(nextViewport.start).toBeLessThan(initialViewport.start + 1)
+  })
+
+  it('suppresses a pan click without swallowing the next deliberate tap', () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query) => ({
+        matches:
+          query === '(max-width: 767px)' ||
+          query === '(pointer: coarse)',
+        media: query,
+        addEventListener() {},
+        removeEventListener() {}
+      }))
+    )
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    const body = container.querySelector('.chart-body-shell')
+    const point = container.querySelector('.episode-point-hit')
+    Object.defineProperty(body, 'clientWidth', {
+      configurable: true,
+      value: 544
+    })
+    vi.spyOn(performance, 'now')
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(1000)
+      .mockReturnValue(1001)
+
+    dispatchTouchPointer(body, 'pointerdown', {
+      pointerId: 1,
+      clientX: 100
+    })
+    dispatchTouchPointer(body, 'pointermove', {
+      pointerId: 1,
+      clientX: 90
+    })
+    dispatchTouchPointer(body, 'pointerup', {
+      pointerId: 1,
+      clientX: 90
+    })
+    point.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(chart.getDebugState().selectedPointId).toBeNull()
+
+    dispatchTouchPointer(body, 'pointerdown', {
+      pointerId: 2,
+      clientX: 100
+    })
+    dispatchTouchPointer(body, 'pointermove', {
+      pointerId: 2,
+      clientX: 90
+    })
+    dispatchTouchPointer(body, 'pointerup', {
+      pointerId: 2,
+      clientX: 90
+    })
+
+    const tapTarget = container.querySelector('.episode-point-hit')
+    const tapTargetId = tapTarget.__data__.id
+    dispatchTouchPointer(body, 'pointerdown', {
+      pointerId: 3,
+      clientX: 20
+    })
+    dispatchTouchPointer(body, 'pointerup', {
+      pointerId: 3,
+      clientX: 20
+    })
+    tapTarget.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    expect(chart.getDebugState().selectedPointId).toBe(tapTargetId)
   })
 
   it('renders episode details outside the chart when given a detail root', () => {
@@ -622,6 +943,28 @@ function getAxisLabels(container) {
   return Array.from(
     container.querySelectorAll('.range-tick text'),
     (node) => node.textContent
+  )
+}
+
+function getPathMidpoint(pathData) {
+  const coordinates = pathData.match(
+    /^M(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)L(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/
+  )
+  const [, startX, startY, endX, endY] = coordinates.map(Number)
+
+  return {
+    x: (startX + endX) / 2,
+    y: (startY + endY) / 2
+  }
+}
+
+function dispatchSurfaceClick(surface, { x, y }) {
+  surface.dispatchEvent(
+    new MouseEvent('click', {
+      bubbles: true,
+      clientX: x,
+      clientY: y
+    })
   )
 }
 

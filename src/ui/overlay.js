@@ -705,6 +705,14 @@ function resultsHelpSections() {
         { keys: ['-'], action: 'Zoom out' },
         { keys: ['=', '+'], action: 'Zoom in' }
       ]
+    },
+    {
+      title: 'Trend selection',
+      items: [
+        { keys: ['t'], action: 'Select full-series trend' },
+        { keys: ['T'], action: 'Select current season trend' },
+        { keys: ['Escape'], action: 'Clear chart selection' }
+      ]
     }
   ]
 }

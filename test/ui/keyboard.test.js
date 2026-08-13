@@ -170,6 +170,9 @@ describe('createKeyboardController', () => {
       moveEpisode: vi.fn(),
       moveSeason: vi.fn(),
       resetZoom: vi.fn(),
+      clearSelection: vi.fn(),
+      toggleSeasonTrend: vi.fn(),
+      toggleSeriesTrend: vi.fn(),
       zoomBy: vi.fn()
     }
     keyboardController = createKeyboardController({
@@ -188,6 +191,9 @@ describe('createKeyboardController', () => {
     pressKey('-')
     pressKey('=')
     pressKey('+', { shiftKey: true })
+    pressKey('t')
+    pressKey('T', { shiftKey: true })
+    pressKey('Escape')
 
     expect(chart.moveEpisode.mock.calls).toEqual([[-1], [1]])
     expect(chart.moveSeason.mock.calls).toEqual([[-1], [1]])
@@ -195,6 +201,9 @@ describe('createKeyboardController', () => {
     expect(chart.fitSeries).toHaveBeenCalledOnce()
     expect(chart.resetZoom).toHaveBeenCalledOnce()
     expect(chart.zoomBy.mock.calls).toEqual([[1.5], [1 / 1.5], [1 / 1.5]])
+    expect(chart.toggleSeriesTrend).toHaveBeenCalledOnce()
+    expect(chart.toggleSeasonTrend).toHaveBeenCalledOnce()
+    expect(chart.clearSelection).toHaveBeenCalledOnce()
 
     for (const removedKey of ['b', 'w', '0', '$']) {
       pressKey(removedKey)

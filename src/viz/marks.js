@@ -1,4 +1,4 @@
-import { format, line } from 'd3'
+import { format, line, pointer as d3Pointer } from 'd3'
 
 import { isUsableProviderRating, isUsableRating } from '../data/stats.js'
 import { scalePointRadiusForDensity } from './pointSize.js'
@@ -14,6 +14,8 @@ const SOURCE_RATING_OPACITY = 0.68
 const FALLBACK_POINT_FILL_OPACITY = 0.2
 const DEFAULT_POINT_RADIUS = 3
 const ACTIVE_POINT_RADIUS_OFFSET = 1.5
+const TREND_LABEL_EDGE_BUFFER = 60
+const TREND_LABEL_INSET = 6
 
 export function renderRangeFrame(svg, scales, dimensions, theme) {
   const [minRating, maxRating] = scales.yDomain
@@ -78,32 +80,192 @@ export function renderSeasonLabels(svg, spans, viewport, scales, dimensions, the
     .text((span) => `Season ${span.seasonNumber}`)
 }
 
-export function renderTrendlines(svg, trendlines, macroTrendline, scales, theme) {
-  const trendlineLayer = svg.selectAll('.trendline-layer').data([null]).join('g').attr('class', 'trendline-layer')
+export function renderTrendlines(
+  svg,
+  trendlines,
+  macroTrendline,
+  scales,
+  dimensions,
+  theme,
+  interactions = {}
+) {
+  const trendlineLayer = svg
+    .selectAll('.trendline-layer')
+    .data([null])
+    .join('g')
+    .attr('class', 'trendline-layer')
   const generator = line()
     .x((point) => scales.xScale(point.x))
     .y((point) => scales.yScale(point.y))
+  const segments = [macroTrendline, ...trendlines].filter(Boolean)
+  const activeTrendId = interactions.activeTrendId ?? null
+
+  const hitSurface = trendlineLayer
+    .selectAll('.chart-hit-surface')
+    .data([null])
+    .join('rect')
+    .attr('class', 'chart-hit-surface')
+    .attr('x', 0)
+    .attr('y', 0)
+    .attr('width', dimensions.width)
+    .attr('height', dimensions.height)
+    .attr('fill', 'transparent')
+    .attr('aria-hidden', 'true')
+    .style('cursor', 'default')
+
+  hitSurface
+    .on('pointermove', function (event) {
+      if (!interactions.hoverEnabled) {
+        return
+      }
+
+      const trendline = resolveTrendHit(
+        d3Pointer(event, this),
+        segments,
+        scales,
+        interactions.hitTolerance ?? 7
+      )
+      hitSurface.style('cursor', trendline ? 'pointer' : 'default')
+      interactions.onHover?.(trendline)
+    })
+    .on('pointerleave', () => {
+      hitSurface.style('cursor', 'default')
+      interactions.onHover?.(null)
+    })
+    .on('click', function (event) {
+      event.stopPropagation()
+      if (interactions.shouldSuppressClick?.()) {
+        return
+      }
+
+      interactions.onSelect?.(
+        resolveTrendHit(
+          d3Pointer(event, this),
+          segments,
+          scales,
+          interactions.hitTolerance ?? 7
+        )
+      )
+    })
 
   trendlineLayer
     .selectAll('.macro-trendline')
     .data(macroTrendline ? [macroTrendline] : [])
     .join('path')
-    .attr('class', 'macro-trendline')
+    .attr(
+      'class',
+      (trendline) =>
+        `macro-trendline${trendline.id === activeTrendId ? ' is-active' : ''}`
+    )
     .attr('fill', 'none')
-    .attr('stroke', theme.trendMacro)
-    .attr('stroke-width', 1)
+    .attr('stroke', (trendline) =>
+      trendline.id === activeTrendId ? theme.spotColor : theme.trendMacro
+    )
+    .attr('stroke-width', (trendline) =>
+      trendline.id === activeTrendId ? 2 : 1
+    )
     .attr('stroke-dasharray', '5 5')
-    .attr('d', (points) => generator(points))
+    .attr('pointer-events', 'none')
+    .attr('d', (trendline) => generator(trendline.points))
 
   trendlineLayer
     .selectAll('.micro-trendline')
-    .data(trendlines, (trendline) => `${trendline.seasonNumber}:${trendline.startX}`)
+    .data(trendlines, (trendline) => trendline.id)
     .join('path')
-    .attr('class', 'micro-trendline')
+    .attr(
+      'class',
+      (trendline) =>
+        `micro-trendline${trendline.id === activeTrendId ? ' is-active' : ''}`
+    )
     .attr('fill', 'none')
-    .attr('stroke', theme.trendMicro)
-    .attr('stroke-width', 1)
+    .attr('stroke', (trendline) =>
+      trendline.id === activeTrendId ? theme.spotColor : theme.trendMicro
+    )
+    .attr('stroke-width', (trendline) =>
+      trendline.id === activeTrendId ? 1.75 : 1
+    )
+    .attr('pointer-events', 'none')
     .attr('d', (trendline) => generator(trendline.points))
+
+  const activeTrendline = segments.find(
+    (trendline) => trendline.id === activeTrendId
+  )
+  const labelData = activeTrendline
+    ? [createTrendLabel(activeTrendline, interactions.summary, scales, dimensions)]
+    : []
+
+  trendlineLayer
+    .selectAll('.trend-label')
+    .data(labelData, (label) => label.id)
+    .join('text')
+    .attr('class', 'trend-label')
+    .attr('x', (label) => label.x)
+    .attr('y', (label) => label.y)
+    .attr('text-anchor', (label) => label.anchor)
+    .attr('fill', theme.spotColor)
+    .attr('stroke', theme.background)
+    .attr('stroke-width', 3)
+    .attr('paint-order', 'stroke')
+    .attr('font-family', 'var(--font-sans)')
+    .attr('font-size', 12)
+    .attr('pointer-events', 'none')
+    .attr('aria-hidden', 'true')
+    .text((label) => label.text)
+}
+
+export function resolveTrendHit([x, y], segments, scales, tolerance) {
+  const dataX = scales.xScale.invert(x)
+
+  return (
+    segments
+      .filter(
+        (segment) =>
+          dataX >= segment.visibleStartX && dataX <= segment.visibleEndX
+      )
+      .map((segment) => ({
+        segment,
+        distance: Math.abs(
+          y -
+            scales.yScale(
+              segment.regression.slope * dataX +
+                segment.regression.intercept
+            )
+        )
+      }))
+      .filter((candidate) => candidate.distance <= tolerance)
+      .sort(
+        (left, right) =>
+          left.distance - right.distance ||
+          trendHitRank(left.segment) - trendHitRank(right.segment)
+      )[0]?.segment ?? null
+  )
+}
+
+function trendHitRank(segment) {
+  return segment.kind === 'season' ? 0 : 1
+}
+
+function createTrendLabel(trendline, summary, scales, dimensions) {
+  const [start, end] = trendline.points
+  const endX = scales.xScale(end.x)
+  const useStart = endX > dimensions.width - TREND_LABEL_EDGE_BUFFER
+  const point = useStart ? start : end
+  const direction =
+    summary?.direction === 'up'
+      ? ` ↑ +${Math.abs(summary.delta).toFixed(1)}`
+      : summary?.direction === 'down'
+        ? ` ↓ −${Math.abs(summary.delta).toFixed(1)}`
+        : ''
+
+  return {
+    id: trendline.id,
+    text: `${summary?.label ?? trendline.id}${direction}`,
+    x:
+      scales.xScale(point.x) +
+      (useStart ? TREND_LABEL_INSET : -TREND_LABEL_INSET),
+    y: clamp(scales.yScale(point.y) - 8, 12, dimensions.height - 6),
+    anchor: useStart ? 'start' : 'end'
+  }
 }
 
 export function renderCrosshair(
@@ -291,7 +453,21 @@ function createSourceSpreadMark(point, scales) {
 }
 
 export function renderPoints(svg, points, scales, theme, interactions) {
-  const pointLayer = svg.selectAll('.point-layer').data([null]).join('g').attr('class', 'point-layer')
+  const pointLayer = svg
+    .selectAll('.point-layer')
+    .data([null])
+    .join('g')
+    .attr('class', 'point-layer')
+  const hitLayer = pointLayer
+    .selectAll('.episode-hit-layer')
+    .data([null])
+    .join('g')
+    .attr('class', 'episode-hit-layer')
+  const markLayer = pointLayer
+    .selectAll('.episode-mark-layer')
+    .data([null])
+    .join('g')
+    .attr('class', 'episode-mark-layer')
   const plottedPoints = points.filter((point) => isUsableRating(point.rating))
   const pointColor = (point) => theme.seasonColor(point.seasonIndex, interactions.totalSeasons)
   const pointRadius = scalePointRadiusForDensity(
@@ -299,8 +475,21 @@ export function renderPoints(svg, points, scales, theme, interactions) {
     plottedPoints.length,
     scales.xScale
   )
+  const hitRadius = getPointHitRadius(pointRadius, scales.xScale)
 
-  pointLayer
+  const hitPoints = hitLayer
+    .selectAll('.episode-point-hit')
+    .data(plottedPoints, (point) => point.id)
+    .join('circle')
+    .attr('class', 'episode-point-hit')
+    .attr('cx', (point) => scales.xScale(point.x))
+    .attr('cy', (point) => scales.yScale(point.rating))
+    .attr('r', hitRadius)
+    .attr('fill', 'transparent')
+    .attr('pointer-events', 'all')
+    .attr('aria-hidden', 'true')
+
+  const visiblePoints = markLayer
     .selectAll('.episode-point')
     .data(plottedPoints, (point) => point.id)
     .join('circle')
@@ -328,12 +517,27 @@ export function renderPoints(svg, points, scales, theme, interactions) {
     .attr('stroke-opacity', 1)
     .attr('data-rating-source', (point) => point.ratingSource)
     .attr('data-rating-fallback', (point) => String(point.isFallbackRating))
+
+  bindPointInteractions(hitPoints, interactions)
+  bindPointInteractions(visiblePoints, interactions)
+}
+
+function bindPointInteractions(points, interactions) {
+  points
     .on('mouseenter', (_, point) => interactions.hoverEnabled && interactions.onHover(point))
     .on('mouseleave', () => interactions.hoverEnabled && interactions.onLeave())
     .on('click', (event, point) => {
       event.stopPropagation()
+      if (interactions.shouldSuppressClick?.()) {
+        return
+      }
       interactions.onSelect(point)
     })
+}
+
+function getPointHitRadius(pointRadius, xScale) {
+  const spacing = Math.abs(xScale(2) - xScale(1))
+  return Math.max(pointRadius, Math.min(12, Math.max(6, spacing / 2 - 0.25)))
 }
 
 function buildTickValues(scales, minRating, maxRating) {

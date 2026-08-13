@@ -196,6 +196,13 @@ export function createKeyboardController({ page, overlayController }) {
       return
     }
 
+    if (key === 'Escape') {
+      if (page.chart?.clearSelection?.()) {
+        event.preventDefault()
+      }
+      return
+    }
+
     if (!page.chart) {
       return
     }
@@ -245,6 +252,18 @@ export function createKeyboardController({ page, overlayController }) {
     if (key === 'r') {
       event.preventDefault()
       page.chart.resetZoom()
+      return
+    }
+
+    if (key === 't') {
+      event.preventDefault()
+      page.chart.toggleSeriesTrend()
+      return
+    }
+
+    if (key === 'T') {
+      event.preventDefault()
+      page.chart.toggleSeasonTrend()
       return
     }
 

@@ -865,7 +865,7 @@ button {
   min-height: 5.5rem;
 }
 
-.reading-pane:not(:empty)::before {
+.chart-shell[data-detail-kind='point'] .reading-pane:not(:empty)::before {
   content: '';
   position: absolute;
   left: var(--reading-pane-marker);
@@ -1035,7 +1035,18 @@ button {
   }
 }
 
-.point-layer .episode-point {
+.trend-label {
+  user-select: none;
+}
+
+.season-label-layer,
+.source-spread-layer,
+.crosshair-layer {
+  pointer-events: none;
+}
+
+.point-layer .episode-point,
+.point-layer .episode-point-hit {
   cursor: pointer;
 }
 

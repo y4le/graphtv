@@ -6,7 +6,8 @@ import {
   createDefaultViewport,
   createFullSeriesScales,
   createMainScales,
-  createSparklineScales
+  createSparklineScales,
+  getMacroTrendline
 } from '../../src/viz/scales.js'
 
 describe('rating scale domains', () => {
@@ -87,6 +88,31 @@ describe('rating scale domains', () => {
 
     expect(model.macroRegression).toEqual({ slope: 1, intercept: 6 })
     expect(model.seasonTrendlines[0].endX).toBe(3)
+  })
+
+  it('clips the full-series trendline to its primary-rated extent', () => {
+    const model = buildChartModel([
+      {
+        number: 1,
+        episodes: [
+          createEpisode('fallback-start', [{ source: 'tmdb', rating: 5 }]),
+          createEpisode('one', [{ source: 'omdb', rating: 7 }]),
+          createEpisode('two', [{ source: 'omdb', rating: 8 }]),
+          createEpisode('three', [{ source: 'omdb', rating: 9 }]),
+          createEpisode('fallback-end', [{ source: 'tmdb', rating: 5 }])
+        ]
+      }
+    ])
+
+    expect(getMacroTrendline(model, { start: 1, end: 5 })).toMatchObject({
+      id: 'series',
+      visibleStartX: 2,
+      visibleEndX: 4,
+      points: [
+        { x: 2, y: 7 },
+        { x: 4, y: 9 }
+      ]
+    })
   })
 
   it('keeps the adaptive y-axis stable across viewports', () => {
