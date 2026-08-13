@@ -20,7 +20,7 @@ export function renderResultsMasthead({ interactive = false } = {}) {
     <header class="masthead">
       <div class="masthead-navigation">
         ${renderPublisherBrand()}
-        <a class="back-link" href="${buildBackHref()}">Back to search</a>
+        <a class="back-link masthead-action" href="${buildBackHref()}">Back to search</a>
       </div>
       ${
         interactive

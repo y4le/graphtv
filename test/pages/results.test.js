@@ -59,6 +59,9 @@ describe('renderResultsMasthead', () => {
         container.querySelectorAll('.masthead-actions .masthead-action')
       ).map((action) => action.dataset.uiAction)
     ).toEqual(['help', 'view-options'])
+    expect(container.querySelector('.back-link').classList).toContain(
+      'masthead-action'
+    )
   })
 
   it('links back to a blank search page without preserving any query parameters', () => {
