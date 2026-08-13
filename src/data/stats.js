@@ -5,6 +5,11 @@ import {
 
 export { RATING_SOURCE_PRIORITY, getRatingSourceLabel }
 
+export const TREND_RANKING_COUNT = 3
+export const MIN_TREND_RATED_EPISODES = 5
+export const MIN_TREND_SIGNAL_RATIO = 2
+export const MIN_TREND_DELTA = 0.1
+
 export function linearRegression(values) {
   const points = values.map((value, index) => ({ x: index, y: value }))
   return linearRegressionFromPoints(points)
@@ -121,12 +126,18 @@ export function summarizeTrendScope(
   )
   const values = ratedPoints.map((point) => point.rating)
   const mean = values.reduce((sum, value) => sum + value, 0) / values.length
-  const high = ratedPoints.reduce((current, point) =>
-    point.rating > current.rating ? point : current
+  const topRanked = [...ratedPoints].sort(
+    (left, right) => right.rating - left.rating || left.x - right.x
   )
-  const low = ratedPoints.reduce((current, point) =>
-    point.rating < current.rating ? point : current
+  const bottomRanked = [...ratedPoints].sort(
+    (left, right) => left.rating - right.rating || right.x - left.x
   )
+  const rankingCount = Math.min(
+    TREND_RANKING_COUNT,
+    Math.floor(ratedPoints.length / 2)
+  )
+  const top = topRanked.slice(0, rankingCount).map(toTrendExtreme)
+  const bottom = bottomRanked.slice(0, rankingCount).map(toTrendExtreme)
   const firstRatedX = ratedPoints[0].x
   const lastRatedX = ratedPoints.at(-1).x
   const delta = regression.slope * (lastRatedX - firstRatedX)
@@ -152,8 +163,21 @@ export function summarizeTrendScope(
       : slopeStandardError
         ? Math.abs(regression.slope) / slopeStandardError
         : 0
+  const trendCriteria = {
+    ratedEpisodes: ratedPoints.length,
+    minimumRatedEpisodes: MIN_TREND_RATED_EPISODES,
+    enoughRatedEpisodes: ratedPoints.length >= MIN_TREND_RATED_EPISODES,
+    signalRatio,
+    minimumSignalRatio: MIN_TREND_SIGNAL_RATIO,
+    consistentSlope: signalRatio >= MIN_TREND_SIGNAL_RATIO,
+    absoluteDelta: Math.abs(delta),
+    minimumDelta: MIN_TREND_DELTA,
+    meaningfulDelta: Math.abs(delta) >= MIN_TREND_DELTA
+  }
   const hasClearDirection =
-    ratedPoints.length >= 5 && signalRatio >= 2 && Math.abs(delta) >= 0.1
+    trendCriteria.enoughRatedEpisodes &&
+    trendCriteria.consistentSlope &&
+    trendCriteria.meaningfulDelta
 
   return {
     n: ratedPoints.length,
@@ -161,19 +185,26 @@ export function summarizeTrendScope(
     excludedFallback,
     source,
     mean,
-    high: { value: high.rating, point: high },
-    low: { value: low.rating, point: low },
+    top,
+    bottom,
+    high: toTrendExtreme(topRanked[0]),
+    low: toTrendExtreme(bottomRanked[0]),
     firstRatedX,
     lastRatedX,
     slope: regression.slope,
     delta,
     slopeStandardError,
+    trendCriteria,
     direction: hasClearDirection
       ? regression.slope > 0
         ? 'up'
         : 'down'
       : 'unclear'
   }
+}
+
+function toTrendExtreme(point) {
+  return { value: point.rating, point }
 }
 
 export function isUsableRating(value) {

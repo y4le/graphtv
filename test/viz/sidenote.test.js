@@ -137,6 +137,7 @@ describe('createSidenote', () => {
   it('renders a compact trend summary and lets extremes select episodes', () => {
     const root = document.createElement('section')
     const onSelectPoint = vi.fn()
+    document.body.appendChild(root)
     const sidenote = createSidenote({
       root,
       onSelectPoint
@@ -144,34 +145,127 @@ describe('createSidenote', () => {
 
     sidenote.renderTrendSummary({
       label: 'Season 2',
-      n: 5,
-      totalEpisodes: 6,
+      n: 6,
+      totalEpisodes: 7,
       excludedFallback: 1,
       source: 'omdb',
       mean: 8.24,
       direction: 'up',
       delta: 0.62,
-      high: {
-        value: 9.4,
-        point: { id: 'high', season: 2, episode: 5 }
-      },
-      low: {
-        value: 7.2,
-        point: { id: 'low', season: 2, episode: 1 }
-      }
+      trendCriteria: createTrendCriteria({ signalRatio: Infinity }),
+      top: [
+        {
+          value: 9.4,
+          point: {
+            id: 'high',
+            title: 'The Best Episode',
+            season: 2,
+            episode: 5
+          }
+        },
+        {
+          value: 9.1,
+          point: { id: 'second-high', season: 2, episode: 4 }
+        },
+        {
+          value: 8.8,
+          point: { id: 'third-high', season: 2, episode: 3 }
+        }
+      ],
+      bottom: [
+        {
+          value: 7.2,
+          point: { id: 'low', season: 2, episode: 1 }
+        },
+        {
+          value: 7.5,
+          point: { id: 'second-low', season: 2, episode: 2 }
+        },
+        {
+          value: 8.1,
+          point: { id: 'third-low', season: 2, episode: 6 }
+        }
+      ]
     })
 
     expect(root.querySelector('.sidenote-title').textContent).toBe('Season 2')
     expect(root.textContent).toContain('Mean')
     expect(root.textContent).toContain('8.2')
     expect(root.textContent).toContain('Trending up +0.6')
-    expect(root.textContent).toContain('5 of 6 rated · IMDb')
+    expect(root.textContent).toContain('6 of 7 rated · IMDb')
     expect(root.textContent).toContain(
       '1 episode uses other sources and is excluded'
+    )
+    expect(
+      Array.from(root.querySelectorAll('.trend-summary-ranking-title')).map(
+        (heading) => heading.textContent
+      )
+    ).toEqual(['Top Rated', 'Bottom Rated'])
+    expect(root.querySelectorAll('.trend-summary-ranking')).toHaveLength(2)
+    expect(root.querySelectorAll('.trend-summary-extreme')).toHaveLength(6)
+    expect(root.querySelector('.trend-summary-episode-title').textContent).toBe(
+      'The Best Episode'
     )
 
     root.querySelector('[data-trend-point-id="high"]').click()
     expect(onSelectPoint).toHaveBeenCalledWith('high')
+
+    const infoButton = root.querySelector('[data-trend-info]')
+    const tooltip = root.querySelector('.trend-info-tooltip')
+    expect(infoButton.textContent).toBe('ⓘ')
+    expect(infoButton.getAttribute('aria-expanded')).toBe('false')
+    expect(infoButton.getAttribute('aria-describedby')).toBe(tooltip.id)
+    expect(tooltip.id).toMatch(/^trend-info-tooltip-\d+$/)
+    expect(tooltip.hidden).toBe(true)
+    infoButton.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+    expect(infoButton.getAttribute('aria-expanded')).toBe('true')
+    expect(tooltip.hidden).toBe(false)
+
+    const onDocumentKeydown = vi.fn()
+    document.addEventListener('keydown', onDocumentKeydown)
+    root.querySelector('[data-trend-point-id="high"]').focus()
+    root
+      .querySelector('[data-trend-point-id="high"]')
+      .dispatchEvent(
+        new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' })
+      )
+    expect(onDocumentKeydown).toHaveBeenCalledTimes(1)
+    expect(tooltip.hidden).toBe(false)
+    document.removeEventListener('keydown', onDocumentKeydown)
+
+    infoButton.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }))
+    expect(infoButton.getAttribute('aria-expanded')).toBe('false')
+    expect(tooltip.hidden).toBe(true)
+
+    infoButton.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+    infoButton.focus()
+    infoButton.click()
+    expect(infoButton.getAttribute('aria-expanded')).toBe('true')
+    expect(tooltip.hidden).toBe(false)
+    infoButton.click()
+    expect(infoButton.getAttribute('aria-expanded')).toBe('false')
+    expect(tooltip.hidden).toBe(true)
+    const onDismissedKeydown = vi.fn()
+    document.addEventListener('keydown', onDismissedKeydown)
+    infoButton.dispatchEvent(
+      new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' })
+    )
+    expect(onDismissedKeydown).toHaveBeenCalledTimes(1)
+    document.removeEventListener('keydown', onDismissedKeydown)
+    root.querySelector('[data-trend-point-id="high"]').focus()
+    expect(tooltip.hidden).toBe(true)
+    infoButton.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }))
+    infoButton.focus()
+    infoButton.click()
+    expect(root.querySelectorAll('[data-passed="true"]')).toHaveLength(3)
+    expect(root.querySelector('.trend-info-check-mark').textContent).toBe('✓')
+    expect(root.textContent).toContain('Consistent slope: ∞×, need 2.0×')
+    infoButton.dispatchEvent(
+      new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' })
+    )
+    expect(infoButton.getAttribute('aria-expanded')).toBe('false')
+    expect(tooltip.hidden).toBe(true)
+    expect(document.activeElement).toBe(infoButton)
   })
 
   it('does not show a numeric delta when the trend is unclear', () => {
@@ -187,18 +281,53 @@ describe('createSidenote', () => {
       mean: 7.5,
       direction: 'unclear',
       delta: 1.2,
-      high: {
-        value: 8,
-        point: { id: 'high', season: 1, episode: 4 }
-      },
-      low: {
-        value: 7,
-        point: { id: 'low', season: 1, episode: 1 }
-      }
+      trendCriteria: createTrendCriteria({
+        ratedEpisodes: 4,
+        enoughRatedEpisodes: false,
+        signalRatio: 1.96,
+        consistentSlope: false,
+        absoluteDelta: 0.098,
+        meaningfulDelta: false
+      }),
+      top: [
+        {
+          value: 8,
+          point: { id: 'high', season: 1, episode: 4 }
+        }
+      ],
+      bottom: [
+        {
+          value: 7,
+          point: { id: 'low', season: 1, episode: 1 }
+        }
+      ]
     })
 
     expect(root.textContent).toContain('No clear trend')
     expect(root.textContent).not.toContain('+1.2')
     expect(root.textContent).toContain('too few rated episodes for a trend')
+
+    root.querySelector('[data-trend-info]').click()
+    expect(root.querySelectorAll('[data-passed="false"]')).toHaveLength(3)
+    expect(root.textContent).toContain('Enough data: 4 rated, need 5')
+    expect(root.textContent).toContain('Consistent slope: 1.96×, need 2.0×')
+    expect(root.textContent).toContain(
+      'Meaningful change: 0.098 points, need 0.1 points'
+    )
   })
 })
+
+function createTrendCriteria(overrides = {}) {
+  return {
+    ratedEpisodes: 5,
+    minimumRatedEpisodes: 5,
+    enoughRatedEpisodes: true,
+    signalRatio: 3,
+    minimumSignalRatio: 2,
+    consistentSlope: true,
+    absoluteDelta: 0.6,
+    minimumDelta: 0.1,
+    meaningfulDelta: true,
+    ...overrides
+  }
+}

@@ -96,6 +96,28 @@ describe('data/stats', () => {
     expect(summary.delta).toBeCloseTo(3.779)
     expect(summary.high.point.id).toBe('five')
     expect(summary.low.point.id).toBe('one')
+    expect(summary.top.map((extreme) => extreme.point.id)).toEqual([
+      'five',
+      'four'
+    ])
+    expect(summary.bottom.map((extreme) => extreme.point.id)).toEqual([
+      'one',
+      'two'
+    ])
+    expect(
+      summary.top.some((top) =>
+        summary.bottom.some((bottom) => bottom.point.id === top.point.id)
+      )
+    ).toBe(false)
+    expect(summary.trendCriteria).toMatchObject({
+      ratedEpisodes: 5,
+      minimumRatedEpisodes: 5,
+      enoughRatedEpisodes: true,
+      minimumSignalRatio: 2,
+      consistentSlope: true,
+      minimumDelta: 0.1,
+      meaningfulDelta: true
+    })
   })
 
   it('does not claim a direction for sparse or noisy fits', () => {
@@ -117,8 +139,36 @@ describe('data/stats', () => {
     )
 
     expect(sparse.direction).toBe('unclear')
+    expect(sparse.trendCriteria.enoughRatedEpisodes).toBe(false)
     expect(flat.direction).toBe('unclear')
+    expect(flat.trendCriteria.meaningfulDelta).toBe(false)
     expect(noisy.direction).toBe('unclear')
+    expect(noisy.trendCriteria.consistentSlope).toBe(false)
+  })
+
+  it('keeps top and bottom rankings disjoint for short seasons', () => {
+    const summary = summarizeTrendScope([
+      createTrendPoint('one', 1, 7),
+      createTrendPoint('two', 2, 8),
+      createTrendPoint('three', 3, 9)
+    ])
+
+    expect(summary.top.map((extreme) => extreme.point.id)).toEqual(['three'])
+    expect(summary.bottom.map((extreme) => extreme.point.id)).toEqual(['one'])
+  })
+
+  it('keeps tied ratings out of both ranking columns', () => {
+    const summary = summarizeTrendScope(
+      [8, 8, 8, 8, 7, 9].map((rating, index) =>
+        createTrendPoint(String(index + 1), index + 1, rating)
+      )
+    )
+    const topIds = summary.top.map((extreme) => extreme.point.id)
+    const bottomIds = summary.bottom.map((extreme) => extreme.point.id)
+
+    expect(topIds).toEqual(['6', '1', '2'])
+    expect(bottomIds).toEqual(['5', '4', '3'])
+    expect(topIds.some((id) => bottomIds.includes(id))).toBe(false)
   })
 
   it('selects IMDb when it covers at least 60% of rateable episodes', () => {

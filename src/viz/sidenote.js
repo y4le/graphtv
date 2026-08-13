@@ -5,6 +5,8 @@ import {
 import { isTrustedRating, isUsableRating } from '../data/stats.js'
 import { formatCompactNumber } from '../lib/number.js'
 
+let trendInfoSequence = 0
+
 function formatRatingList(point, { loadingDetails = false } = {}) {
   return orderVisibleRatings(point.ratings.filter(isTrustedRating))
     .map((rating, index) => {
@@ -73,7 +75,19 @@ export function createSidenote({
   const navigatorMeta = root.querySelector('.sidenote-nav-meta')
   const previousButton = root.querySelector('[data-sidenote-nav="previous"]')
   const nextButton = root.querySelector('[data-sidenote-nav="next"]')
+  const trendInfoId = `trend-info-tooltip-${++trendInfoSequence}`
   let navigatorKey = null
+
+  function syncTrendInfo(control) {
+    const button = control.querySelector('[data-trend-info]')
+    const expanded =
+      control.dataset.dismissed !== 'true' &&
+      ['hovered', 'focused', 'pinned'].some(
+        (state) => control.dataset[state] === 'true'
+      )
+    button.setAttribute('aria-expanded', String(expanded))
+    button.nextElementSibling.hidden = !expanded
+  }
 
   function setMarkup(markup) {
     contentRoot.innerHTML = markup
@@ -170,7 +184,9 @@ export function createSidenote({
           : 'No clear trend'
     const provenanceNotes = [
       fallbackCopy,
-      summary.n < 5 ? 'too few rated episodes for a trend' : null
+      !summary.trendCriteria.enoughRatedEpisodes
+        ? 'too few rated episodes for a trend'
+        : null
     ].filter(Boolean)
     const provenance = `${summary.n} of ${summary.totalEpisodes} rated · ${escapeHtml(getRatingSourceLabel(summary.source))}${
       provenanceNotes.length > 0
@@ -193,13 +209,18 @@ export function createSidenote({
           </div>
           <div class="trend-summary-metric">
             <dt>Trend</dt>
-            <dd>${trendCopy}</dd>
+            <dd class="trend-summary-trend-value">
+              <span>${trendCopy}</span>
+              <div class="trend-info-control">
+                <button type="button" class="trend-info-button" data-trend-info aria-label="Explain trend classification" aria-expanded="false" aria-controls="${trendInfoId}" aria-describedby="${trendInfoId}">ⓘ</button>
+                ${renderTrendInfo(summary, trendInfoId)}
+              </div>
+            </dd>
           </div>
         </dl>
-        <div class="trend-summary-extremes" aria-label="Highest and lowest rated episodes">
-          ${renderExtreme('High', summary.high)}
-          <span aria-hidden="true">·</span>
-          ${renderExtreme('Low', summary.low)}
+        <div class="trend-summary-rankings" aria-label="Highest and lowest rated episodes">
+          ${renderRanking('Top Rated', summary.top)}
+          ${renderRanking('Bottom Rated', summary.bottom)}
         </div>
         <p class="trend-summary-provenance">${provenance}</p>
       </div>
@@ -221,7 +242,91 @@ export function createSidenote({
     if (trendPointButton) {
       onInteract?.()
       onSelectPoint?.(trendPointButton.dataset.trendPointId)
+      return
     }
+
+    const trendInfoButton = event.target.closest?.('[data-trend-info]')
+    if (trendInfoButton) {
+      onInteract?.()
+      const control = trendInfoButton.closest('.trend-info-control')
+      if (control.dataset.pinned === 'true') {
+        control.dataset.pinned = 'false'
+        control.dataset.dismissed = 'true'
+      } else {
+        control.dataset.pinned = 'true'
+        control.dataset.dismissed = 'false'
+      }
+      syncTrendInfo(control)
+    }
+  })
+
+  root.addEventListener('mouseover', (event) => {
+    const control = event.target.closest?.('.trend-info-control')
+    if (!control || control.contains(event.relatedTarget)) {
+      return
+    }
+
+    control.dataset.hovered = 'true'
+    control.dataset.dismissed = 'false'
+    syncTrendInfo(control)
+  })
+
+  root.addEventListener('mouseout', (event) => {
+    const control = event.target.closest?.('.trend-info-control')
+    if (!control || control.contains(event.relatedTarget)) {
+      return
+    }
+
+    control.dataset.hovered = 'false'
+    syncTrendInfo(control)
+  })
+
+  root.addEventListener('focusin', (event) => {
+    const control = event.target.closest?.('.trend-info-control')
+    if (!control) {
+      return
+    }
+
+    control.dataset.focused = 'true'
+    control.dataset.dismissed = 'false'
+    syncTrendInfo(control)
+  })
+
+  root.addEventListener('focusout', (event) => {
+    const control = event.target.closest?.('.trend-info-control')
+    if (!control || control.contains(event.relatedTarget)) {
+      return
+    }
+
+    control.dataset.focused = 'false'
+    syncTrendInfo(control)
+  })
+
+  root.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') {
+      return
+    }
+
+    const control = Array.from(
+      root.querySelectorAll('.trend-info-control')
+    ).find(
+      (candidate) =>
+        candidate.dataset.pinned === 'true' ||
+        (candidate.contains(document.activeElement) &&
+          candidate
+            .querySelector('[data-trend-info]')
+            .getAttribute('aria-expanded') === 'true')
+    )
+    if (!control) {
+      return
+    }
+
+    event.stopPropagation()
+    control.dataset.hovered = 'false'
+    control.dataset.focused = 'false'
+    control.dataset.pinned = 'false'
+    control.dataset.dismissed = 'true'
+    syncTrendInfo(control)
   })
 
   renderRestingState()
@@ -239,12 +344,73 @@ function updateNavigatorButton(button, available, label) {
   button.setAttribute('aria-label', label)
 }
 
-function renderExtreme(label, extreme) {
+function renderRanking(label, extremes) {
+  return `
+    <section class="trend-summary-ranking">
+      <h2 class="trend-summary-ranking-title">${label}</h2>
+      <ol class="trend-summary-ranking-list">
+        ${extremes.map((extreme, index) => renderExtreme(extreme, index)).join('')}
+      </ol>
+    </section>
+  `
+}
+
+function renderTrendInfo(summary, id) {
+  const criteria = summary.trendCriteria
+  const checks = [
+    {
+      passed: criteria.enoughRatedEpisodes,
+      label: `Enough data: ${criteria.ratedEpisodes} rated, need ${criteria.minimumRatedEpisodes}`
+    },
+    {
+      passed: criteria.consistentSlope,
+      label: `Consistent slope: ${formatThresholdValue(criteria.signalRatio, criteria.minimumSignalRatio, '×')}, need ${criteria.minimumSignalRatio.toFixed(1)}×`
+    },
+    {
+      passed: criteria.meaningfulDelta,
+      label: `Meaningful change: ${formatThresholdValue(criteria.absoluteDelta, criteria.minimumDelta, '')} points, need ${criteria.minimumDelta.toFixed(1)} points`
+    }
+  ]
+
+  return `
+    <aside class="trend-info-tooltip" id="${id}" role="tooltip" hidden>
+      <strong>Why this trend?</strong>
+      <p>A clear trend must pass every check:</p>
+      <ul>
+        ${checks.map(renderTrendCheck).join('')}
+      </ul>
+    </aside>
+  `
+}
+
+function renderTrendCheck(check) {
+  const status = check.passed ? 'Pass' : 'Does not pass'
+  return `<li class="trend-info-check" data-passed="${check.passed}"><span class="trend-info-check-mark" aria-hidden="true">${check.passed ? '✓' : '×'}</span><span><span class="visually-hidden">${status}: </span>${escapeHtml(check.label)}</span></li>`
+}
+
+function formatThresholdValue(value, threshold, suffix) {
+  if (!Number.isFinite(value)) {
+    return `∞${suffix}`
+  }
+
+  for (let precision = 1; precision <= 6; precision += 1) {
+    const observed = value.toFixed(precision)
+    if (observed !== threshold.toFixed(precision)) {
+      return `${observed}${suffix}`
+    }
+  }
+
+  return value < threshold
+    ? `< ${threshold.toFixed(1)}${suffix}`
+    : `${value.toFixed(1)}${suffix}`
+}
+
+function renderExtreme(extreme, index) {
   const point = extreme.point
   const episodeNumber = point.episode ?? point.number
   const episodeLabel = `S${String(point.season).padStart(2, '0')}E${String(episodeNumber).padStart(2, '0')}`
 
-  return `<button type="button" class="trend-summary-extreme" data-trend-point-id="${escapeHtml(point.id)}"><span>${label}</span> ${episodeLabel} ${extreme.value.toFixed(1)}</button>`
+  return `<li><button type="button" class="trend-summary-extreme" data-trend-point-id="${escapeHtml(point.id)}"><span class="trend-summary-rank" aria-hidden="true">${index + 1}.</span><span>${episodeLabel}</span><span class="trend-summary-episode-title">${escapeHtml(point.title ?? 'Untitled episode')}</span><span>${extreme.value.toFixed(1)}</span></button></li>`
 }
 
 function formatSignedDelta(value) {

@@ -1038,7 +1038,7 @@ button {
 
 .trend-summary-metric dt,
 .trend-summary-metric dd,
-.trend-summary-extremes,
+.trend-summary-rankings,
 .trend-summary-provenance {
   font-family: var(--font-sans);
   font-size: var(--type-size-meta);
@@ -1050,23 +1050,146 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
-.trend-summary-extremes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem 0.5rem;
-  align-items: baseline;
-  margin-top: 0.55rem;
+.trend-summary-trend-value {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.trend-info-control {
+  position: relative;
+  display: inline-flex;
+}
+
+.trend-info-button {
+  display: inline-grid;
+  width: 1.35rem;
+  min-height: 1.35rem;
+  padding: 0;
+  border: 0;
+  place-items: center;
+  background: transparent;
+  color: var(--textSecondary);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.trend-info-button:hover,
+.trend-info-button:focus-visible,
+.trend-info-button[aria-expanded='true'] {
+  color: var(--spotColor);
+}
+
+.trend-info-button:focus-visible {
+  outline: 2px solid var(--spotColor);
+  outline-offset: 2px;
+}
+
+.trend-info-tooltip {
+  position: absolute;
+  z-index: 4;
+  top: calc(100% + 0.45rem);
+  left: 50%;
+  width: min(20rem, calc(100vw - 2rem));
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--lineStrong);
+  border-radius: 0.3rem;
+  background: var(--canvas);
+  box-shadow: 0 0.4rem 1.2rem rgba(0, 0, 0, 0.12);
+  color: var(--textPrimary);
+  font-family: var(--font-sans);
+  font-size: var(--type-size-utility);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  transform: translateX(-50%);
+}
+
+.trend-info-tooltip[hidden] {
+  display: none;
+}
+
+.trend-info-tooltip p {
+  margin: 0.2rem 0 0.45rem;
+  color: var(--textSecondary);
+}
+
+.trend-info-tooltip ul {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trend-info-check {
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  gap: 0.55rem;
+}
+
+.trend-info-check[data-passed='true'] > :first-child {
+  color: var(--spotColor);
+}
+
+.trend-info-check[data-passed='false'] > :first-child {
+  color: var(--textMuted);
+}
+
+.trend-summary-rankings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 0.7rem;
+}
+
+.trend-summary-ranking {
+  min-width: 0;
+}
+
+.trend-summary-ranking-title {
+  margin: 0 0 0.25rem;
+  color: var(--textSecondary);
+  font: inherit;
+  font-weight: 700;
+}
+
+.trend-summary-ranking-list {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .trend-summary-extreme {
-  padding: 0;
+  display: grid;
+  grid-template-columns: 1.25rem max-content minmax(0, 1fr) max-content;
+  gap: 0.3rem;
+  width: 100%;
+  min-height: 1.75rem;
+  padding: 0.15rem 0;
   border: 0;
   border-bottom: 1px solid var(--lineStrong);
+  align-items: center;
   background: transparent;
   color: var(--textPrimary);
   font: inherit;
   font-variant-numeric: tabular-nums;
+  text-align: left;
   cursor: pointer;
+}
+
+.trend-summary-rank {
+  color: var(--textSecondary);
+}
+
+.trend-summary-episode-title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--textSecondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .trend-summary-extreme:hover,
@@ -1095,10 +1218,15 @@ button {
     width: 2.75rem;
     min-height: 2.75rem;
   }
-}
 
-.trend-label {
-  user-select: none;
+  .trend-summary-extreme {
+    min-height: 2.75rem;
+  }
+
+  .trend-info-button {
+    width: 2.75rem;
+    min-height: 2.75rem;
+  }
 }
 
 .season-label-layer,
