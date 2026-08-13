@@ -212,7 +212,7 @@ function renderShowCard(show, buildHref) {
         class="collection-card-poster"
         src="${escapeHtml(show.poster)}"
         ${sources ? `srcset="${escapeHtml(sources)}"` : ''}
-        sizes="(max-width: 560px) 7rem, (max-width: 860px) 20vw, 10.5rem"
+        sizes="(min-width: 861px) 7rem, (max-height: 800px) and (max-width: 860px) 7rem, (max-width: 560px) 7rem, 20vw"
         alt=""
         loading="lazy"
         decoding="async"

@@ -124,6 +124,21 @@ describe('renderSearchPage', () => {
     }
   }
 
+  it('keeps the masthead outside the centered landing content', () => {
+    const { container, page } = renderPage()
+    const shell = container.querySelector('.document-shell-search')
+    const masthead = container.querySelector('.masthead')
+    const landingContent = container.querySelector('.search-landing-content')
+
+    expect(masthead.parentElement).toBe(shell)
+    expect(landingContent.parentElement).toBe(shell)
+    expect(landingContent.contains(masthead)).toBe(false)
+    expect(landingContent.querySelector('.search-document')).not.toBeNull()
+    expect(landingContent.querySelector('.collection-rails')).not.toBeNull()
+
+    page.destroy()
+  })
+
   it('wires the rotating placeholder to a stable accessible name and lifecycle', () => {
     vi.useFakeTimers()
     const { container, input, page } = renderPage()

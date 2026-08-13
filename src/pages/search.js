@@ -70,45 +70,47 @@ export function renderSearchPage(container) {
   container.innerHTML = `
     <main class="document-shell document-shell-search">
       ${renderSearchMasthead()}
-      <section class="search-document ${query ? '' : 'search-document-empty'}">
-        <form class="search-form" role="search" aria-label="Search shows">
-          <div class="search-row">
-            <div class="search-field">
-              <input
-                id="search-query"
-                name="q"
-                type="search"
-                value="${escapeHtml(query)}"
-                aria-label="Show title"
-                aria-controls="search-results"
-                placeholder="The Americans"
-                autocomplete="off"
-                autocorrect="off"
-                autocapitalize="off"
-                spellcheck="false"
-                enterkeyhint="search"
-              />
-              <button
-                type="button"
-                class="search-clear"
-                aria-label="Clear search and results"
-                ${query ? '' : 'hidden'}
-              ><span aria-hidden="true">×</span></button>
+      <div class="search-landing-content">
+        <section class="search-document ${query ? '' : 'search-document-empty'}">
+          <form class="search-form" role="search" aria-label="Search shows">
+            <div class="search-row">
+              <div class="search-field">
+                <input
+                  id="search-query"
+                  name="q"
+                  type="search"
+                  value="${escapeHtml(query)}"
+                  aria-label="Show title"
+                  aria-controls="search-results"
+                  placeholder="The Americans"
+                  autocomplete="off"
+                  autocorrect="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                  enterkeyhint="search"
+                />
+                <button
+                  type="button"
+                  class="search-clear"
+                  aria-label="Clear search and results"
+                  ${query ? '' : 'hidden'}
+                ><span aria-hidden="true">×</span></button>
+              </div>
+              <button type="submit" class="search-submit">Search</button>
             </div>
-            <button type="submit" class="search-submit">Search</button>
-          </div>
-        </form>
-        <section class="search-results-section" aria-busy="${query ? 'true' : 'false'}">
-          <div class="results-status" aria-live="polite" aria-atomic="true">${query ? renderLoading('Searching…', { announce: false }) : ''}</div>
-          <ol
-            id="search-results"
-            class="search-results-list"
-            data-focus-zone="search-results"
-            aria-label="Search results"
-          ></ol>
+          </form>
+          <section class="search-results-section" aria-busy="${query ? 'true' : 'false'}">
+            <div class="results-status" aria-live="polite" aria-atomic="true">${query ? renderLoading('Searching…', { announce: false }) : ''}</div>
+            <ol
+              id="search-results"
+              class="search-results-list"
+              data-focus-zone="search-results"
+              aria-label="Search results"
+            ></ol>
+          </section>
         </section>
-      </section>
-      ${collectionsEnabled ? renderCollectionRailsShell(SEARCH_PAGE_COLLECTIONS) : ''}
+        ${collectionsEnabled ? renderCollectionRailsShell(SEARCH_PAGE_COLLECTIONS) : ''}
+      </div>
     </main>
   `
 
