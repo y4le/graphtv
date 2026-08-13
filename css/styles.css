@@ -159,13 +159,11 @@ button {
 }
 
 .masthead-actions {
-  display: none;
+  display: flex;
   gap: 0.5rem;
   align-items: center;
-}
-
-.results-masthead .masthead-actions {
-  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
 }
 
 .masthead-action {
@@ -176,6 +174,7 @@ button {
   font-family: var(--font-sans);
   font-size: var(--type-size-utility);
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 .document-kicker,
@@ -186,13 +185,6 @@ button {
   font-size: 0.79rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-}
-
-.masthead-hint {
-  margin: 0;
-  color: var(--textSecondary);
-  font-family: var(--font-sans);
-  font-size: var(--type-size-utility);
 }
 
 .keycap {
@@ -1720,10 +1712,6 @@ button {
     font-size: max(var(--type-size-utility), 12px);
   }
 
-  .masthead-hint {
-    display: none;
-  }
-
   .back-link {
     margin-bottom: 0;
   }
@@ -1810,6 +1798,20 @@ button {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.65rem 0.75rem;
     align-items: start;
+  }
+}
+
+@media (max-width: 380px) {
+  .results-masthead {
+    gap: 0.5rem;
+  }
+
+  .results-masthead .masthead-actions {
+    gap: 0.3rem;
+  }
+
+  .results-masthead .masthead-action {
+    padding-inline: 0.4rem;
   }
 }
 

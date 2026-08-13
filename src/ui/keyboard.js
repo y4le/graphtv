@@ -23,7 +23,7 @@ export function createKeyboardController({ page, overlayController }) {
 
     if (overlayController.isOpen()) {
       if (
-        event.key === 'v' &&
+        event.key === 'o' &&
         overlayController.getActiveId() === 'view-options'
       ) {
         event.preventDefault()
@@ -140,7 +140,7 @@ export function createKeyboardController({ page, overlayController }) {
       return true
     }
 
-    if (key === 'v') {
+    if (key === 'o') {
       event.preventDefault()
       runUiAction('view-options')
       return true

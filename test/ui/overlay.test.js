@@ -145,7 +145,7 @@ describe('keyboard help overlay', () => {
       document.querySelector('.help-key[aria-label="Left arrow"]').textContent
     ).toBe('←')
     expect(keycapLabels).toEqual(
-      expect.arrayContaining(['f', 'r', '-', '=', '+', 't', 'T', 'Escape'])
+      expect.arrayContaining(['o', 'f', 'r', '-', '=', '+', 't', 'T', 'Escape'])
     )
     expect(keycapLabels).not.toEqual(
       expect.arrayContaining(['b', 'w', '0', '$', 'd'])

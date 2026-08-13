@@ -80,29 +80,23 @@ describe('renderSearchMasthead', () => {
     expect(masthead.querySelector('.masthead-meta .publisher-brand')).toBeNull()
   })
 
-  it('renders help and view shortcuts as actions while leaving search as a key hint', () => {
+  it('renders options and help as ordered shortcut buttons without a prose hint', () => {
     const container = document.createElement('div')
     container.innerHTML = renderSearchMasthead()
 
     const actions = Array.from(
-      container.querySelectorAll('.masthead-hint .shortcut-action')
+      container.querySelectorAll('.masthead-actions .masthead-action')
     )
 
     expect(actions.map((action) => action.dataset.uiAction)).toEqual([
-      'help',
-      'view-options'
+      'view-options',
+      'help'
     ])
-    expect(actions.every((action) => action.classList.contains('keycap'))).toBe(
-      true
-    )
-    expect(
-      container.querySelector('.masthead-hint kbd.keycap').textContent
-    ).toBe('/')
-    expect(
-      Array.from(
-        container.querySelectorAll('.masthead-actions .masthead-action')
-      ).map((action) => action.dataset.uiAction)
-    ).toEqual(['help', 'view-options'])
+    expect(actions.map((action) => action.textContent.trim())).toEqual([
+      'Options (o)',
+      'Help (?)'
+    ])
+    expect(container.querySelector('.masthead-hint')).toBeNull()
   })
 })
 

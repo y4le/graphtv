@@ -16,7 +16,7 @@ describe('createKeyboardController', () => {
   it('gives shortcut actions the same effects as their matching keys', () => {
     document.body.innerHTML = `
       <button type="button" data-ui-action="help">?</button>
-      <button type="button" data-ui-action="view-options">v</button>
+      <button type="button" data-ui-action="view-options">o</button>
       <button type="button" data-ui-action="return-search">q</button>
     `
 
@@ -48,6 +48,8 @@ describe('createKeyboardController', () => {
       expect.objectContaining({ id: 'view-options' })
     )
     pressKey('v')
+    expect(overlayController.open).toHaveBeenCalledTimes(3)
+    pressKey('o')
     expect(overlayController.open).toHaveBeenLastCalledWith(
       expect.objectContaining({ id: 'view-options' })
     )
@@ -160,14 +162,14 @@ describe('createKeyboardController', () => {
     expect(goBack).toHaveBeenCalledOnce()
   })
 
-  it('closes view options with v without reopening it as the event bubbles', () => {
+  it('closes view options with o without reopening it as the event bubbles', () => {
     const overlayController = createOverlayController()
     keyboardController = createKeyboardController({
       page: { kind: 'search' },
       overlayController
     })
 
-    pressKey('v')
+    pressKey('o')
     expect(overlayController.getActiveId()).toBe('view-options')
 
     const initialYAxis = getUiSettings().absoluteYAxis
@@ -183,7 +185,7 @@ describe('createKeyboardController', () => {
 
     document.activeElement.dispatchEvent(
       new window.KeyboardEvent('keydown', {
-        key: 'v',
+        key: 'o',
         bubbles: true,
         cancelable: true
       })

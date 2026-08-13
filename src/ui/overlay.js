@@ -89,7 +89,7 @@ export function createOverlayController() {
 
       if (
         (config.id === 'help' && (event.key === '?' || event.key === 'F1')) ||
-        (config.id === 'view-options' && event.key === 'v') ||
+        (config.id === 'view-options' && event.key === 'o') ||
         (config.id === 'debug' && event.key === 'D')
       ) {
         event.preventDefault()
@@ -681,7 +681,7 @@ function resultsHelpSections() {
       title: 'Global',
       items: [
         { keys: ['/', 'q'], action: 'Return to search' },
-        { keys: ['v'], action: 'Open view options' },
+        { keys: ['o'], action: 'Open view options' },
         { keys: ['?', 'F1'], action: 'Open help' },
         { keys: ['D'], action: 'Toggle debug overlay' }
       ]
@@ -726,7 +726,7 @@ function searchHelpSections() {
       title: 'Global',
       items: [
         { keys: ['/'], action: 'Focus search input' },
-        { keys: ['v'], action: 'Open view options' },
+        { keys: ['o'], action: 'Open view options' },
         { keys: ['?', 'F1'], action: 'Open help' },
         { keys: ['D'], action: 'Toggle debug overlay' }
       ]

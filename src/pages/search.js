@@ -30,14 +30,9 @@ export function renderSearchMasthead() {
       ${renderPublisherBrand()}
       <div class="masthead-meta">
         <div class="masthead-actions" aria-label="Page actions">
-          <button type="button" class="masthead-action" data-ui-action="help">Help</button>
-          <button type="button" class="masthead-action" data-ui-action="view-options">Options</button>
+          <button type="button" class="masthead-action" data-ui-action="view-options">Options (o)</button>
+          <button type="button" class="masthead-action" data-ui-action="help">Help (?)</button>
         </div>
-        <p class="masthead-hint">
-          Press <kbd class="keycap">/</kbd> to search,
-          <button type="button" class="shortcut-action keycap" data-ui-action="help" aria-label="? shortcut: Open help">?</button> for help,
-          <button type="button" class="shortcut-action keycap" data-ui-action="view-options" aria-label="v shortcut: Open view options">v</button> for view options.
-        </p>
       </div>
     </header>
   `

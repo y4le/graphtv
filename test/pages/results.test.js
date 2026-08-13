@@ -38,33 +38,22 @@ describe('renderResultsMasthead', () => {
     }
   )
 
-  it('renders help, view, and return shortcuts as actions on the interactive page', () => {
+  it('renders the results actions in shortcut order without a prose hint', () => {
     const container = document.createElement('div')
     container.innerHTML = renderResultsMasthead({ interactive: true })
 
-    const actions = Array.from(
-      container.querySelectorAll('.masthead-hint .shortcut-action')
-    )
-
-    expect(actions.map((action) => action.dataset.uiAction)).toEqual([
-      'help',
-      'view-options',
-      'return-search'
-    ])
-    expect(actions.every((action) => action.classList.contains('keycap'))).toBe(
-      true
-    )
     const mastheadActions = Array.from(
       container.querySelectorAll('.masthead-actions .masthead-action')
     )
     expect(mastheadActions.map((action) => action.textContent.trim())).toEqual([
-      'Back',
-      'Help',
-      'Options'
+      'Options (o)',
+      'Help (?)',
+      'Back (q)'
     ])
     expect(
-      mastheadActions.slice(1).map((action) => action.dataset.uiAction)
-    ).toEqual(['help', 'view-options'])
+      mastheadActions.slice(0, 2).map((action) => action.dataset.uiAction)
+    ).toEqual(['view-options', 'help'])
+    expect(container.querySelector('.masthead-hint')).toBeNull()
     expect(
       container.querySelector('.back-link').parentElement.classList
     ).toContain('masthead-actions')
@@ -79,8 +68,10 @@ describe('renderResultsMasthead', () => {
     )
 
     expect(actions).toHaveLength(1)
-    expect(actions[0].textContent.trim()).toBe('Back')
-    expect(actions[0].getAttribute('aria-label')).toBe('Back to search')
+    expect(actions[0].textContent.trim()).toBe('Back (q)')
+    expect(actions[0].getAttribute('aria-label')).toBe(
+      'Back to search (q shortcut)'
+    )
   })
 
   it('links back to a blank search page without preserving any query parameters', () => {
