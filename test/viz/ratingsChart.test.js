@@ -61,6 +61,250 @@ describe('createChart', () => {
     expect(sparklineWidth).toBe(mainPlotWidth)
   })
 
+  it('opens rating details with the highest-priority enabled selection', () => {
+    updateUiSettings({ fullShowTrendline: true })
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+
+    chart = createChart(container, createSeasons(), { detailRoot })
+
+    expect(chart.getDebugState()).toMatchObject({
+      selectedTrendId: 'series',
+      selectedPointId: null,
+      hasUserInteracted: false
+    })
+    expect(detailRoot.querySelector('.sidenote-nav-label').textContent).toBe(
+      'Browse the full series'
+    )
+    expect(detailRoot.textContent).toContain('Full series')
+    expect(container.querySelector('.chart-selection-status').textContent).toBe(
+      ''
+    )
+  })
+
+  it('falls back to and enriches the first rated episode when trendlines are unavailable', async () => {
+    vi.useFakeTimers()
+    updateUiSettings({
+      seasonTrendlines: false,
+      fullShowTrendline: false
+    })
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    const loadEpisodeDetails = vi.fn(async (point) => point)
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+    const seasons = createSeasons()
+    seasons[0].episodes[0].ratings[0].rating = null
+
+    chart = createChart(container, seasons, {
+      detailRoot,
+      loadEpisodeDetails
+    })
+
+    expect(chart.getDebugState()).toMatchObject({
+      selectedTrendId: null,
+      selectedPointId: 'episode-2',
+      hasUserInteracted: false
+    })
+    expect(detailRoot.querySelector('.sidenote-nav-label').textContent).toBe(
+      'S01E02'
+    )
+    expect(detailRoot.textContent).toContain('Episode 2')
+
+    await vi.advanceTimersByTimeAsync(250)
+    expect(loadEpisodeDetails).toHaveBeenCalledTimes(1)
+    expect(loadEpisodeDetails.mock.calls[0][0].id).toBe('episode-2')
+
+    chart.clearSelection()
+    expect(detailRoot.textContent).toContain(
+      'Browse the rated episodes with the arrow buttons.'
+    )
+  })
+
+  it('navigates rated episodes without wrapping while hover only previews detail', () => {
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+    const seasons = createSeasons()
+    seasons[0].episodes = seasons[0].episodes.slice(0, 4)
+    seasons[0].episodes[1].ratings[0].rating = null
+
+    chart = createChart(container, seasons, { detailRoot })
+    const previous = detailRoot.querySelector('[data-sidenote-nav="previous"]')
+    const next = detailRoot.querySelector('[data-sidenote-nav="next"]')
+
+    expect(chart.getDebugState().selectedTrendId).toBe('season:1')
+    expect(detailRoot.querySelector('.sidenote-nav-label').textContent).toBe(
+      'Browse Season 1'
+    )
+    expect(previous.getAttribute('aria-disabled')).toBe('true')
+    expect(next.getAttribute('aria-label')).toBe('First episode of Season 1')
+
+    next.focus()
+    next.click()
+    expect(chart.getDebugState().selectedPointId).toBe('episode-1')
+    expect(document.activeElement).toBe(next)
+
+    const thirdPoint = Array.from(
+      container.querySelectorAll('.episode-point')
+    ).find((point) => point.__data__.id === 'episode-3')
+    thirdPoint.dispatchEvent(new MouseEvent('mouseenter'))
+    expect(detailRoot.textContent).toContain('Episode 3')
+    expect(detailRoot.querySelector('.sidenote-nav-label').textContent).toBe(
+      'S01E01'
+    )
+    thirdPoint.dispatchEvent(new MouseEvent('mouseleave'))
+
+    next.click()
+    expect(chart.getDebugState().selectedPointId).toBe('episode-3')
+    expect(detailRoot.querySelector('.sidenote-nav-meta').textContent).toBe(
+      '2 of 3 rated episodes'
+    )
+    previous.click()
+    expect(chart.getDebugState().selectedPointId).toBe('episode-1')
+    next.click()
+    next.click()
+    expect(chart.getDebugState().selectedPointId).toBe('episode-4')
+    expect(next.getAttribute('aria-disabled')).toBe('true')
+    next.click()
+    expect(chart.getDebugState().selectedPointId).toBe('episode-4')
+    expect(document.activeElement).toBe(next)
+  })
+
+  it('keeps the detail region open after clearing and enters browsing forward', () => {
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+
+    chart = createChart(container, createSeasons(), { detailRoot })
+    chart.clearSelection()
+
+    expect(detailRoot.querySelector('.sidenote-nav-label').textContent).toBe(
+      'Browse episodes'
+    )
+    expect(detailRoot.textContent).toContain(
+      'Choose a trendline or browse the rated episodes.'
+    )
+    detailRoot.querySelector('[data-sidenote-nav="next"]').click()
+    expect(chart.getDebugState().selectedPointId).toBe('episode-1')
+  })
+
+  it('upgrades the untouched fallback selection when richer data arrives', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+    const initialSeasons = createSeasons()
+    initialSeasons[0].episodes = initialSeasons[0].episodes.slice(0, 2)
+
+    chart = createChart(container, initialSeasons)
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId: 'episode-1',
+      selectedTrendId: null,
+      hasUserInteracted: false
+    })
+
+    const hoveredPoint = Array.from(
+      container.querySelectorAll('.episode-point')
+    ).find((point) => point.__data__.id === 'episode-2')
+    hoveredPoint.dispatchEvent(new MouseEvent('mouseenter'))
+    expect(chart.getDebugState().hasUserInteracted).toBe(false)
+
+    const updatedSeasons = createSeasons()
+    updatedSeasons[0].episodes = updatedSeasons[0].episodes.slice(0, 3)
+    chart.updateSeasons(updatedSeasons)
+
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId: null,
+      selectedTrendId: 'season:1',
+      hasUserInteracted: false
+    })
+    hoveredPoint.dispatchEvent(new MouseEvent('mouseleave'))
+    expect(container.textContent).toContain('Mean')
+    expect(container.querySelector('.chart-selection-status').textContent).toBe(
+      ''
+    )
+  })
+
+  it('moves and enriches a vanished user-selected episode at the nearest rated point', async () => {
+    vi.useFakeTimers()
+    const container = document.createElement('div')
+    const loadEpisodeDetails = vi.fn(async (point) => point)
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+    const initialSeasons = createSeasons()
+    initialSeasons[0].episodes = initialSeasons[0].episodes.slice(0, 5)
+
+    chart = createChart(container, initialSeasons, { loadEpisodeDetails })
+    chart.moveEpisode(1)
+    chart.moveEpisode(2)
+    expect(chart.getDebugState().selectedPointId).toBe('episode-3')
+    await vi.advanceTimersByTimeAsync(250)
+    expect(loadEpisodeDetails).toHaveBeenCalledTimes(1)
+
+    const updatedSeasons = createSeasons()
+    updatedSeasons[0].episodes = updatedSeasons[0].episodes
+      .slice(0, 5)
+      .filter((episode) => episode.id !== 'episode-3')
+    chart.updateSeasons(updatedSeasons)
+
+    expect(chart.getDebugState().selectedPointId).toBe('episode-4')
+    expect(chart.getDebugState().selectedTrendId).toBeNull()
+    await vi.advanceTimersByTimeAsync(250)
+    expect(loadEpisodeDetails).toHaveBeenCalledTimes(2)
+    expect(loadEpisodeDetails.mock.calls[1][0].id).toBe('episode-4')
+  })
+
+  it('shows a stable empty detail state when no episodes are rated', () => {
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+    const seasons = createSeasons()
+    seasons[0].episodes = seasons[0].episodes.slice(0, 2)
+    seasons[0].episodes.forEach((episode) => {
+      episode.ratings[0].rating = null
+    })
+
+    chart = createChart(container, seasons, { detailRoot })
+
+    expect(detailRoot.querySelector('.sidenote-nav-label').textContent).toBe(
+      'No rated episodes'
+    )
+    expect(detailRoot.textContent).toContain(
+      'No rated episode details are available.'
+    )
+    expect(
+      Array.from(detailRoot.querySelectorAll('.sidenote-nav-button')).every(
+        (button) => button.getAttribute('aria-disabled') === 'true'
+      )
+    ).toBe(true)
+  })
+
   it('rerenders the graph and sparkline on an absolute 0–10 y-axis', () => {
     const container = document.createElement('div')
     Object.defineProperty(container, 'clientWidth', {
@@ -105,7 +349,7 @@ describe('createChart', () => {
       expect.arrayContaining(['0.0', '10.0'])
     )
 
-    chart.moveEpisode(0)
+    chart.moveEpisode(1)
 
     expect(container.querySelectorAll('.crosshair')).toHaveLength(2)
     expect(
@@ -187,7 +431,7 @@ describe('createChart', () => {
     )
     expect(restingRadius).toBe(5)
 
-    chart.moveEpisode(0)
+    chart.moveEpisode(1)
     const activeRadius = Number(
       container.querySelector('.episode-point').getAttribute('r')
     )
@@ -210,6 +454,8 @@ describe('createChart', () => {
       container.querySelector('.micro-trendline').getAttribute('d')
     )
 
+    expect(chart.getDebugState().selectedTrendId).toBe('season:1')
+    chart.clearSelection()
     dispatchSurfaceClick(surface, trendPoint)
 
     expect(chart.getDebugState().selectedTrendId).toBe('season:1')
@@ -254,7 +500,9 @@ describe('createChart', () => {
       container.querySelector('.micro-trendline').getAttribute('d')
     )
 
+    chart.clearSelection()
     dispatchSurfaceClick(surface, trendPoint)
+    expect(chart.getDebugState().selectedTrendId).toBe('season:1')
     dispatchSurfaceClick(surface, trendPoint)
 
     expect(chart.getDebugState().selectedTrendId).toBeNull()
@@ -300,8 +548,7 @@ describe('createChart', () => {
       'matchMedia',
       vi.fn((query) => ({
         matches:
-          query === '(max-width: 767px)' ||
-          query === '(pointer: coarse)',
+          query === '(max-width: 767px)' || query === '(pointer: coarse)',
         media: query,
         addEventListener() {},
         removeEventListener() {}
@@ -331,6 +578,7 @@ describe('createChart', () => {
     await vi.advanceTimersByTimeAsync(200)
     expect(chart.getDebugState().hoverTrendId).toBeNull()
 
+    chart.clearSelection()
     dispatchSurfaceClick(surface, coarseTarget)
     expect(chart.getDebugState().selectedTrendId).toBe('season:1')
   })
@@ -344,6 +592,7 @@ describe('createChart', () => {
     document.body.appendChild(container)
 
     chart = createChart(container, createSeasons())
+    chart.clearSelection()
     chart.toggleSeasonTrend()
     expect(chart.getDebugState().selectedTrendId).toBe('season:1')
 
@@ -352,6 +601,7 @@ describe('createChart', () => {
     chart.updateSeasons(nextSeasons)
 
     expect(chart.getDebugState().selectedTrendId).toBeNull()
+    expect(chart.getDebugState().selectedPointId).toBe('episode-1')
   })
 
   it('reveals and selects the full-series trend from its keyboard action', () => {
@@ -406,11 +656,18 @@ describe('createChart', () => {
     document.body.appendChild(container)
 
     chart = createChart(container, createSeasons())
+    chart.clearSelection()
     chart.toggleSeasonTrend()
     await vi.advanceTimersByTimeAsync(120)
 
-    expect(container.querySelector('.chart-selection-status').textContent).toContain(
-      'Season 1 trend selected. Mean'
+    expect(
+      container.querySelector('.chart-selection-status').textContent
+    ).toContain('Season 1 trend selected. Mean')
+
+    chart.moveEpisode(1)
+    await vi.advanceTimersByTimeAsync(120)
+    expect(container.querySelector('.chart-selection-status').textContent).toBe(
+      'S01E01 selected: Episode 1. Rating 6.0.'
     )
 
     expect(chart.clearSelection()).toBe(true)
@@ -421,22 +678,47 @@ describe('createChart', () => {
     expect(chart.clearSelection()).toBe(false)
   })
 
-  it('clears a selected trend when its view setting is disabled', () => {
+  it('announces and enriches a disabled season trend selection in the same season', async () => {
+    vi.useFakeTimers()
     const container = document.createElement('div')
+    const loadEpisodeDetails = vi.fn(async (point) => point)
     Object.defineProperty(container, 'clientWidth', {
       configurable: true,
       value: 600
     })
     document.body.appendChild(container)
 
-    chart = createChart(container, createSeasons())
+    const seasons = createSeasons()
+    seasons[0].episodes = seasons[0].episodes.slice(0, 3)
+    seasons.push({
+      number: 2,
+      episodes: Array.from({ length: 3 }, (_, index) => ({
+        id: `season-2-episode-${index + 1}`,
+        title: `Season 2 Episode ${index + 1}`,
+        season: 2,
+        number: index + 1,
+        ratings: [{ source: 'test', rating: 7 + index / 10 }]
+      }))
+    })
+
+    chart = createChart(container, seasons, { loadEpisodeDetails })
+    chart.moveEpisode(1)
+    chart.moveSeason(1)
     chart.toggleSeasonTrend()
-    expect(chart.getDebugState().selectedTrendId).toBe('season:1')
+    expect(chart.getDebugState().selectedTrendId).toBe('season:2')
 
     updateUiSettings({ seasonTrendlines: false })
 
     expect(chart.getDebugState().selectedTrendId).toBeNull()
+    expect(chart.getDebugState().selectedPointId).toBe('season-2-episode-1')
     expect(container.querySelector('.micro-trendline')).toBeNull()
+
+    await vi.advanceTimersByTimeAsync(250)
+    expect(loadEpisodeDetails).toHaveBeenCalledTimes(1)
+    expect(loadEpisodeDetails.mock.calls[0][0].id).toBe('season-2-episode-1')
+    expect(container.querySelector('.chart-selection-status').textContent).toBe(
+      'S02E01 selected: Season 2 Episode 1. Rating 7.0.'
+    )
   })
 
   it('preserves small horizontal trackpad deltas', () => {
@@ -562,6 +844,7 @@ describe('createChart', () => {
     chart = createChart(container, createSeasons())
     const initialViewport = chart.getDebugState().viewport
     const initialSpan = initialViewport.end - initialViewport.start
+    chart.moveEpisode(1)
     chart.moveEpisode(40)
     const selectedPointId = chart.getDebugState().selectedPointId
 
@@ -601,7 +884,7 @@ describe('createChart', () => {
     document.body.appendChild(container)
 
     chart = createChart(container, createSeasons())
-    chart.moveEpisode(0)
+    chart.moveEpisode(1)
     const body = container.querySelector('.chart-body-shell')
     Object.defineProperty(body, 'clientWidth', {
       configurable: true,
@@ -663,8 +946,7 @@ describe('createChart', () => {
       'matchMedia',
       vi.fn((query) => ({
         matches:
-          query === '(max-width: 767px)' ||
-          query === '(pointer: coarse)',
+          query === '(max-width: 767px)' || query === '(pointer: coarse)',
         media: query,
         addEventListener() {},
         removeEventListener() {}
@@ -743,6 +1025,7 @@ describe('createChart', () => {
 
     chart = createChart(container, createSeasons(), { detailRoot })
     chart.moveEpisode(1)
+    chart.moveEpisode(1)
 
     expect(container.querySelector('.reading-pane-shell')).toBeNull()
     expect(detailRoot.querySelector('.sidenote-card')).not.toBeNull()
@@ -764,7 +1047,7 @@ describe('createChart', () => {
     const initialSeasons = createSeasons()
 
     chart = createChart(container, initialSeasons, { detailRoot })
-    chart.moveEpisode(0)
+    chart.moveEpisode(1)
     const selectedPointId = chart.getDebugState().selectedPointId
     expect(detailRoot.textContent).not.toContain('TMDB')
 
@@ -809,7 +1092,7 @@ describe('createChart', () => {
       detailRoot,
       loadEpisodeDetails
     })
-    chart.moveEpisode(0)
+    chart.moveEpisode(1)
     await vi.advanceTimersByTimeAsync(250)
 
     const updatedSeasons = createSeasons()
@@ -824,6 +1107,61 @@ describe('createChart', () => {
 
     expect(detailRoot.textContent).toContain('TEST 6.0 (123 votes)')
     expect(detailRoot.textContent).toContain('TMDB 9.0 (500 votes)')
+  })
+
+  it('does not starve a pending detail load during repeated renders', async () => {
+    vi.useFakeTimers()
+    const container = document.createElement('div')
+    const loadEpisodeDetails = vi.fn(async (point) => point)
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+    const seasons = createSeasons()
+    seasons[0].episodes = seasons[0].episodes.slice(0, 2)
+
+    chart = createChart(container, seasons, { loadEpisodeDetails })
+    for (let index = 0; index < 4; index += 1) {
+      await vi.advanceTimersByTimeAsync(50)
+      chart.zoomBy(0.99)
+    }
+    await vi.advanceTimersByTimeAsync(50)
+
+    expect(loadEpisodeDetails).toHaveBeenCalledTimes(1)
+    expect(loadEpisodeDetails.mock.calls[0][0].id).toBe('episode-1')
+  })
+
+  it('suppresses failed detail retries until provider data refreshes', async () => {
+    vi.useFakeTimers()
+    const container = document.createElement('div')
+    const loadEpisodeDetails = vi.fn(async () => {
+      throw new Error('detail provider unavailable')
+    })
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+    const seasons = createSeasons()
+    seasons[0].episodes = seasons[0].episodes.slice(0, 2)
+
+    chart = createChart(container, seasons, { loadEpisodeDetails })
+    await vi.advanceTimersByTimeAsync(250)
+    expect(loadEpisodeDetails).toHaveBeenCalledTimes(1)
+
+    for (let index = 0; index < 5; index += 1) {
+      chart.zoomBy(0.99)
+      await vi.advanceTimersByTimeAsync(250)
+    }
+    expect(loadEpisodeDetails).toHaveBeenCalledTimes(1)
+    expect(chart.getDebugState().episodeDetails.errors).toHaveLength(1)
+
+    chart.updateSeasons(seasons)
+    await vi.advanceTimersByTimeAsync(250)
+
+    expect(loadEpisodeDetails).toHaveBeenCalledTimes(2)
+    expect(chart.getDebugState().episodeDetails.errors).toHaveLength(2)
   })
 
   it('debounces selected episode detail loading', async () => {
@@ -844,6 +1182,7 @@ describe('createChart', () => {
       detailRoot,
       loadEpisodeDetails
     })
+    chart.moveEpisode(1)
     chart.moveEpisode(1)
     chart.moveEpisode(1)
 

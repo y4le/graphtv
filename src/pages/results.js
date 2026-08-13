@@ -211,7 +211,7 @@ function renderResultsShell(container, show) {
         </section>
         <section
           class="results-episode"
-          aria-label="Selected episode details"
+          aria-label="Rating details"
         ></section>
         <aside class="results-context"></aside>
       </section>

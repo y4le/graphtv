@@ -45,32 +45,86 @@ function getEpisodeRatingSourceLabel(source) {
   return getRatingSourceLabel(source)
 }
 
-export function createSidenote({ desktopRoot, mobileRoot, onSelectPoint }) {
-  const roots = Array.from(new Set([desktopRoot, mobileRoot].filter(Boolean)))
+export function createSidenote({ root, onInteract, onSelectPoint }) {
+  root.innerHTML = `
+    <div class="sidenote-nav" role="group" aria-label="Episode navigation">
+      <button type="button" class="sidenote-nav-button" data-sidenote-nav="previous" aria-label="Previous episode" aria-disabled="true">
+        <span aria-hidden="true">‹</span>
+      </button>
+      <p class="sidenote-nav-status">
+        <span class="sidenote-nav-label">Browse episodes</span>
+        <span class="sidenote-nav-meta"></span>
+      </p>
+      <button type="button" class="sidenote-nav-button" data-sidenote-nav="next" aria-label="Next episode" aria-disabled="true">
+        <span aria-hidden="true">›</span>
+      </button>
+    </div>
+    <div class="sidenote-content"></div>
+  `
+
+  const contentRoot = root.querySelector('.sidenote-content')
+  const navigatorLabel = root.querySelector('.sidenote-nav-label')
+  const navigatorMeta = root.querySelector('.sidenote-nav-meta')
+  const previousButton = root.querySelector('[data-sidenote-nav="previous"]')
+  const nextButton = root.querySelector('[data-sidenote-nav="next"]')
+  let navigatorKey = null
 
   function setMarkup(markup) {
-    for (const root of roots) {
-      root.innerHTML = markup
-      root.querySelectorAll('[data-trend-point-id]').forEach((button) => {
-        button.addEventListener('click', () => {
-          onSelectPoint?.(button.dataset.trendPointId)
-        })
-      })
-    }
+    contentRoot.innerHTML = markup
   }
 
-  function renderPlaceholder() {
-    setMarkup('')
+  function renderRestingState({
+    empty = false,
+    trendlinesAvailable = false
+  } = {}) {
+    setMarkup(
+      `<p class="sidenote-resting-copy">${
+        empty
+          ? 'No rated episode details are available.'
+          : trendlinesAvailable
+            ? 'Choose a trendline or browse the rated episodes.'
+            : 'Browse the rated episodes with the arrow buttons.'
+      }</p>`
+    )
+  }
+
+  function renderNavigator(viewModel) {
+    const key = [
+      viewModel.mode,
+      viewModel.label,
+      viewModel.meta,
+      viewModel.previousPointId,
+      viewModel.nextPointId,
+      viewModel.nextLabel
+    ].join(':')
+    if (key === navigatorKey) {
+      return
+    }
+    navigatorKey = key
+
+    navigatorLabel.textContent = viewModel.label
+    navigatorMeta.textContent = viewModel.meta ?? ''
+    updateNavigatorButton(
+      previousButton,
+      viewModel.previousPointId,
+      'Previous episode'
+    )
+    updateNavigatorButton(
+      nextButton,
+      viewModel.nextPointId,
+      viewModel.nextLabel ?? 'Next episode'
+    )
   }
 
   function renderPoint(point, { loadingDetails = false } = {}) {
+    const episodeNumber = point?.episode ?? point?.number
     const markup = point
       ? `
           <div class="sidenote-card">
             <div class="sidenote-header">
               <p class="sidenote-caption">
                 <span class="sidenote-title">${escapeHtml(point.title)}</span>
-                <span class="sidenote-kicker">S${String(point.season).padStart(2, '0')}E${String(point.episode).padStart(2, '0')}</span>
+                <span class="sidenote-kicker">S${String(point.season).padStart(2, '0')}E${String(episodeNumber).padStart(2, '0')}</span>
                 <span class="sidenote-meta">${escapeHtml(point.date ?? 'Unknown air date')}</span>
               </p>
             </div>
@@ -89,7 +143,7 @@ export function createSidenote({ desktopRoot, mobileRoot, onSelectPoint }) {
 
   function renderTrendSummary(summary) {
     if (!summary) {
-      renderPlaceholder()
+      renderRestingState()
       return
     }
 
@@ -140,12 +194,42 @@ export function createSidenote({ desktopRoot, mobileRoot, onSelectPoint }) {
     `)
   }
 
-  renderPlaceholder()
+  root.addEventListener('click', (event) => {
+    const navigatorButton = event.target.closest?.('[data-sidenote-nav]')
+    if (navigatorButton) {
+      onInteract?.()
+      if (navigatorButton.getAttribute('aria-disabled') === 'true') {
+        return
+      }
+      onSelectPoint?.(navigatorButton.dataset.pointId)
+      return
+    }
+
+    const trendPointButton = event.target.closest?.('[data-trend-point-id]')
+    if (trendPointButton) {
+      onInteract?.()
+      onSelectPoint?.(trendPointButton.dataset.trendPointId)
+    }
+  })
+
+  renderRestingState()
 
   return {
+    renderNavigator,
     renderPoint,
     renderTrendSummary,
-    renderPlaceholder
+    renderRestingState
+  }
+}
+
+function updateNavigatorButton(button, pointId, label) {
+  const available = Boolean(pointId)
+  button.setAttribute('aria-disabled', String(!available))
+  button.setAttribute('aria-label', label)
+  if (available) {
+    button.dataset.pointId = pointId
+  } else {
+    delete button.dataset.pointId
   }
 }
 

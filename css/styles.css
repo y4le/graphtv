@@ -861,11 +861,7 @@ button {
   padding-top: 0.85rem;
 }
 
-.reading-pane:empty {
-  min-height: 5.5rem;
-}
-
-.chart-shell[data-detail-kind='point'] .reading-pane:not(:empty)::before {
+.chart-shell[data-detail-kind='point'] .reading-pane::before {
   content: '';
   position: absolute;
   left: var(--reading-pane-marker);
@@ -873,6 +869,78 @@ button {
   width: 1px;
   height: 1rem;
   background: var(--lineStrong);
+}
+
+.sidenote-nav {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr) 1.75rem;
+  gap: 0.45rem;
+  align-items: center;
+  margin-bottom: 0.7rem;
+}
+
+.sidenote-nav-button {
+  display: inline-grid;
+  width: 1.75rem;
+  min-height: 1.75rem;
+  padding: 0;
+  border: 1px solid var(--lineSoft);
+  border-radius: 50%;
+  place-items: center;
+  background: transparent;
+  color: var(--textPrimary);
+  font: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sidenote-nav-button:hover,
+.sidenote-nav-button:focus-visible {
+  border-color: var(--spotColor);
+  color: var(--spotColor);
+}
+
+.sidenote-nav-button[aria-disabled='true'] {
+  border-color: var(--lineSoft);
+  color: var(--textMuted);
+  cursor: default;
+  opacity: 0.48;
+}
+
+.sidenote-nav-status {
+  min-width: 0;
+  margin: 0;
+  text-align: center;
+}
+
+.sidenote-nav-label {
+  display: block;
+  color: var(--textPrimary);
+  font-family: var(--font-sans);
+  font-size: var(--type-size-meta);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.sidenote-nav-meta,
+.sidenote-resting-copy {
+  color: var(--textSecondary);
+  font-family: var(--font-sans);
+  font-size: var(--type-size-meta);
+}
+
+.sidenote-nav-meta {
+  display: block;
+  margin-top: 0.08rem;
+  line-height: 1.25;
+}
+
+.sidenote-resting-copy {
+  margin: 0;
 }
 
 .sidenote-caption,
@@ -1032,6 +1100,17 @@ button {
   .trend-summary-metrics {
     grid-template-columns: 1fr;
     gap: 0.25rem;
+  }
+}
+
+@media (pointer: coarse) {
+  .sidenote-nav {
+    grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+  }
+
+  .sidenote-nav-button {
+    width: 2.75rem;
+    min-height: 2.75rem;
   }
 }
 

@@ -3,9 +3,66 @@ import { describe, expect, it, vi } from 'vitest'
 import { createSidenote } from '../../src/viz/sidenote.js'
 
 describe('createSidenote', () => {
+  it('keeps navigator controls stable and focusable at episode boundaries', () => {
+    const root = document.createElement('section')
+    const onInteract = vi.fn()
+    const onSelectPoint = vi.fn()
+    document.body.appendChild(root)
+    const sidenote = createSidenote({ root, onInteract, onSelectPoint })
+    const previous = root.querySelector('[data-sidenote-nav="previous"]')
+    const next = root.querySelector('[data-sidenote-nav="next"]')
+
+    sidenote.renderNavigator({
+      mode: 'season',
+      label: 'Browse Season 2',
+      meta: '3 rated episodes in Season 2',
+      previousPointId: null,
+      nextPointId: 'episode-1',
+      nextLabel: 'First episode of Season 2'
+    })
+
+    expect(previous.getAttribute('aria-disabled')).toBe('true')
+    expect(next.getAttribute('aria-label')).toBe('First episode of Season 2')
+    previous.focus()
+    previous.click()
+    expect(document.activeElement).toBe(previous)
+    expect(onInteract).toHaveBeenCalledTimes(1)
+    expect(onSelectPoint).not.toHaveBeenCalled()
+
+    next.click()
+    expect(onSelectPoint).toHaveBeenCalledWith('episode-1')
+
+    sidenote.renderNavigator({
+      mode: 'point',
+      label: 'S02E01',
+      meta: '1 of 3 rated episodes',
+      previousPointId: null,
+      nextPointId: 'episode-3'
+    })
+
+    expect(root.querySelector('[data-sidenote-nav="previous"]')).toBe(previous)
+    expect(root.querySelector('[data-sidenote-nav="next"]')).toBe(next)
+    expect(document.activeElement).toBe(previous)
+  })
+
+  it('only suggests selecting a trendline when one is available', () => {
+    const root = document.createElement('section')
+    const sidenote = createSidenote({ root })
+
+    sidenote.renderRestingState()
+    expect(root.textContent).toContain(
+      'Browse the rated episodes with the arrow buttons.'
+    )
+
+    sidenote.renderRestingState({ trendlinesAvailable: true })
+    expect(root.textContent).toContain(
+      'Choose a trendline or browse the rated episodes.'
+    )
+  })
+
   it('orders ratings by plotting preference and emphasizes the plotted source', () => {
     const root = document.createElement('section')
-    const sidenote = createSidenote({ desktopRoot: root })
+    const sidenote = createSidenote({ root })
 
     sidenote.renderPoint({
       title: 'A Great Episode',
@@ -44,7 +101,7 @@ describe('createSidenote', () => {
 
   it('shows a vote-count placeholder while IMDb details load', () => {
     const root = document.createElement('section')
-    const sidenote = createSidenote({ desktopRoot: root })
+    const sidenote = createSidenote({ root })
 
     sidenote.renderPoint(
       {
@@ -69,7 +126,7 @@ describe('createSidenote', () => {
     const root = document.createElement('section')
     const onSelectPoint = vi.fn()
     const sidenote = createSidenote({
-      desktopRoot: root,
+      root,
       onSelectPoint
     })
 
@@ -107,7 +164,7 @@ describe('createSidenote', () => {
 
   it('does not show a numeric delta when the trend is unclear', () => {
     const root = document.createElement('section')
-    const sidenote = createSidenote({ desktopRoot: root })
+    const sidenote = createSidenote({ root })
 
     sidenote.renderTrendSummary({
       label: 'Full series',

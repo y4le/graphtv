@@ -93,6 +93,7 @@ export function createChart(container, seasons, options = {}) {
   let hoverPointId = null
   let selectedTrendId = null
   let hoverTrendId = null
+  let hasUserInteracted = false
   let sparkline = null
   let suppressScrollSync = false
   let suppressScrollSyncFrame = null
@@ -105,6 +106,7 @@ export function createChart(container, seasons, options = {}) {
   let destroyed = false
   const detailCache = new Map()
   const detailErrors = []
+  const failedDetailPointIds = new Set()
   const loadingDetailPointIds = new Set()
 
   function setScrollLeftSuppressed(scrollLeft) {
@@ -122,8 +124,10 @@ export function createChart(container, seasons, options = {}) {
   }
 
   const sidenote = createSidenote({
-    desktopRoot: options.detailRoot ?? readingPane,
-    mobileRoot: options.detailRoot ?? readingPane,
+    root: options.detailRoot ?? readingPane,
+    onInteract() {
+      hasUserInteracted = true
+    },
     onSelectPoint(pointId) {
       setSelectedPoint(getPointById(pointId), 'pointer')
     }
@@ -196,6 +200,92 @@ export function createChart(container, seasons, options = {}) {
 
   function getTrendSummary(id) {
     return id ? (model.trendSummaries[id] ?? null) : null
+  }
+
+  function getScopeRatedPoints(summary) {
+    if (summary?.kind === 'season') {
+      return model.ratedPoints.filter(
+        (point) => point.season === summary.seasonNumber
+      )
+    }
+
+    return model.ratedPoints
+  }
+
+  function getFirstRatedPointInScope(summary) {
+    return getScopeRatedPoints(summary)[0] ?? model.ratedPoints[0] ?? null
+  }
+
+  function resolveDefaultSelection(settings = getUiSettings()) {
+    selectedPointId = null
+    selectedTrendId = null
+
+    if (settings.fullShowTrendline && getTrendSummary('series')) {
+      selectedTrendId = 'series'
+      return
+    }
+
+    if (settings.seasonTrendlines) {
+      const firstSeasonSummary = Object.values(model.trendSummaries)
+        .filter((summary) => summary.kind === 'season')
+        .sort((left, right) => left.seasonNumber - right.seasonNumber)[0]
+      if (firstSeasonSummary) {
+        selectedTrendId = firstSeasonSummary.id
+        return
+      }
+    }
+
+    selectedPointId = model.ratedPoints[0]?.id ?? null
+  }
+
+  function getNavigatorViewModel() {
+    const points = getRatedPoints()
+    if (points.length === 0) {
+      return {
+        mode: 'empty',
+        label: 'No rated episodes',
+        meta: '',
+        previousPointId: null,
+        nextPointId: null
+      }
+    }
+
+    const selectedPoint = getPointById(selectedPointId)
+    if (selectedPoint) {
+      const index = points.findIndex((point) => point.id === selectedPoint.id)
+      return {
+        mode: 'point',
+        label: formatEpisodeCode(selectedPoint),
+        meta: `${index + 1} of ${points.length} rated ${points.length === 1 ? 'episode' : 'episodes'}`,
+        previousPointId: points[index - 1]?.id ?? null,
+        nextPointId: points[index + 1]?.id ?? null
+      }
+    }
+
+    const summary = getTrendSummary(selectedTrendId)
+    const scopePoints = getScopeRatedPoints(summary)
+    if (summary?.kind === 'season') {
+      return {
+        mode: 'season',
+        label: `Browse Season ${summary.seasonNumber}`,
+        meta: `${scopePoints.length} rated ${scopePoints.length === 1 ? 'episode' : 'episodes'} in Season ${summary.seasonNumber}`,
+        previousPointId: null,
+        nextPointId: scopePoints[0]?.id ?? null,
+        nextLabel: `First episode of Season ${summary.seasonNumber}`
+      }
+    }
+
+    return {
+      mode: summary?.kind === 'series' ? 'series' : 'browse',
+      label:
+        summary?.kind === 'series'
+          ? 'Browse the full series'
+          : 'Browse episodes',
+      meta: `${scopePoints.length} rated ${scopePoints.length === 1 ? 'episode' : 'episodes'}`,
+      previousPointId: null,
+      nextPointId: scopePoints[0]?.id ?? null,
+      nextLabel: 'First rated episode'
+    }
   }
 
   function isTrendEnabled(id, settings = getUiSettings()) {
@@ -284,11 +374,15 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function scheduleDetailLoad(point) {
+    if (scheduledDetailPointId === point.id) {
+      return
+    }
     cancelScheduledDetailLoad()
 
     if (
       !options.loadEpisodeDetails ||
       detailCache.has(point.id) ||
+      failedDetailPointIds.has(point.id) ||
       loadingDetailPointIds.has(point.id)
     ) {
       return
@@ -313,6 +407,7 @@ export function createChart(container, seasons, options = {}) {
         detailCache.set(point.id, mergedPoint)
       } catch (error) {
         if (error?.name !== 'AbortError') {
+          failedDetailPointIds.add(point.id)
           detailErrors.push({ episodeId: point.id, reason: error.message })
           if (detailErrors.length > MAX_DETAIL_ERRORS) {
             detailErrors.shift()
@@ -348,7 +443,12 @@ export function createChart(container, seasons, options = {}) {
   function updateDetail(point, { load = false } = {}) {
     if (!point) {
       cancelScheduledDetailLoad()
-      sidenote.renderPlaceholder()
+      sidenote.renderRestingState({
+        empty: model.ratedPoints.length === 0,
+        trendlinesAvailable: Object.keys(model.trendSummaries).some((id) =>
+          isTrendEnabled(id)
+        )
+      })
       shell.style.removeProperty('--reading-pane-marker')
       return
     }
@@ -362,10 +462,11 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function updateActiveDetail() {
+    sidenote.renderNavigator(getNavigatorViewModel())
     const activePoint = getActivePoint()
     if (activePoint) {
       shell.dataset.detailKind = 'point'
-      updateDetail(activePoint)
+      updateDetail(activePoint, { load: true })
       return
     }
 
@@ -380,14 +481,6 @@ export function createChart(container, seasons, options = {}) {
 
     shell.dataset.detailKind = 'none'
     updateDetail(null)
-  }
-
-  function ensureSelectedPoint() {
-    return getPointById(selectedPointId) ?? model.ratedPoints[0] ?? null
-  }
-
-  function ensureNavigablePoint() {
-    return getActivePoint() ?? ensureSelectedPoint()
   }
 
   function ensureViewport(width) {
@@ -406,6 +499,8 @@ export function createChart(container, seasons, options = {}) {
       return
     }
 
+    hasUserInteracted = true
+
     if (source === 'keyboard') {
       hoverPointId = null
     }
@@ -415,6 +510,7 @@ export function createChart(container, seasons, options = {}) {
     selectedTrendId = null
     selectedPointId = point.id
     updateDetail(point, { load: true })
+    announceSelection({ point })
 
     if (usesScrollableBody()) {
       syncScrollableViewportToPoint(point, source === 'keyboard')
@@ -439,6 +535,8 @@ export function createChart(container, seasons, options = {}) {
       return
     }
 
+    hasUserInteracted = true
+
     const isTogglingOff = selectedTrendId === id
     cancelTrendHover()
     hoverTrendId = null
@@ -446,21 +544,28 @@ export function createChart(container, seasons, options = {}) {
     selectedPointId = null
     selectedTrendId = isTogglingOff ? null : id
     cancelScheduledDetailLoad()
-    announceSelection(isTogglingOff ? null : summary)
+    announceSelection(isTogglingOff ? null : { summary })
     render()
   }
 
-  function announceSelection(summary) {
+  function announceSelection(selection) {
     if (selectionAnnouncementTimer) {
       clearTimeout(selectionAnnouncementTimer)
     }
 
     selectionAnnouncementTimer = setTimeout(() => {
       selectionAnnouncementTimer = null
-      if (!summary) {
+      if (!selection) {
         selectionStatus.textContent = 'Chart selection cleared.'
         return
       }
+
+      if (selection.point) {
+        selectionStatus.textContent = `${formatEpisodeCode(selection.point)} selected: ${selection.point.title}. Rating ${selection.point.rating.toFixed(1)}.`
+        return
+      }
+
+      const { summary } = selection
 
       const trend =
         summary.direction === 'up'
@@ -473,20 +578,32 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function moveEpisode(delta) {
-    const currentPoint = ensureNavigablePoint()
-    if (!currentPoint) {
+    hasUserInteracted = true
+    const points = getRatedPoints()
+    const selectedPoint = getPointById(selectedPointId)
+    if (!selectedPoint) {
+      if (delta >= 0) {
+        setSelectedPoint(
+          getFirstRatedPointInScope(getTrendSummary(selectedTrendId))
+        )
+      }
       return
     }
-    const points = getRatedPoints()
+
     const currentIndex = points.findIndex(
-      (point) => point.id === currentPoint.id
+      (point) => point.id === selectedPoint.id
     )
     const nextIndex = clamp(currentIndex + delta, 0, points.length - 1)
-    setSelectedPoint(points[nextIndex])
+    if (nextIndex !== currentIndex) {
+      setSelectedPoint(points[nextIndex])
+    }
   }
 
   function moveSeason(delta) {
-    const activePoint = ensureNavigablePoint()
+    hasUserInteracted = true
+    const activePoint =
+      getPointById(selectedPointId) ||
+      getFirstRatedPointInScope(getTrendSummary(selectedTrendId))
     if (!activePoint) {
       return
     }
@@ -504,6 +621,7 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function jumpBoundary(edge) {
+    hasUserInteracted = true
     const points = getRatedPoints()
     if (points.length === 0) {
       return
@@ -644,12 +762,14 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function fitSeries() {
+    hasUserInteracted = true
     viewport = clampViewport({ start: 1, end: model.xMax }, model)
     render()
     announceViewport()
   }
 
   function resetZoom() {
+    hasUserInteracted = true
     resetViewportWidth(
       getCurrentChartWidth(),
       usesScrollableBody(),
@@ -659,6 +779,7 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function zoomBy(scale) {
+    hasUserInteracted = true
     if (!viewport) {
       return
     }
@@ -687,6 +808,7 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function clearActiveSelection({ announce = false } = {}) {
+    hasUserInteracted = true
     cancelTrendHover()
     hoverPointId = null
     selectedPointId = null
@@ -699,6 +821,7 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function toggleSeriesTrend() {
+    hasUserInteracted = true
     if (selectedTrendId === 'series') {
       setSelectedTrend('series')
       return true
@@ -714,18 +837,15 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function toggleSeasonTrend() {
+    hasUserInteracted = true
     const activePoint = getActivePoint()
     const selectedTrend = getTrendSummary(selectedTrendId)
     const viewportCenter = viewport.start + (viewport.end - viewport.start) / 2
     const visibleTrends = getVisibleSeasonTrendlines(model, viewport)
     const nearestVisibleTrend = visibleTrends.sort(
       (left, right) =>
-        Math.abs(
-          (left.visibleStartX + left.visibleEndX) / 2 - viewportCenter
-        ) -
-        Math.abs(
-          (right.visibleStartX + right.visibleEndX) / 2 - viewportCenter
-        )
+        Math.abs((left.visibleStartX + left.visibleEndX) / 2 - viewportCenter) -
+        Math.abs((right.visibleStartX + right.visibleEndX) / 2 - viewportCenter)
     )[0]
     const seasonNumber =
       selectedTrend?.kind === 'season'
@@ -751,18 +871,43 @@ export function createChart(container, seasons, options = {}) {
       return
     }
 
+    const previousPoint = getPointById(selectedPointId)
+    const previousTrend = getTrendSummary(selectedTrendId)
     model = buildChartModel(nextSeasons)
-    if (!getPointById(selectedPointId)) {
-      selectedPointId = null
-    }
+    failedDetailPointIds.clear()
     if (!getPointById(hoverPointId)) {
       hoverPointId = null
     }
-    if (!getTrendSummary(selectedTrendId)) {
-      selectedTrendId = null
-    }
     if (!getTrendSummary(hoverTrendId)) {
       hoverTrendId = null
+    }
+
+    if (!hasUserInteracted) {
+      resolveDefaultSelection()
+    } else if (previousPoint) {
+      const survivingPoint = model.ratedPoints.find(
+        (point) => point.id === previousPoint.id
+      )
+      const nearestPoint = model.ratedPoints.reduce((nearest, point) => {
+        if (!nearest) {
+          return point
+        }
+        return Math.abs(point.x - previousPoint.x) <
+          Math.abs(nearest.x - previousPoint.x)
+          ? point
+          : nearest
+      }, null)
+      selectedPointId = (survivingPoint ?? nearestPoint)?.id ?? null
+      selectedTrendId = null
+    } else if (previousTrend) {
+      const survivingTrend = getTrendSummary(previousTrend.id)
+      if (survivingTrend && isTrendEnabled(survivingTrend.id)) {
+        selectedTrendId = survivingTrend.id
+        selectedPointId = null
+      } else {
+        selectedTrendId = null
+        selectedPointId = getFirstRatedPointInScope(previousTrend)?.id ?? null
+      }
     }
 
     for (const [episodeId, cachedPoint] of detailCache) {
@@ -955,10 +1100,14 @@ export function createChart(container, seasons, options = {}) {
       chartWidth,
       sparklineHeight,
       (nextViewport) => {
+        hasUserInteracted = true
         viewport = clampViewport(nextViewport, model)
         render()
       },
-      () => resetViewportWidth(chartWidth, false)
+      () => {
+        hasUserInteracted = true
+        resetViewportWidth(chartWidth, false)
+      }
     )
   }
 
@@ -1085,6 +1234,7 @@ export function createChart(container, seasons, options = {}) {
       chartWidth,
       sparklineHeight,
       (nextViewport) => {
+        hasUserInteracted = true
         viewport = clampViewport(nextViewport, model)
         const maxScrollLeft = Math.max(contentWidth - chartWidth, 0)
         const maxStart = Math.max(
@@ -1095,7 +1245,10 @@ export function createChart(container, seasons, options = {}) {
         setScrollLeftSuppressed(ratio * maxScrollLeft)
         render()
       },
-      () => resetViewportWidth(chartWidth, true)
+      () => {
+        hasUserInteracted = true
+        resetViewportWidth(chartWidth, true)
+      }
     )
   }
 
@@ -1184,6 +1337,7 @@ export function createChart(container, seasons, options = {}) {
       return
     }
 
+    hasUserInteracted = true
     updateViewportFromScroll()
     const chartTheme = getChartTheme()
     const axisWidth = isMobile() ? 40 : 56
@@ -1208,6 +1362,7 @@ export function createChart(container, seasons, options = {}) {
       dimensions: { width: chartWidth, height: sparklineHeight },
       scales: sparklineScales,
       onViewportChange(nextViewport) {
+        hasUserInteracted = true
         viewport = clampViewport(nextViewport, model)
         render()
       }
@@ -1244,7 +1399,11 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function handleBodyWheel(event) {
-    if (handleTrackpadPinch(event, bodyShell) || usesScrollableBody()) {
+    if (handleTrackpadPinch(event, bodyShell)) {
+      hasUserInteracted = true
+      return
+    }
+    if (usesScrollableBody()) {
       return
     }
 
@@ -1258,6 +1417,7 @@ export function createChart(container, seasons, options = {}) {
       return
     }
 
+    hasUserInteracted = true
     const visibleEpisodes = Math.max(
       (viewport?.end ?? 1) - (viewport?.start ?? 1),
       1
@@ -1273,7 +1433,9 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function handleSparklineWheel(event) {
-    handleTrackpadPinch(event, sparklineSvg)
+    if (handleTrackpadPinch(event, sparklineSvg)) {
+      hasUserInteracted = true
+    }
   }
 
   bodyShell.addEventListener('wheel', handleBodyWheel, { passive: false })
@@ -1337,6 +1499,7 @@ export function createChart(container, seasons, options = {}) {
   }
 
   bodyShell.addEventListener('pointerdown', (event) => {
+    hasUserInteracted = true
     if (event.pointerType !== 'touch' || !isMobile() || !viewport) {
       return
     }
@@ -1460,8 +1623,7 @@ export function createChart(container, seasons, options = {}) {
 
     if (gesture.pointers.size === 0) {
       if (gesture.type !== 'pending') {
-        suppressClickUntil =
-          performance.now() + SUPPRESS_CLICK_DURATION_MS
+        suppressClickUntil = performance.now() + SUPPRESS_CLICK_DURATION_MS
       }
       gesture = null
 
@@ -1490,6 +1652,7 @@ export function createChart(container, seasons, options = {}) {
   bodyShell.addEventListener('pointercancel', endGesture)
 
   bodyShell.addEventListener('click', (event) => {
+    hasUserInteracted = true
     if (shouldSuppressClick()) {
       return
     }
@@ -1508,7 +1671,14 @@ export function createChart(container, seasons, options = {}) {
 
   const settingsListener = () => {
     if (selectedTrendId && !isTrendEnabled(selectedTrendId)) {
+      const previousTrend = getTrendSummary(selectedTrendId)
       selectedTrendId = null
+      const nextPoint = getFirstRatedPointInScope(previousTrend)
+      selectedPointId = nextPoint?.id ?? null
+      hasUserInteracted = true
+      if (nextPoint) {
+        announceSelection({ point: nextPoint })
+      }
     }
     if (hoverTrendId && !isTrendEnabled(hoverTrendId)) {
       hoverTrendId = null
@@ -1517,6 +1687,8 @@ export function createChart(container, seasons, options = {}) {
   }
   document.addEventListener('graphtv:settings-change', settingsListener)
 
+  ensureViewport(getCurrentChartWidth())
+  resolveDefaultSelection()
   render()
 
   return {
@@ -1529,6 +1701,7 @@ export function createChart(container, seasons, options = {}) {
     toggleSeriesTrend,
     toggleSeasonTrend,
     clearSelection() {
+      hasUserInteracted = true
       if (!selectedPointId && !selectedTrendId) {
         return false
       }
@@ -1542,6 +1715,8 @@ export function createChart(container, seasons, options = {}) {
         hoverPointId,
         selectedTrendId,
         hoverTrendId,
+        hasUserInteracted,
+        navigator: getNavigatorViewModel(),
         viewport,
         mobileScrollable: usesScrollableBody(),
         ratings: {
@@ -1568,6 +1743,7 @@ export function createChart(container, seasons, options = {}) {
         clearTimeout(selectionAnnouncementTimer)
       }
       loadingDetailPointIds.clear()
+      failedDetailPointIds.clear()
       resizeObserver.disconnect()
       document.removeEventListener('graphtv:settings-change', settingsListener)
       bodyShell.removeEventListener('wheel', handleBodyWheel)
@@ -1577,6 +1753,11 @@ export function createChart(container, seasons, options = {}) {
       container.innerHTML = ''
     }
   }
+}
+
+function formatEpisodeCode(point) {
+  const episodeNumber = point.episode ?? point.number
+  return `S${String(point.season).padStart(2, '0')}E${String(episodeNumber).padStart(2, '0')}`
 }
 
 function formatViewportAnnouncement(viewport, episodeCount) {
