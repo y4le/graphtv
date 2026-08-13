@@ -58,7 +58,10 @@ export function createKeyboardController({ page, overlayController }) {
       chordTracker.reset()
 
       if (keyWorksFromInteractiveControl(event.key)) {
-        handleGlobalAction(event.key, event)
+        const handledGlobally = handleGlobalAction(event.key, event)
+        if (!handledGlobally && page.kind === 'results') {
+          handleResultsAction(event.key, event)
+        }
       }
       return
     }
@@ -91,7 +94,7 @@ export function createKeyboardController({ page, overlayController }) {
   }
 
   function keyWorksFromInteractiveControl(key) {
-    return key === '/' || key === '?' || key === 'F1'
+    return ['/', '?', 'F1', 'Escape', 'q'].includes(key)
   }
 
   function onClick(event) {

@@ -60,7 +60,7 @@ export function createChart(container, seasons, options = {}) {
         <svg class="chart-axis" aria-hidden="true"></svg>
       </div>
       <div class="chart-body-shell">
-        <svg class="ratings-chart" role="img" aria-label="Episode ratings chart"></svg>
+        <svg class="ratings-chart" role="group" aria-label="Episode ratings chart" tabindex="-1"></svg>
       </div>
     </div>
     ${
@@ -583,6 +583,18 @@ export function createChart(container, seasons, options = {}) {
     render()
   }
 
+  function selectSeasonTrend(seasonNumber) {
+    const id = `season:${seasonNumber}`
+    if (!getTrendSummary(id)) {
+      return
+    }
+
+    if (!getUiSettings().seasonTrendlines) {
+      updateUiSettings({ seasonTrendlines: true })
+    }
+    setSelectedTrend(id)
+  }
+
   function announceSelection(selection) {
     if (selectionAnnouncementTimer) {
       clearTimeout(selectionAnnouncementTimer)
@@ -1088,6 +1100,19 @@ export function createChart(container, seasons, options = {}) {
     }
   }
 
+  function getSeasonLabelInteractions() {
+    const selectedTrend = getTrendSummary(selectedTrendId)
+    return {
+      activeSeasonNumber:
+        selectedTrend?.kind === 'season' ? selectedTrend.seasonNumber : null,
+      isSelectable(seasonNumber) {
+        return Boolean(getTrendSummary(`season:${seasonNumber}`))
+      },
+      onSelect: selectSeasonTrend,
+      shouldSuppressClick
+    }
+  }
+
   function renderDesktopChart(
     chartTheme,
     axisWidth,
@@ -1170,7 +1195,8 @@ export function createChart(container, seasons, options = {}) {
       viewport,
       mainScales,
       { width: chartWidth, height: chartHeight },
-      chartTheme
+      chartTheme,
+      getSeasonLabelInteractions()
     )
     renderCrosshair(
       mainSvg,
@@ -1304,7 +1330,8 @@ export function createChart(container, seasons, options = {}) {
       { start: 1, end: model.xMax },
       fullScales,
       { width: contentWidth, height: chartHeight },
-      chartTheme
+      chartTheme,
+      getSeasonLabelInteractions()
     )
     renderCrosshair(
       mainSvg,

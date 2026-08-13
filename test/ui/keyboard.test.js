@@ -131,6 +131,35 @@ describe('createKeyboardController', () => {
     expect(page.openSelection).not.toHaveBeenCalled()
   })
 
+  it('keeps only global result shortcuts available from an SVG button', () => {
+    document.body.innerHTML = `
+      <svg>
+        <text role="button" tabindex="0">Season 1</text>
+      </svg>
+    `
+    const chart = {
+      clearSelection: vi.fn(() => true),
+      jumpBoundary: vi.fn(),
+      moveEpisode: vi.fn()
+    }
+    const goBack = vi.fn()
+    keyboardController = createKeyboardController({
+      page: { kind: 'results', chart, goBack },
+      overlayController: createClosedOverlayController()
+    })
+    document.querySelector('[role="button"]').focus()
+
+    pressKey('G')
+    pressKey('ArrowRight')
+    pressKey('Escape')
+    pressKey('q')
+
+    expect(chart.jumpBoundary).not.toHaveBeenCalled()
+    expect(chart.moveEpisode).not.toHaveBeenCalled()
+    expect(chart.clearSelection).toHaveBeenCalledOnce()
+    expect(goBack).toHaveBeenCalledOnce()
+  })
+
   it('closes view options with v without reopening it as the event bubbles', () => {
     const overlayController = createOverlayController()
     keyboardController = createKeyboardController({

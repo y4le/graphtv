@@ -49,16 +49,21 @@ export function isEditableElement(element) {
 }
 
 export function isSuppressedInteractiveElement(element) {
-  if (!(element instanceof HTMLElement)) {
+  if (!(element instanceof Element)) {
     return false
   }
 
-  if (isEditableElement(element)) {
+  if (element instanceof HTMLElement && isEditableElement(element)) {
     return true
   }
 
   const tagName = element.tagName.toLowerCase()
-  return tagName === 'a' || tagName === 'button' || tagName === 'summary'
+  return (
+    tagName === 'a' ||
+    tagName === 'button' ||
+    tagName === 'summary' ||
+    element.getAttribute('role') === 'button'
+  )
 }
 
 export function hasCommandModifier(event) {
