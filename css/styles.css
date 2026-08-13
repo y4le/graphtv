@@ -1423,6 +1423,73 @@ button {
   margin-top: 1.2rem;
 }
 
+.debug-data-actions {
+  display: grid;
+  gap: 0.7rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--lineSoft);
+}
+
+.debug-data-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.45rem 0.75rem;
+}
+
+.debug-data-action p,
+.debug-cache-status {
+  margin: 0;
+  color: var(--textSecondary);
+  font-family: var(--font-sans);
+  font-size: var(--type-size-utility);
+}
+
+.debug-data-action p {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.debug-cache-button {
+  flex: 0 0 auto;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--lineSoft);
+  background: transparent;
+  color: var(--textSecondary);
+  font-family: var(--font-sans);
+  font-size: var(--type-size-utility);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.debug-cache-button:hover,
+.debug-cache-button:focus-visible {
+  border-color: var(--spotColor);
+  color: var(--spotColor);
+  outline: none;
+}
+
+.debug-cache-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.debug-cache-status {
+  width: 100%;
+}
+
+.debug-cache-status:empty {
+  display: none;
+}
+
+.debug-cache-status[data-state='error'] {
+  color: var(--spotColor);
+}
+
+.debug-overlay-sections {
+  margin-top: 1.2rem;
+}
+
 .debug-section-header {
   display: flex;
   align-items: baseline;
@@ -1801,7 +1868,7 @@ button {
   }
 }
 
-@media (max-width: 380px) {
+@media (max-width: 600px) {
   .results-masthead {
     gap: 0.5rem;
   }
@@ -1813,9 +1880,7 @@ button {
   .results-masthead .masthead-action {
     padding-inline: 0.4rem;
   }
-}
 
-@media (max-width: 600px) {
   .document-shell-search .masthead {
     margin-bottom: 0.5rem;
   }

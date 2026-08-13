@@ -1,7 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   createOverlayController,
+  openDebugOverlay,
   openHelpOverlay,
   openViewOptionsOverlay
 } from '../../src/ui/overlay.js'
@@ -161,5 +162,133 @@ describe('keyboard help overlay', () => {
     expect(helpText).toContain('Browse collections')
     expect(helpText).toContain('Scroll collection backward')
     expect(helpText).toContain('Scroll collection forward')
+  })
+})
+
+describe('debug overlay', () => {
+  it('clears provider caches and reloads the page', async () => {
+    let finishClearing
+    const clearCaches = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          finishClearing = resolve
+        })
+    )
+    const reloadPage = vi.fn()
+    const overlayController = createOverlayController()
+
+    openDebugOverlay(
+      overlayController,
+      {
+        debugEnabled: true,
+        getDebugSections: () => []
+      },
+      { clearCaches, reloadPage }
+    )
+
+    const button = document.querySelector('[data-debug-clear-caches]')
+    const status = document.querySelector('[data-debug-cache-status]')
+
+    expect(document.querySelector('.debug-data-actions h3')).toBeNull()
+    expect(button.nextElementSibling.textContent).toContain(
+      'View settings are kept'
+    )
+    expect(
+      document.querySelector('[data-debug-full-reset]').nextElementSibling
+        .textContent
+    ).toContain('Requires confirmation')
+
+    button.click()
+
+    expect(clearCaches).toHaveBeenCalledTimes(1)
+    expect(button.disabled).toBe(true)
+    expect(document.querySelector('[data-debug-full-reset]').disabled).toBe(
+      true
+    )
+    expect(button.textContent).toBe('Clearing…')
+    expect(status.textContent).toContain('Clearing cached provider responses')
+
+    finishClearing()
+    await vi.waitFor(() => expect(reloadPage).toHaveBeenCalledTimes(1))
+
+    expect(button.textContent).toBe('Caches cleared')
+    expect(status.textContent).toBe('Caches cleared. Reloading…')
+  })
+
+  it('reports cache clearing failures and allows retrying', async () => {
+    const clearCaches = vi.fn().mockRejectedValue(new Error('Storage blocked'))
+    const reloadPage = vi.fn()
+    const overlayController = createOverlayController()
+
+    openDebugOverlay(
+      overlayController,
+      {
+        debugEnabled: true,
+        getDebugSections: () => []
+      },
+      { clearCaches, reloadPage }
+    )
+
+    const button = document.querySelector('[data-debug-clear-caches]')
+    const status = document.querySelector('[data-debug-cache-status]')
+    button.click()
+
+    await vi.waitFor(() => expect(button.disabled).toBe(false))
+
+    expect(button.textContent).toBe('Clear caches')
+    expect(status.textContent).toBe(
+      'Could not clear browser data: Storage blocked'
+    )
+    expect(status.dataset.state).toBe('error')
+    expect(reloadPage).not.toHaveBeenCalled()
+  })
+
+  it('confirms a full reset before clearing all app data and reloading', async () => {
+    const confirmFullReset = vi.fn().mockReturnValue(true)
+    const fullReset = vi.fn().mockResolvedValue()
+    const reloadPage = vi.fn()
+    const overlayController = createOverlayController()
+
+    openDebugOverlay(
+      overlayController,
+      {
+        debugEnabled: true,
+        getDebugSections: () => []
+      },
+      { confirmFullReset, fullReset, reloadPage }
+    )
+
+    const resetButton = document.querySelector('[data-debug-full-reset]')
+    const status = document.querySelector('[data-debug-cache-status]')
+    resetButton.click()
+
+    expect(confirmFullReset).toHaveBeenCalledTimes(1)
+    await vi.waitFor(() => expect(reloadPage).toHaveBeenCalledTimes(1))
+
+    expect(fullReset).toHaveBeenCalledTimes(1)
+    expect(resetButton.textContent).toBe('Full reset complete')
+    expect(status.textContent).toBe('Full reset complete. Reloading…')
+  })
+
+  it('leaves browser data untouched when a full reset is cancelled', () => {
+    const confirmFullReset = vi.fn().mockReturnValue(false)
+    const fullReset = vi.fn()
+    const reloadPage = vi.fn()
+    const overlayController = createOverlayController()
+
+    openDebugOverlay(
+      overlayController,
+      {
+        debugEnabled: true,
+        getDebugSections: () => []
+      },
+      { confirmFullReset, fullReset, reloadPage }
+    )
+
+    document.querySelector('[data-debug-full-reset]').click()
+
+    expect(confirmFullReset).toHaveBeenCalledTimes(1)
+    expect(fullReset).not.toHaveBeenCalled()
+    expect(reloadPage).not.toHaveBeenCalled()
   })
 })

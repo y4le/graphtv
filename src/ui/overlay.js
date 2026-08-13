@@ -7,6 +7,8 @@ import {
   cyclePalette
 } from '../viz/theme.js'
 import { hasCommandModifier } from '../lib/keyboard.js'
+import { clearApiCache } from '../data/apiCache.js'
+import { resetAllAppData } from '../data/appData.js'
 
 const VIEW_OPTION_SHORTCUTS = {
   c: 'palette',
@@ -179,18 +181,38 @@ export function openHelpOverlay(overlayController, page) {
   })
 }
 
-export function openDebugOverlay(overlayController, page) {
+export function openDebugOverlay(overlayController, page, options = {}) {
   if (!page.debugEnabled) {
     return
   }
 
   const sections = page.getDebugSections()
+  const clearCaches = options.clearCaches ?? clearApiCache
+  const fullReset = options.fullReset ?? resetAllAppData
+  const confirmFullReset =
+    options.confirmFullReset ??
+    (() =>
+      window.confirm(
+        'Reset graphtv? This clears provider caches, view settings, request history, and all other graphtv data stored in this browser. This cannot be undone.'
+      ))
+  const reloadPage = options.reloadPage ?? (() => window.location.reload())
 
   overlayController.open({
     id: 'debug',
     title: 'Debug',
     className: 'overlay-debug',
     content: `
+      <div class="debug-data-actions" aria-label="Debug data actions">
+        <div class="debug-data-action">
+          <button type="button" class="debug-cache-button" data-debug-clear-caches>Clear caches</button>
+          <p>Clear cached provider responses and reload. View settings are kept.</p>
+        </div>
+        <div class="debug-data-action">
+          <button type="button" class="debug-cache-button" data-debug-full-reset>Full reset</button>
+          <p>Clear every graphtv setting and stored value, then reload. Requires confirmation.</p>
+        </div>
+        <p class="debug-cache-status" data-debug-cache-status role="status" aria-live="polite"></p>
+      </div>
       <div class="debug-overlay-sections">
         ${sections
           .map(
@@ -209,6 +231,12 @@ export function openDebugOverlay(overlayController, page) {
     `,
     onMount({ content }) {
       hydrateDebugTrees(content, sections)
+      bindDebugDataActions(content, {
+        clearCaches,
+        confirmFullReset,
+        fullReset,
+        reloadPage
+      })
     },
     onKeyDown(event, { content }) {
       if (event.key === 'j' || event.key === 'ArrowDown') {
@@ -221,6 +249,63 @@ export function openDebugOverlay(overlayController, page) {
         content.scrollBy({ top: -56, behavior: getMotionBehavior() })
       }
     }
+  })
+}
+
+function bindDebugDataActions(
+  content,
+  { clearCaches, confirmFullReset, fullReset, reloadPage }
+) {
+  const buttons = Array.from(content.querySelectorAll('.debug-cache-button'))
+  const clearButton = content.querySelector('[data-debug-clear-caches]')
+  const resetButton = content.querySelector('[data-debug-full-reset]')
+  const status = content.querySelector('[data-debug-cache-status]')
+
+  async function runAction(button, action, pendingMessage, successMessage) {
+    buttons.forEach((item) => {
+      item.disabled = true
+    })
+    button.textContent = 'Clearing…'
+    status.dataset.state = 'pending'
+    status.textContent = pendingMessage
+
+    try {
+      await action()
+      button.textContent = successMessage
+      status.dataset.state = 'success'
+      status.textContent = `${successMessage}. Reloading…`
+      reloadPage()
+    } catch (error) {
+      buttons.forEach((item) => {
+        item.disabled = false
+      })
+      clearButton.textContent = 'Clear caches'
+      resetButton.textContent = 'Full reset'
+      status.dataset.state = 'error'
+      status.textContent = `Could not clear browser data: ${error?.message ?? String(error)}`
+    }
+  }
+
+  clearButton.addEventListener('click', () =>
+    runAction(
+      clearButton,
+      clearCaches,
+      'Clearing cached provider responses…',
+      'Caches cleared'
+    )
+  )
+
+  resetButton.addEventListener('click', () => {
+    if (!confirmFullReset()) {
+      return
+    }
+
+    return runAction(
+      resetButton,
+      fullReset,
+      'Resetting all graphtv browser data…',
+      'Full reset complete'
+    )
   })
 }
 
