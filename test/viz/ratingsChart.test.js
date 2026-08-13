@@ -1352,6 +1352,10 @@ describe('createChart', () => {
     expect(
       detailRoot.querySelector('.sidenote-rating-primary').textContent
     ).toBe('TEST 7.0')
+
+    chart.destroy()
+    chart = undefined
+    expect(detailRoot.childNodes).toHaveLength(0)
   })
 
   it('updates provider ratings in place while preserving the selected episode', () => {

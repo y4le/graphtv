@@ -6,6 +6,50 @@ import { isTrustedRating, isUsableRating } from '../data/stats.js'
 import { formatCompactNumber } from '../lib/number.js'
 
 let trendInfoSequence = 0
+const trendInfoDocuments = new WeakSet()
+
+function syncTrendInfo(control) {
+  const button = control.querySelector('[data-trend-info]')
+  const expanded =
+    control.dataset.dismissed !== 'true' &&
+    ['hovered', 'focused', 'pinned'].some(
+      (state) => control.dataset[state] === 'true'
+    )
+  button.setAttribute('aria-expanded', String(expanded))
+  button.nextElementSibling.hidden = !expanded
+}
+
+function dismissTrendInfo(control) {
+  control.dataset.hovered = 'false'
+  control.dataset.focused = 'false'
+  control.dataset.pinned = 'false'
+  control.dataset.dismissed = 'true'
+  syncTrendInfo(control)
+}
+
+function ensureOutsideTrendInfoDismissal(ownerDocument) {
+  if (trendInfoDocuments.has(ownerDocument)) {
+    return
+  }
+
+  trendInfoDocuments.add(ownerDocument)
+  ownerDocument.addEventListener(
+    'click',
+    (event) => {
+      ownerDocument
+        .querySelectorAll(
+          '.trend-info-control [data-trend-info][aria-expanded="true"]'
+        )
+        .forEach((button) => {
+          const control = button.closest('.trend-info-control')
+          if (!control.contains(event.target)) {
+            dismissTrendInfo(control)
+          }
+        })
+    },
+    true
+  )
+}
 
 function formatRatingList(point, { loadingDetails = false } = {}) {
   return orderVisibleRatings(point.ratings.filter(isTrustedRating))
@@ -53,6 +97,12 @@ export function createSidenote({
   onNavigate,
   onSelectPoint
 }) {
+  ensureOutsideTrendInfoDismissal(root.ownerDocument)
+  const eventController = new root.ownerDocument.defaultView.AbortController()
+  const eventOptions = { signal: eventController.signal }
+  const listen = (type, listener) => {
+    root.addEventListener(type, listener, eventOptions)
+  }
   root.innerHTML = `
     <div class="sidenote-nav" role="group" aria-label="Episode navigation">
       <button type="button" class="sidenote-nav-button shortcut-action keycap" data-sidenote-nav="previous" aria-label="Previous episode" aria-disabled="true">
@@ -77,17 +127,6 @@ export function createSidenote({
   const nextButton = root.querySelector('[data-sidenote-nav="next"]')
   const trendInfoId = `trend-info-tooltip-${++trendInfoSequence}`
   let navigatorKey = null
-
-  function syncTrendInfo(control) {
-    const button = control.querySelector('[data-trend-info]')
-    const expanded =
-      control.dataset.dismissed !== 'true' &&
-      ['hovered', 'focused', 'pinned'].some(
-        (state) => control.dataset[state] === 'true'
-      )
-    button.setAttribute('aria-expanded', String(expanded))
-    button.nextElementSibling.hidden = !expanded
-  }
 
   function setMarkup(markup) {
     contentRoot.innerHTML = markup
@@ -227,7 +266,7 @@ export function createSidenote({
     `)
   }
 
-  root.addEventListener('click', (event) => {
+  listen('click', (event) => {
     const navigatorButton = event.target.closest?.('[data-sidenote-nav]')
     if (navigatorButton) {
       onInteract?.()
@@ -260,7 +299,7 @@ export function createSidenote({
     }
   })
 
-  root.addEventListener('mouseover', (event) => {
+  listen('mouseover', (event) => {
     const control = event.target.closest?.('.trend-info-control')
     if (!control || control.contains(event.relatedTarget)) {
       return
@@ -271,7 +310,7 @@ export function createSidenote({
     syncTrendInfo(control)
   })
 
-  root.addEventListener('mouseout', (event) => {
+  listen('mouseout', (event) => {
     const control = event.target.closest?.('.trend-info-control')
     if (!control || control.contains(event.relatedTarget)) {
       return
@@ -281,7 +320,7 @@ export function createSidenote({
     syncTrendInfo(control)
   })
 
-  root.addEventListener('focusin', (event) => {
+  listen('focusin', (event) => {
     const control = event.target.closest?.('.trend-info-control')
     if (!control) {
       return
@@ -292,7 +331,7 @@ export function createSidenote({
     syncTrendInfo(control)
   })
 
-  root.addEventListener('focusout', (event) => {
+  listen('focusout', (event) => {
     const control = event.target.closest?.('.trend-info-control')
     if (!control || control.contains(event.relatedTarget)) {
       return
@@ -302,7 +341,7 @@ export function createSidenote({
     syncTrendInfo(control)
   })
 
-  root.addEventListener('keydown', (event) => {
+  listen('keydown', (event) => {
     if (event.key !== 'Escape') {
       return
     }
@@ -322,11 +361,7 @@ export function createSidenote({
     }
 
     event.stopPropagation()
-    control.dataset.hovered = 'false'
-    control.dataset.focused = 'false'
-    control.dataset.pinned = 'false'
-    control.dataset.dismissed = 'true'
-    syncTrendInfo(control)
+    dismissTrendInfo(control)
   })
 
   renderRestingState()
@@ -335,7 +370,11 @@ export function createSidenote({
     renderNavigator,
     renderPoint,
     renderTrendSummary,
-    renderRestingState
+    renderRestingState,
+    destroy() {
+      eventController.abort()
+      root.replaceChildren()
+    }
   }
 }
 

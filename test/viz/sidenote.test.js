@@ -72,6 +72,30 @@ describe('createSidenote', () => {
     )
   })
 
+  it('removes delegated listeners when destroyed', () => {
+    const root = document.createElement('section')
+    const firstNavigate = vi.fn()
+    const secondNavigate = vi.fn()
+    const firstSidenote = createSidenote({ root, onNavigate: firstNavigate })
+
+    firstSidenote.destroy()
+    const secondSidenote = createSidenote({
+      root,
+      onNavigate: secondNavigate
+    })
+    secondSidenote.renderNavigator({
+      mode: 'point',
+      label: 'S01E01',
+      meta: '1 of 2 rated episodes',
+      previousAvailable: false,
+      nextAvailable: true
+    })
+    root.querySelector('[data-sidenote-nav="next"]').click()
+
+    expect(firstNavigate).not.toHaveBeenCalled()
+    expect(secondNavigate).toHaveBeenCalledOnce()
+  })
+
   it('orders ratings by plotting preference and emphasizes the plotted source', () => {
     const root = document.createElement('section')
     const sidenote = createSidenote({ root })
@@ -260,12 +284,23 @@ describe('createSidenote', () => {
     expect(root.querySelectorAll('[data-passed="true"]')).toHaveLength(3)
     expect(root.querySelector('.trend-info-check-mark').textContent).toBe('✓')
     expect(root.textContent).toContain('Consistent slope: ∞×, need 2.0×')
+    tooltip.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(tooltip.hidden).toBe(false)
+    const outsideButton = document.createElement('button')
+    outsideButton.addEventListener('click', (event) => event.stopPropagation())
+    document.body.appendChild(outsideButton)
+    outsideButton.click()
+    expect(infoButton.getAttribute('aria-expanded')).toBe('false')
+    expect(tooltip.hidden).toBe(true)
+    infoButton.click()
+    expect(tooltip.hidden).toBe(false)
     infoButton.dispatchEvent(
       new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' })
     )
     expect(infoButton.getAttribute('aria-expanded')).toBe('false')
     expect(tooltip.hidden).toBe(true)
     expect(document.activeElement).toBe(infoButton)
+    outsideButton.remove()
   })
 
   it('does not show a numeric delta when the trend is unclear', () => {

@@ -1870,6 +1870,7 @@ export function createChart(container, seasons, options = {}) {
       bodyShell.removeEventListener('wheel', handleBodyWheel)
       sparklineSvg.removeEventListener('wheel', handleSparklineWheel)
       sparkline?.destroy()
+      sidenote.destroy()
       options.loadEpisodeDetails?.destroy?.()
       container.innerHTML = ''
     }
