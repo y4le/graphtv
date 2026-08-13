@@ -17,26 +17,31 @@ import { orderVisibleRatings } from '../data/ratingProviders.js'
 
 export function renderResultsMasthead({ interactive = false } = {}) {
   return `
-    <header class="masthead">
+    <header class="masthead results-masthead">
       <div class="masthead-navigation">
         ${renderPublisherBrand()}
-        <a class="back-link masthead-action" href="${buildBackHref()}">Back to search</a>
       </div>
-      ${
-        interactive
-          ? `<div class="masthead-meta">
-              <div class="masthead-actions" aria-label="Page actions">
+      <div class="masthead-meta">
+        <div class="masthead-actions" aria-label="Page actions">
+          <a class="back-link masthead-action" href="${buildBackHref()}" aria-label="Back to search">Back</a>
+          ${
+            interactive
+              ? `
                 <button type="button" class="masthead-action" data-ui-action="help">Help</button>
-                <button type="button" class="masthead-action" data-ui-action="view-options">Options</button>
-              </div>
-              <p class="masthead-hint">
+                <button type="button" class="masthead-action" data-ui-action="view-options">Options</button>`
+              : ''
+          }
+        </div>
+        ${
+          interactive
+            ? `<p class="masthead-hint">
                 Press <button type="button" class="shortcut-action keycap" data-ui-action="help" aria-label="? shortcut: Open help">?</button> for help,
                 <button type="button" class="shortcut-action keycap" data-ui-action="view-options" aria-label="v shortcut: Open view options">v</button> for view options,
                 <button type="button" class="shortcut-action keycap" data-ui-action="return-search" aria-label="q shortcut: Return to search">q</button> to return.
-              </p>
-            </div>`
-          : ''
-      }
+              </p>`
+            : ''
+        }
+      </div>
     </header>
   `
 }

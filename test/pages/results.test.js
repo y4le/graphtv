@@ -54,14 +54,33 @@ describe('renderResultsMasthead', () => {
     expect(actions.every((action) => action.classList.contains('keycap'))).toBe(
       true
     )
-    expect(
-      Array.from(
-        container.querySelectorAll('.masthead-actions .masthead-action')
-      ).map((action) => action.dataset.uiAction)
-    ).toEqual(['help', 'view-options'])
-    expect(container.querySelector('.back-link').classList).toContain(
-      'masthead-action'
+    const mastheadActions = Array.from(
+      container.querySelectorAll('.masthead-actions .masthead-action')
     )
+    expect(mastheadActions.map((action) => action.textContent.trim())).toEqual([
+      'Back',
+      'Help',
+      'Options'
+    ])
+    expect(
+      mastheadActions.slice(1).map((action) => action.dataset.uiAction)
+    ).toEqual(['help', 'view-options'])
+    expect(
+      container.querySelector('.back-link').parentElement.classList
+    ).toContain('masthead-actions')
+  })
+
+  it('keeps Back available in the non-interactive masthead', () => {
+    const container = document.createElement('div')
+    container.innerHTML = renderResultsMasthead()
+
+    const actions = Array.from(
+      container.querySelectorAll('.masthead-actions .masthead-action')
+    )
+
+    expect(actions).toHaveLength(1)
+    expect(actions[0].textContent.trim()).toBe('Back')
+    expect(actions[0].getAttribute('aria-label')).toBe('Back to search')
   })
 
   it('links back to a blank search page without preserving any query parameters', () => {

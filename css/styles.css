@@ -164,6 +164,10 @@ button {
   align-items: center;
 }
 
+.results-masthead .masthead-actions {
+  display: flex;
+}
+
 .masthead-action {
   padding: 0.3rem 0.6rem;
   border: 1px solid var(--lineSoft);
@@ -735,7 +739,6 @@ button {
 
 .back-link {
   display: inline-block;
-  margin-bottom: 1.25rem;
   font-size: var(--type-size-meta);
   text-decoration: none;
 }
