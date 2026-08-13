@@ -128,7 +128,10 @@ describe('view options overlay', () => {
 describe('keyboard help overlay', () => {
   it('renders shortcuts as keycaps and uses glyphs for arrow keys', () => {
     const overlayController = createOverlayController()
-    openHelpOverlay(overlayController, { kind: 'results' })
+    openHelpOverlay(overlayController, {
+      kind: 'results',
+      debugEnabled: true
+    })
 
     const keycaps = Array.from(document.querySelectorAll('.help-key'))
     const keycapLabels = keycaps.map((keycap) => keycap.textContent)
@@ -151,6 +154,48 @@ describe('keyboard help overlay', () => {
     expect(keycapLabels).not.toEqual(
       expect.arrayContaining(['b', 'w', '0', '$', 'd'])
     )
+    expect(document.querySelector('[data-help-action="debug"]')).toMatchObject(
+      {
+        tagName: 'BUTTON'
+      }
+    )
+    expect(
+      document
+        .querySelector('[data-help-action="debug"]')
+        .classList.contains('shortcut-action')
+    ).toBe(true)
+  })
+
+  it('opens the debug menu when the D keycap is pressed', () => {
+    const overlayController = createOverlayController()
+    const page = {
+      kind: 'results',
+      debugEnabled: true,
+      getDebugSections: () => []
+    }
+    openHelpOverlay(overlayController, page)
+
+    expect(overlayController.getActiveId()).toBe('help')
+
+    document.querySelector('[data-help-action="debug"]').click()
+
+    expect(overlayController.getActiveId()).toBe('debug')
+    expect(document.querySelector('[data-debug-clear-caches]')).not.toBeNull()
+  })
+
+  it('keeps the D keycap non-interactive when debug data is unavailable', () => {
+    const overlayController = createOverlayController()
+    openHelpOverlay(overlayController, {
+      kind: 'results',
+      debugEnabled: false
+    })
+
+    expect(document.querySelector('[data-help-action="debug"]')).toBeNull()
+    expect(
+      Array.from(document.querySelectorAll('.help-key')).find(
+        (keycap) => keycap.textContent === 'D'
+      ).tagName
+    ).toBe('KBD')
   })
 
   it('documents collection navigation on the search page', () => {

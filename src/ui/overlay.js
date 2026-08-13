@@ -155,7 +155,10 @@ export function openHelpOverlay(overlayController, page) {
                   ${section.items
                     .map(
                       (item) => `
-                        <dt class="help-keys">${renderHelpKeys(item.keys)}</dt>
+                        <dt class="help-keys">${renderHelpKeys(
+                          item.keys,
+                          page.debugEnabled === false ? null : item.keyAction
+                        )}</dt>
                         <dd>${item.action}</dd>
                       `
                     )
@@ -167,6 +170,14 @@ export function openHelpOverlay(overlayController, page) {
           .join('')}
       </div>
     `,
+    onMount({ content }) {
+      content
+        .querySelector('[data-help-action="debug"]')
+        ?.addEventListener('click', () => {
+          overlayController.close()
+          openDebugOverlay(overlayController, page)
+        })
+    },
     onKeyDown(event, { content }) {
       if (event.key === 'j' || event.key === 'ArrowDown') {
         event.preventDefault()
@@ -768,7 +779,11 @@ function resultsHelpSections() {
         { keys: ['/', 'q'], action: 'Return to search' },
         { keys: ['o'], action: 'Open view options' },
         { keys: ['?', 'F1'], action: 'Open help' },
-        { keys: ['D'], action: 'Toggle debug overlay' }
+        {
+          keys: ['D'],
+          action: 'Toggle debug overlay',
+          keyAction: 'debug'
+        }
       ]
     },
     {
@@ -813,7 +828,11 @@ function searchHelpSections() {
         { keys: ['/'], action: 'Focus search input' },
         { keys: ['o'], action: 'Open view options' },
         { keys: ['?', 'F1'], action: 'Open help' },
-        { keys: ['D'], action: 'Toggle debug overlay' }
+        {
+          keys: ['D'],
+          action: 'Toggle debug overlay',
+          keyAction: 'debug'
+        }
       ]
     },
     {
@@ -838,7 +857,7 @@ function searchHelpSections() {
   ]
 }
 
-function renderHelpKeys(keys) {
+function renderHelpKeys(keys, keyAction = null) {
   const labels = {
     ArrowDown: { glyph: '↓', name: 'Down arrow' },
     ArrowLeft: { glyph: '←', name: 'Left arrow' },
@@ -852,6 +871,11 @@ function renderHelpKeys(keys) {
       const accessibleName = label
         ? ` aria-label="${label.name}" title="${label.name}"`
         : ''
+
+      if (keyAction === 'debug' && key === 'D') {
+        return '<button type="button" class="help-key shortcut-action keycap" data-help-action="debug" aria-label="Open debug menu">D</button>'
+      }
+
       return `<kbd class="help-key keycap"${accessibleName}>${escapeHtml(label?.glyph ?? key)}</kbd>`
     })
     .join('<span class="help-key-separator" aria-hidden="true">/</span>')
