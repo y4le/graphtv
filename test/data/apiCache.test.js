@@ -330,4 +330,32 @@ describe('API request cache', () => {
     ).resolves.toEqual({ recovered: true })
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
+
+  it('attaches credential-safe request context to opaque fetch failures', async () => {
+    const cache = createCache()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockRejectedValue(new TypeError('Load failed'))
+    )
+
+    const error = await cache
+      .requestJson({ provider: 'omdb', kind: 'title', id: 'tt123' }, () => ({
+        url: 'https://www.omdbapi.com/?i=tt123&apikey=super-secret'
+      }))
+      .catch((caught) => caught)
+
+    expect(error).toMatchObject({
+      name: 'TypeError',
+      message: 'Load failed',
+      provider: 'omdb',
+      requestContext: {
+        provider: 'omdb',
+        kind: 'title',
+        endpoint: 'https://www.omdbapi.com',
+        crossOrigin: true
+      }
+    })
+    expect(JSON.stringify(error.requestContext)).not.toContain('super-secret')
+    expect(JSON.stringify(error.requestContext)).not.toContain('apikey')
+  })
 })

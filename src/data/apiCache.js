@@ -1,4 +1,5 @@
 import { createCacheStore } from './cacheStore.js'
+import { attachRequestContext } from './errorDiagnostics.js'
 
 export const DAY_MS = 24 * 60 * 60 * 1000
 export const API_CACHE_TTL = Object.freeze({
@@ -152,9 +153,11 @@ export function createApiRequestCache({
 
       stats.misses += 1
       let networkStarted = false
+      let requestUrl = null
       try {
         controller.signal.throwIfAborted()
         const { url, init = {} } = await requestFactory(controller.signal)
+        requestUrl = url
         controller.signal.throwIfAborted()
         await options.beforeNetwork?.()
         controller.signal.throwIfAborted()
@@ -187,21 +190,24 @@ export function createApiRequestCache({
         }
         return { value, cacheHit: false }
       } catch (error) {
+        const diagnosedError = requestUrl
+          ? attachRequestContext(error, descriptor, requestUrl)
+          : error
         if (
           networkStarted &&
           !request.abandoned &&
-          error?.name !== 'AbortError'
+          diagnosedError?.name !== 'AbortError'
         ) {
           recentFailures.delete(key)
           recentFailures.set(key, {
-            error,
+            error: diagnosedError,
             expiresAt: now() + FAILURE_RETRY_DELAY_MS
           })
           if (recentFailures.size > MAX_RECENT_FAILURES) {
             recentFailures.delete(recentFailures.keys().next().value)
           }
         }
-        throw error
+        throw diagnosedError
       }
     })().finally(() => {
       request.settled = true
