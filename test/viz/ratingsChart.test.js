@@ -183,9 +183,20 @@ describe('createChart', () => {
     thirdPoint.dispatchEvent(new MouseEvent('mouseenter'))
     expect(detailRoot.textContent).toContain('Episode 3')
     expect(detailRoot.querySelector('.sidenote-nav-label').textContent).toBe(
+      'S01E03'
+    )
+    expect(detailRoot.querySelector('.sidenote-nav-meta').textContent).toBe(
+      '2 of 3 rated episodes'
+    )
+    expect(chart.getDebugState().selectedPointId).toBe('episode-1')
+    thirdPoint.dispatchEvent(new MouseEvent('mouseleave'))
+    expect(detailRoot.querySelector('.sidenote-nav-label').textContent).toBe(
       'S01E01'
     )
-    thirdPoint.dispatchEvent(new MouseEvent('mouseleave'))
+    expect(detailRoot.querySelector('.sidenote-nav-meta').textContent).toBe(
+      '1 of 3 rated episodes'
+    )
+    expect(chart.getDebugState().selectedPointId).toBe('episode-1')
 
     next.click()
     expect(chart.getDebugState().selectedPointId).toBe('episode-3')

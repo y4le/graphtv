@@ -264,14 +264,14 @@ export function createChart(container, seasons, options = {}) {
       }
     }
 
-    const selectedPoint = getPointById(selectedPointId)
-    if (selectedPoint) {
-      const index = points.findIndex((point) => point.id === selectedPoint.id)
+    const activePoint = getActivePoint()
+    if (activePoint) {
+      const index = points.findIndex((point) => point.id === activePoint.id)
       const hasSeriesStop = Boolean(getSeriesNavigationStop())
       const canNavigate = points.length > 1 || hasSeriesStop
       return {
         mode: 'point',
-        label: formatEpisodeCode(selectedPoint),
+        label: formatEpisodeCode(activePoint),
         meta: `${index + 1} of ${points.length} rated ${points.length === 1 ? 'episode' : 'episodes'}`,
         previousAvailable: canNavigate,
         nextAvailable: canNavigate,
@@ -290,7 +290,7 @@ export function createChart(container, seasons, options = {}) {
       }
     }
 
-    const summary = getTrendSummary(selectedTrendId)
+    const summary = getTrendSummary(getActiveTrendId())
     const scopePoints = getScopeRatedPoints(summary)
     if (summary?.kind === 'season') {
       const seasonTrends = getSeasonTrendSummaries()
