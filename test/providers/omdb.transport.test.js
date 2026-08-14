@@ -48,7 +48,20 @@ describe('OMDb transport', () => {
       diagnostics: {
         requested: 2,
         loaded: 1,
-        failures: [{ season: 2, reason: 'network failure' }]
+        failures: [
+          {
+            season: 2,
+            reason: 'network failure',
+            error: expect.objectContaining({
+              operation: 'load-season',
+              provider: 'omdb',
+              request: expect.objectContaining({
+                endpoint: 'https://www.omdbapi.com',
+                kind: 'season'
+              })
+            })
+          }
+        ]
       }
     })
   })
@@ -66,8 +79,24 @@ describe('OMDb transport', () => {
       requested: 2,
       loaded: 0,
       failures: [
-        { season: 1, reason: 'network failure' },
-        { season: 2, reason: 'network failure' }
+        {
+          season: 1,
+          reason: 'network failure',
+          error: expect.objectContaining({
+            category: 'provider-error',
+            operation: 'load-season',
+            provider: 'omdb'
+          })
+        },
+        {
+          season: 2,
+          reason: 'network failure',
+          error: expect.objectContaining({
+            category: 'provider-error',
+            operation: 'load-season',
+            provider: 'omdb'
+          })
+        }
       ]
     })
   })

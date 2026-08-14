@@ -73,6 +73,58 @@ describe('data/provider', () => {
     })
   })
 
+  it('preserves actionable supplemental provider failure diagnostics', async () => {
+    const failure = new TypeError('Load failed')
+    failure.provider = 'omdb'
+    failure.requestContext = {
+      provider: 'omdb',
+      kind: 'title',
+      endpoint: 'https://www.omdbapi.com',
+      crossOrigin: true
+    }
+    const providers = {
+      tvmaze: {
+        getShow: async () => createShow('tvmaze:1', { imdb: 'tt123' }),
+        getSeasons: async () => []
+      },
+      omdb: {
+        resolveShowRef: async () => 'omdb:tt123',
+        getShow: async () => {
+          throw failure
+        }
+      }
+    }
+
+    const bundle = await getShowBundle('tvmaze:1', {
+      compareProviders: ['omdb'],
+      providerLoader: async (provider) => providers[provider]
+    })
+
+    expect(bundle.providerDiagnostics[0]).toMatchObject({
+      provider: 'omdb',
+      status: 'failed',
+      reason: 'Load failed',
+      error: {
+        category: 'opaque-network-failure',
+        name: 'TypeError',
+        message: 'Load failed',
+        provider: 'omdb',
+        operation: 'load-show',
+        request: {
+          kind: 'title',
+          endpoint: 'https://www.omdbapi.com',
+          crossOrigin: true
+        },
+        environment: {
+          online: true
+        }
+      }
+    })
+    expect(bundle.providerDiagnostics[0].error.hint).toContain(
+      'content blockers'
+    )
+  })
+
   it('threads structured season diagnostics for the primary provider', async () => {
     const diagnostics = { requested: 2, loaded: 1, failures: [] }
     const bundle = await getShowBundle('omdb:tt123', {

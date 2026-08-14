@@ -1,6 +1,7 @@
 import { mergeShowRecords } from './merge.js'
 import { createEpisodeDetailLoader as createDetailLoader } from './episodeDetails.js'
 import { CLIENT_SECRET_KEYS, hasClientSecret } from '../config/clientSecrets.js'
+import { createErrorDiagnostic } from './errorDiagnostics.js'
 
 const PROVIDER_LOADERS = {
   omdb: () => import('../providers/omdb/transport.js'),
@@ -155,8 +156,10 @@ async function loadSupplementalRecord(
     }
   }
 
+  let operation = 'load-provider'
   try {
     const provider = await providerLoader(providerName)
+    operation = 'resolve-show'
     const resolvedRef = await provider.resolveShowRef({
       externalIds: primaryRecord.show.externalIds,
       show: primaryRecord.show
@@ -173,7 +176,9 @@ async function loadSupplementalRecord(
     }
 
     const { id } = parseShowRef(resolvedRef)
+    operation = 'load-show'
     const show = await provider.getShow(id)
+    operation = 'load-seasons'
     const seasonResult = unpackSeasons(
       await provider.getSeasons(id, show.totalSeasons)
     )
@@ -195,6 +200,10 @@ async function loadSupplementalRecord(
       role: 'supplemental',
       status: 'failed',
       reason: error.message,
+      error: createErrorDiagnostic(error, {
+        provider: providerName,
+        operation
+      }),
       seasonDiagnostics: error.seasonDiagnostics ?? null
     }
   }

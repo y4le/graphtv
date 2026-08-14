@@ -5,6 +5,7 @@ import {
   getFetchInit,
   requestJson
 } from '../../data/apiCache.js'
+import { createErrorDiagnostic } from '../../data/errorDiagnostics.js'
 import {
   normalizeOmdbSearch,
   normalizeOmdbSeason,
@@ -115,7 +116,11 @@ export async function getSeasons(imdbId, totalSeasons, options = {}) {
     } else {
       failures.push({
         season: index + 1,
-        reason: result.reason?.message ?? String(result.reason)
+        reason: result.reason?.message ?? String(result.reason),
+        error: createErrorDiagnostic(result.reason, {
+          provider: 'omdb',
+          operation: 'load-season'
+        })
       })
     }
   })
