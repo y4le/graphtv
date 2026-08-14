@@ -409,6 +409,15 @@ describe('createChart', () => {
     )
     expect(labels[0].classList.contains('is-active')).toBe(true)
     expect(labels[1].getAttribute('aria-pressed')).toBe('false')
+    expect(
+      Array.from(
+        container.querySelectorAll('.season-axis-tick.is-active'),
+        (tick) => tick.__data__
+      )
+    ).toEqual([1, 3.5])
+    expect(
+      container.querySelector('.season-axis-selection').getAttribute('stroke')
+    ).toBe(labels[0].getAttribute('fill'))
 
     labels[1].dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
@@ -416,6 +425,12 @@ describe('createChart', () => {
     expect(labels[0].getAttribute('aria-pressed')).toBe('false')
     expect(labels[1].getAttribute('aria-pressed')).toBe('true')
     expect(labels[1].classList.contains('is-active')).toBe(true)
+    expect(
+      Array.from(
+        container.querySelectorAll('.season-axis-tick.is-active'),
+        (tick) => tick.__data__
+      )
+    ).toEqual([3.5, 6])
 
     labels[0].dispatchEvent(
       new KeyboardEvent('keydown', { bubbles: true, key: ' ' })

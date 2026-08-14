@@ -88,6 +88,12 @@ export function renderSeasonAxis(
     .raise()
   const visibleSpans = createVisibleSeasonAxisSpans(spans, viewport, scales)
   const boundaries = createVisibleSeasonBoundaries(spans, viewport)
+  const activeSpan = visibleSpans.find(
+    (span) => span.seasonNumber === interactions.activeSeasonNumber
+  )
+  const activeBoundaries = new Set(
+    getSeasonAxisSpanBoundaries(spans, interactions.activeSeasonNumber)
+  )
   const [, axisEndX] = scales.xScale.range()
   const axisY = dimensions.height - 0.5
 
@@ -118,17 +124,42 @@ export function renderSeasonAxis(
     .attr('pointer-events', 'none')
 
   layer
+    .selectAll('.season-axis-selection')
+    .data(activeSpan ? [activeSpan] : [], (span) => span.seasonNumber)
+    .join('line')
+    .attr('class', 'season-axis-selection')
+    .attr('x1', (span) => span.startX)
+    .attr('x2', (span) => span.endX)
+    .attr('y1', axisY)
+    .attr('y2', axisY)
+    .attr('stroke', theme.spotColor)
+    .attr('stroke-opacity', 1)
+    .attr('stroke-width', 2)
+    .attr('aria-hidden', 'true')
+    .attr('pointer-events', 'none')
+
+  layer
     .selectAll('.season-axis-tick')
     .data(boundaries, (boundary) => String(boundary))
     .join('line')
-    .attr('class', 'season-axis-tick')
+    .attr('class', (boundary) =>
+      activeBoundaries.has(boundary)
+        ? 'season-axis-tick is-active'
+        : 'season-axis-tick'
+    )
     .attr('x1', (boundary) => scales.xScale(boundary))
     .attr('x2', (boundary) => scales.xScale(boundary))
     .attr('y1', axisY)
     .attr('y2', axisY - SEASON_AXIS_TICK_SIZE)
-    .attr('stroke', theme.textSecondary)
-    .attr('stroke-opacity', 0.7)
-    .attr('stroke-width', 1)
+    .attr('stroke', (boundary) =>
+      activeBoundaries.has(boundary) ? theme.spotColor : theme.textSecondary
+    )
+    .attr('stroke-opacity', (boundary) =>
+      activeBoundaries.has(boundary) ? 1 : 0.7
+    )
+    .attr('stroke-width', (boundary) =>
+      activeBoundaries.has(boundary) ? 2 : 1
+    )
     .attr('aria-hidden', 'true')
     .attr('pointer-events', 'none')
 
@@ -232,6 +263,8 @@ function createVisibleSeasonAxisSpans(spans, viewport, scales) {
         ...spans[0],
         visibleStart: viewport.start,
         visibleEnd: viewport.end,
+        startX: rangeStart,
+        endX: rangeEnd,
         centerX: (rangeStart + rangeEnd) / 2,
         availableWidth: Math.abs(rangeEnd - rangeStart)
       }
@@ -251,6 +284,8 @@ function createVisibleSeasonAxisSpans(spans, viewport, scales) {
         ...span,
         visibleStart,
         visibleEnd,
+        startX,
+        endX,
         centerX: (startX + endX) / 2,
         availableWidth: Math.abs(endX - startX)
       }
@@ -272,6 +307,19 @@ function createVisibleSeasonBoundaries(spans, viewport) {
   ).filter(
     (boundary) => boundary >= viewport.start && boundary <= viewport.end
   )
+}
+
+function getSeasonAxisSpanBoundaries(spans, seasonNumber) {
+  const index = spans.findIndex((span) => span.seasonNumber === seasonNumber)
+  if (index === -1) {
+    return []
+  }
+
+  const span = spans[index]
+  return [
+    index === 0 ? span.start : span.start - 0.5,
+    index === spans.length - 1 ? span.end : span.end + 0.5
+  ]
 }
 
 function measureSvgText(node, text) {

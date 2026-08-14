@@ -86,6 +86,45 @@ describe('season axis', () => {
       '234'
     )
   })
+
+  it('highlights the selected season axis segment and its boundary ticks', () => {
+    const svgNode = document.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'svg'
+    )
+    const spans = [
+      { seasonNumber: 1, seasonIndex: 0, start: 1, end: 4, midpoint: 2.5 },
+      { seasonNumber: 2, seasonIndex: 1, start: 5, end: 8, midpoint: 6.5 }
+    ]
+    const xScale = scaleLinear().domain([1, 8]).range([6, 234])
+
+    renderSeasonAxis(
+      select(svgNode),
+      spans,
+      { start: 1, end: 8 },
+      { xScale },
+      { width: 240, height: 124 },
+      { textSecondary: '#737373', spotColor: '#d9480f' },
+      { activeSeasonNumber: 2 }
+    )
+
+    const selection = svgNode.querySelector('.season-axis-selection')
+    const activeTicks = Array.from(
+      svgNode.querySelectorAll('.season-axis-tick.is-active')
+    )
+
+    expect(Number(selection.getAttribute('x1'))).toBe(xScale(4.5))
+    expect(Number(selection.getAttribute('x2'))).toBe(xScale(8))
+    expect(selection.getAttribute('stroke')).toBe('#d9480f')
+    expect(activeTicks.map((tick) => tick.__data__)).toEqual([4.5, 8])
+    expect(
+      activeTicks.every(
+        (tick) =>
+          tick.getAttribute('stroke') === '#d9480f' &&
+          tick.getAttribute('stroke-width') === '2'
+      )
+    ).toBe(true)
+  })
 })
 
 describe('trendline hit testing', () => {
