@@ -41,7 +41,7 @@ const SETTINGS_DEFAULTS = {
   theme: 'light',
   palette: 'monotone',
   seasonTrendlines: true,
-  fullShowTrendline: false,
+  fullShowTrendline: true,
   showSourceSpread: true,
   absoluteYAxis: false
 }

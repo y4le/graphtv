@@ -32,6 +32,18 @@ describe('theme defaults', () => {
     expect(JSON.parse(window.localStorage.getItem('graphtv-ui-settings')).showSourceSpread).toBe(false)
     expect(initializeTheme().showSourceSpread).toBe(false)
   })
+
+  it('shows the full-series trendline by default and persists an opt-out', () => {
+    expect(initializeTheme().fullShowTrendline).toBe(true)
+
+    updateUiSettings({ fullShowTrendline: false })
+
+    expect(
+      JSON.parse(window.localStorage.getItem('graphtv-ui-settings'))
+        .fullShowTrendline
+    ).toBe(false)
+    expect(initializeTheme().fullShowTrendline).toBe(false)
+  })
 })
 
 describe('theme accents', () => {
