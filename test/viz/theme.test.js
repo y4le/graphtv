@@ -34,12 +34,7 @@ describe('theme defaults', () => {
   })
 
   it('defaults to balanced episode density and persists another choice', () => {
-    expect(EPISODE_DENSITIES).toEqual([
-      'roomy',
-      'balanced',
-      'dense',
-      'all'
-    ])
+    expect(EPISODE_DENSITIES).toEqual(['roomy', 'balanced', 'dense', 'all'])
     expect(initializeTheme().episodeDensity).toBe('balanced')
     expect(document.documentElement.dataset.episodeDensity).toBe('balanced')
 
@@ -70,7 +65,10 @@ describe('theme defaults', () => {
 
     updateUiSettings({ absoluteYAxis: true })
 
-    expect(JSON.parse(window.localStorage.getItem('graphtv-ui-settings')).absoluteYAxis).toBe(true)
+    expect(
+      JSON.parse(window.localStorage.getItem('graphtv-ui-settings'))
+        .absoluteYAxis
+    ).toBe(true)
     expect(initializeTheme().absoluteYAxis).toBe(true)
   })
 
@@ -79,7 +77,10 @@ describe('theme defaults', () => {
 
     updateUiSettings({ showSourceSpread: false })
 
-    expect(JSON.parse(window.localStorage.getItem('graphtv-ui-settings')).showSourceSpread).toBe(false)
+    expect(
+      JSON.parse(window.localStorage.getItem('graphtv-ui-settings'))
+        .showSourceSpread
+    ).toBe(false)
     expect(initializeTheme().showSourceSpread).toBe(false)
   })
 
@@ -97,14 +98,19 @@ describe('theme defaults', () => {
 })
 
 describe('theme accents', () => {
-  it.each(['light', 'dark'])('uses the single house accent in the %s theme', (theme) => {
-    updateUiSettings({ theme, palette: 'alternating' })
-    const chartTheme = getChartTheme({ theme, palette: 'alternating' })
+  it.each(['light', 'dark'])(
+    'uses the single house accent in the %s theme',
+    (theme) => {
+      updateUiSettings({ theme, palette: 'alternating' })
+      const chartTheme = getChartTheme({ theme, palette: 'alternating' })
 
-    expect(chartTheme.spotColor).toBe('#C1432E')
-    expect(chartTheme.spotColorMuted).toBe('#C1432E')
-    expect(document.documentElement.style.getPropertyValue('--publisherAccent')).toBe('#C1432E')
-  })
+      expect(chartTheme.spotColor).toBe('#C1432E')
+      expect(chartTheme.spotColorMuted).toBe('#C1432E')
+      expect(
+        document.documentElement.style.getPropertyValue('--publisherAccent')
+      ).toBe('#C1432E')
+    }
+  )
 })
 
 describe('theme typography', () => {
@@ -160,16 +166,19 @@ describe('season palettes', () => {
     ])
   })
 
-  it.each(['light', 'dark'])('builds a stable, unique maximin prefix in %s mode', (theme) => {
-    const colors = Array.from({ length: 12 }, (_, index) =>
-      seasonColor('maximin', index, 12, theme)
-    )
-
-    expect(new Set(colors)).toHaveLength(colors.length)
-    expect(
-      Array.from({ length: 12 }, (_, index) =>
+  it.each(['light', 'dark'])(
+    'builds a stable, unique maximin prefix in %s mode',
+    (theme) => {
+      const colors = Array.from({ length: 12 }, (_, index) =>
         seasonColor('maximin', index, 12, theme)
       )
-    ).toEqual(colors)
-  })
+
+      expect(new Set(colors)).toHaveLength(colors.length)
+      expect(
+        Array.from({ length: 12 }, (_, index) =>
+          seasonColor('maximin', index, 12, theme)
+        )
+      ).toEqual(colors)
+    }
+  )
 })

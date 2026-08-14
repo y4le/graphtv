@@ -4,16 +4,16 @@ Research completed March 12, 2026. The goal is to find free (ideally keyless) AP
 
 ## Summary
 
-| API | Auth | Episode Ratings | Rating Source | Rate Limits | CORS | Verdict |
-|-----|------|-----------------|---------------|-------------|------|---------|
-| **TVmaze** | None | Yes | TVmaze community | 20/10s per IP | Yes | Best keyless option |
-| **TMDB** (current) | Bearer token | Yes | TMDB community | ~40/s per IP | Yes | Already working |
-| **OMDb** (old) | API key | Yes | IMDb | 1,000/day free | Works | Best ratings, tight limits |
-| **Trakt.tv** | Client ID | Yes | Trakt community | 1,000/5min | Per-domain whitelist | Complex CORS setup |
-| **TheTVDB** | API key + PIN | Not really | N/A | Unspecified | Unknown | Metadata only |
-| **EpisoDate** | None | No | N/A | Unknown | Unknown | Disqualified |
-| **IMDb Datasets** | None (download) | Yes | IMDb | N/A (static files) | N/A | Needs backend |
-| **Wikidata SPARQL** | None | Extremely sparse | Various | 60s timeout | Yes | Not viable |
+| API                 | Auth            | Episode Ratings  | Rating Source    | Rate Limits        | CORS                 | Verdict                    |
+| ------------------- | --------------- | ---------------- | ---------------- | ------------------ | -------------------- | -------------------------- |
+| **TVmaze**          | None            | Yes              | TVmaze community | 20/10s per IP      | Yes                  | Best keyless option        |
+| **TMDB** (current)  | Bearer token    | Yes              | TMDB community   | ~40/s per IP       | Yes                  | Already working            |
+| **OMDb** (old)      | API key         | Yes              | IMDb             | 1,000/day free     | Works                | Best ratings, tight limits |
+| **Trakt.tv**        | Client ID       | Yes              | Trakt community  | 1,000/5min         | Per-domain whitelist | Complex CORS setup         |
+| **TheTVDB**         | API key + PIN   | Not really       | N/A              | Unspecified        | Unknown              | Metadata only              |
+| **EpisoDate**       | None            | No               | N/A              | Unknown            | Unknown              | Disqualified               |
+| **IMDb Datasets**   | None (download) | Yes              | IMDb             | N/A (static files) | N/A                  | Needs backend              |
+| **Wikidata SPARQL** | None            | Extremely sparse | Various          | 60s timeout        | Yes                  | Not viable                 |
 
 ## Detailed findings
 

@@ -1,5 +1,11 @@
 import { alignSupplementalRecord } from './align.js'
-import { createEpisode, createSeason, createShow, sortEpisodes, sortSeasons } from './schema.js'
+import {
+  createEpisode,
+  createSeason,
+  createShow,
+  sortEpisodes,
+  sortSeasons
+} from './schema.js'
 
 function mergeRatings(...ratingSets) {
   const merged = new Map()
@@ -62,13 +68,17 @@ export function mergeShowRecords(primaryRecord, supplementalRecords = []) {
   const primaryShow = primaryRecord.show
   const mergedShow = createShow({
     ...primaryShow,
-    plot: supplementalRecords.reduce((plot, record) => pickValue(plot, record.show.plot), primaryShow.plot),
+    plot: supplementalRecords.reduce(
+      (plot, record) => pickValue(plot, record.show.plot),
+      primaryShow.plot
+    ),
     poster: supplementalRecords.reduce(
       (poster, record) => pickValue(poster, record.show.poster),
       primaryShow.poster
     ),
     totalSeasons: supplementalRecords.reduce(
-      (totalSeasons, record) => Math.max(totalSeasons, record.show.totalSeasons),
+      (totalSeasons, record) =>
+        Math.max(totalSeasons, record.show.totalSeasons),
       primaryShow.totalSeasons
     ),
     ratings: supplementalRecords.reduce(
@@ -112,7 +122,9 @@ export function mergeShowRecords(primaryRecord, supplementalRecords = []) {
   const mismatches = alignmentReports.flatMap((report) =>
     report.entries.filter((entry) => entry.type !== 'matched')
   )
-  const alignmentIssues = mismatches.filter((entry) => entry.type === 'ambiguous')
+  const alignmentIssues = mismatches.filter(
+    (entry) => entry.type === 'ambiguous'
+  )
 
   return {
     primarySource: primaryRecord.provider,

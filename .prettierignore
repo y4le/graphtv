@@ -1,0 +1,6 @@
+.parley/
+.octant/
+coverage/
+dist/
+node_modules/
+src/generated/

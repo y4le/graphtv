@@ -5,7 +5,8 @@ const tailnetPath = process.env.GRAPHTV_DEV_PATH
 export function restoreTailnetRequestUrl(requestUrl, path) {
   const base = `${path}/`
   const suffixIndex = requestUrl.search(/[?#]/)
-  const pathname = suffixIndex === -1 ? requestUrl : requestUrl.slice(0, suffixIndex)
+  const pathname =
+    suffixIndex === -1 ? requestUrl : requestUrl.slice(0, suffixIndex)
   const suffix = suffixIndex === -1 ? '' : requestUrl.slice(suffixIndex)
 
   if (pathname === path) {

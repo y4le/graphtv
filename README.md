@@ -29,13 +29,26 @@ Use `.env.local` for provider credentials:
 ```bash
 TMDB_BEARER_TOKEN=
 OMDB_API_KEY=
-TVDB_API_KEY=
-TVDB_READ_TOKEN=
 ```
+
+Before opening a pull request or pushing to `master`, run the same validation
+used by CI:
+
+```bash
+npm run verify
+```
+
+`npm run audit` performs the network-backed full dependency audit used by CI.
+It is separate from `verify` so local validation and production deployment do
+not become unavailable when the advisory service is unreachable.
+
+The production asset budget defaults to 90,000 gzip bytes total and 75,000
+gzip bytes for the entry JavaScript chunk. Set `MAX_TOTAL_GZIP_BYTES` or
+`MAX_ENTRY_GZIP_BYTES` when intentionally revising those limits.
 
 ## GitHub Pages
 
-This repo includes a GitHub Pages workflow at [.github/workflows/deploy-pages.yml](/Users/yale/dev/graphtv/.github/workflows/deploy-pages.yml).
+This repo includes a GitHub Pages workflow at [.github/workflows/deploy-pages.yml](.github/workflows/deploy-pages.yml).
 
 To deploy:
 
@@ -43,10 +56,9 @@ To deploy:
 2. Add these repository secrets if you want the keyed providers enabled in the deployed build:
    - `TMDB_BEARER_TOKEN`
    - `OMDB_API_KEY`
-   - `TVDB_API_KEY`
-   - `TVDB_READ_TOKEN`
 3. Push to `master` or run the workflow manually.
 
 Important:
+
 - This is a static client-side deploy. Any keyed provider credentials included in the build are exposed to the browser.
 - The build step obfuscates them to avoid trivial harvesting from git, but it does not keep them secret from users.

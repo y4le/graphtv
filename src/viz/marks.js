@@ -230,15 +230,14 @@ export function renderSeasonAxis(
     })
     .text((span) => `Season ${span.seasonNumber}`)
 
-  labels
-    .each(function (span) {
-      const fullLabel = `Season ${span.seasonNumber}`
-      const fullLabelWidth = measureSvgText(this, fullLabel)
-      this.textContent =
-        fullLabelWidth + SEASON_AXIS_FULL_LABEL_PADDING <= span.availableWidth
-          ? fullLabel
-          : String(span.seasonNumber)
-    })
+  labels.each(function (span) {
+    const fullLabel = `Season ${span.seasonNumber}`
+    const fullLabelWidth = measureSvgText(this, fullLabel)
+    this.textContent =
+      fullLabelWidth + SEASON_AXIS_FULL_LABEL_PADDING <= span.availableWidth
+        ? fullLabel
+        : String(span.seasonNumber)
+  })
 }
 
 function isSelectableSeasonAxisLabel(span, interactions) {
@@ -304,9 +303,7 @@ function createVisibleSeasonBoundaries(spans, viewport) {
       ...spans.slice(1).map((span) => span.start - 0.5),
       spans.at(-1).end
     ])
-  ).filter(
-    (boundary) => boundary >= viewport.start && boundary <= viewport.end
-  )
+  ).filter((boundary) => boundary >= viewport.start && boundary <= viewport.end)
 }
 
 function getSeasonAxisSpanBoundaries(spans, seasonNumber) {

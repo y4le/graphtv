@@ -173,13 +173,13 @@ If one slice grows too large, split it.
 
 Before considering the redesign done:
 
-1. `npm test` passes
-2. `npm run lint` passes
-3. `npm run build` passes
-4. bundle size remains comfortably under budget
-5. every interactive element is keyboard navigable with both vim and conventional keys
-6. help, view options, and debug overlays all open, navigate, and close by keyboard
-7. mobile chart-body scrolling and sticky-axis fallback work coherently
-8. the chart sits on the page canvas without a boxed background
-9. reduced-motion behavior is respected
-10. the codebase is cleaner after the polish pass, not just more featureful
+1. `npm run verify` passes
+2. the independent `npm run audit` security check passes
+3. the bundle stays below the enforced 90,000-byte total and 75,000-byte
+   entry-JavaScript gzip budgets
+4. every interactive element is keyboard navigable with both vim and conventional keys
+5. help, view options, and debug overlays all open, navigate, and close by keyboard
+6. mobile chart-body scrolling and sticky-axis fallback work coherently
+7. the chart sits on the page canvas without a boxed background
+8. reduced-motion behavior is respected
+9. the codebase is cleaner after the polish pass, not just more featureful

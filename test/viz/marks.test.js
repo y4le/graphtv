@@ -137,9 +137,9 @@ describe('trendline hit testing', () => {
     const series = createSegment('series', 'series', 0.5, 2.5)
     const season = createSegment('season:1', 'season', 0.5, 2.5)
 
-    expect(
-      resolveTrendHit([50, 50], [series, season], scales, 7)?.id
-    ).toBe('season:1')
+    expect(resolveTrendHit([50, 50], [series, season], scales, 7)?.id).toBe(
+      'season:1'
+    )
     expect(resolveTrendHit([50, 70], [series, season], scales, 7)).toBeNull()
   })
 

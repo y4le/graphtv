@@ -14,9 +14,16 @@ let sparklineInstances = 0
 export function createSparkline(svgNode, config) {
   const svg = select(svgNode)
   const clipId = `sparkline-window-${++sparklineInstances}`
-  const windowClipRect = svg.append('defs').append('clipPath').attr('id', clipId).append('rect')
+  const windowClipRect = svg
+    .append('defs')
+    .append('clipPath')
+    .attr('id', clipId)
+    .append('rect')
   const brushLayer = svg.append('g').attr('class', 'viewport-brush')
-  const marks = svg.append('g').attr('class', 'sparkline-marks').attr('pointer-events', 'none')
+  const marks = svg
+    .append('g')
+    .attr('class', 'sparkline-marks')
+    .attr('pointer-events', 'none')
 
   let suppressBrushEvents = false
   let lastTapAt = 0
@@ -43,7 +50,10 @@ export function createSparkline(svgNode, config) {
       }
 
       const [start, end] = event.selection.map(config.scales.xScale.invert)
-      config.onViewportChange({ start, end }, event.type === 'end' ? 'brush-end' : 'brush')
+      config.onViewportChange(
+        { start, end },
+        event.type === 'end' ? 'brush-end' : 'brush'
+      )
     })
 
   brush.extent([
@@ -65,11 +75,20 @@ export function createSparkline(svgNode, config) {
       .x((point) => config.scales.xScale(point.x))
       .y((point) => config.scales.yScale(point.rating))
 
-    svg.attr('viewBox', `0 0 ${config.dimensions.width} ${config.dimensions.height}`)
-    const [windowX1, windowX2] = viewportToBrushSelection(config.viewport, config.scales.xScale)
-    const isInWindow = (point) => point.x >= config.viewport.start && point.x <= config.viewport.end
+    svg.attr(
+      'viewBox',
+      `0 0 ${config.dimensions.width} ${config.dimensions.height}`
+    )
+    const [windowX1, windowX2] = viewportToBrushSelection(
+      config.viewport,
+      config.scales.xScale
+    )
+    const isInWindow = (point) =>
+      point.x >= config.viewport.start && point.x <= config.viewport.end
     const pathData =
-      config.model.ratedPoints.length > 1 ? generator(config.model.ratedPoints) : null
+      config.model.ratedPoints.length > 1
+        ? generator(config.model.ratedPoints)
+        : null
     const activePointRadius = scalePointRadiusForDensity(
       ACTIVE_POINT_RADIUS,
       config.model.ratedPoints.length,
@@ -124,7 +143,9 @@ export function createSparkline(svgNode, config) {
         isInWindow(point) ? activePointRadius : inactivePointRadius
       )
       .attr('fill', config.theme.text)
-      .attr('opacity', (point) => (isInWindow(point) ? 1 : INACTIVE_INK_OPACITY))
+      .attr('opacity', (point) =>
+        isInWindow(point) ? 1 : INACTIVE_INK_OPACITY
+      )
 
     brushLayer.style('display', null)
     brush.extent([
@@ -140,7 +161,8 @@ export function createSparkline(svgNode, config) {
 
   render({
     ...config,
-    scales: config.scales ?? createSparklineScales(config.model, config.dimensions)
+    scales:
+      config.scales ?? createSparklineScales(config.model, config.dimensions)
   })
 
   return {
@@ -225,7 +247,12 @@ export function createSparkline(svgNode, config) {
       return
     }
 
-    if (wasTracked && !hadMultiTouch && pointerMeta && isTapLike(pointerMeta, event)) {
+    if (
+      wasTracked &&
+      !hadMultiTouch &&
+      pointerMeta &&
+      isTapLike(pointerMeta, event)
+    ) {
       const now = Date.now()
       if (now - lastTapAt <= DOUBLE_TAP_DELAY) {
         handleViewportReset(event)
@@ -241,7 +268,9 @@ export function createSparkline(svgNode, config) {
   }
 
   function applyMultiTouchBounds() {
-    const xs = Array.from(activePointers.values()).sort((left, right) => left - right)
+    const xs = Array.from(activePointers.values()).sort(
+      (left, right) => left - right
+    )
     if (xs.length < 2) {
       return
     }
@@ -275,7 +304,9 @@ export function createSparkline(svgNode, config) {
   function getLocalX(event) {
     const rect = svgNode.getBoundingClientRect()
     const renderedWidth = rect.width || config.dimensions.width
-    return ((event.clientX - rect.left) / renderedWidth) * config.dimensions.width
+    return (
+      ((event.clientX - rect.left) / renderedWidth) * config.dimensions.width
+    )
   }
 
   function clampX(value) {

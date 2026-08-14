@@ -2425,7 +2425,6 @@ button {
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
   }
-
 }
 
 @media (max-width: 860px) and (pointer: coarse) {
@@ -2481,7 +2480,6 @@ button {
   .collection-track {
     padding-bottom: 0.125rem;
   }
-
 }
 
 @media (max-width: 860px) and (max-height: 800px) {
@@ -2514,7 +2512,6 @@ button {
   .collection-rail + .collection-rail {
     margin-top: 0;
   }
-
 }
 
 @media (min-width: 601px) and (max-width: 860px) and (max-height: 800px) {

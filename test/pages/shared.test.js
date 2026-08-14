@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatRatingBadge, renderLoading, renderPublisherBrand } from '../../src/pages/shared.js'
+import {
+  formatRatingBadge,
+  renderLoading,
+  renderPublisherBrand
+} from '../../src/pages/shared.js'
 
 describe('renderPublisherBrand', () => {
   it('renders the publisher signature as a root-home link with one accented period', () => {
@@ -16,7 +20,9 @@ describe('renderPublisherBrand', () => {
 describe('renderLoading', () => {
   it('can defer announcements to a containing live region', () => {
     expect(renderLoading('Searching…')).toContain('role="status"')
-    expect(renderLoading('Searching…', { announce: false })).not.toContain('role="status"')
+    expect(renderLoading('Searching…', { announce: false })).not.toContain(
+      'role="status"'
+    )
   })
 })
 

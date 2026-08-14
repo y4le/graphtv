@@ -162,7 +162,9 @@ export function alignSupplementalRecord(primarySeasons, supplementalRecord) {
   const matches = new Map()
   const entries = []
   const seasonReports = []
-  const primaryBySeason = new Map(primarySeasons.map((season) => [season.number, season]))
+  const primaryBySeason = new Map(
+    primarySeasons.map((season) => [season.number, season])
+  )
   const supplementalBySeason = new Map(
     supplementalRecord.seasons.map((season) => [season.number, season])
   )
@@ -171,9 +173,9 @@ export function alignSupplementalRecord(primarySeasons, supplementalRecord) {
   ).sort((left, right) => left - right)
 
   for (const seasonNumber of seasonNumbers) {
-    const primaryEpisodes = [...(primaryBySeason.get(seasonNumber)?.episodes ?? [])].sort(
-      compareEpisodes
-    )
+    const primaryEpisodes = [
+      ...(primaryBySeason.get(seasonNumber)?.episodes ?? [])
+    ].sort(compareEpisodes)
     const supplementalEpisodes = [
       ...(supplementalBySeason.get(seasonNumber)?.episodes ?? [])
     ].sort(compareEpisodes)
@@ -197,7 +199,10 @@ export function alignSupplementalRecord(primarySeasons, supplementalRecord) {
 
     function matchUnique(strategy, evidenceForPair, keyForEpisode) {
       const primaryGroups = groupByKey(unmatchedPrimary, keyForEpisode)
-      const supplementalGroups = groupByKey(unmatchedSupplemental, keyForEpisode)
+      const supplementalGroups = groupByKey(
+        unmatchedSupplemental,
+        keyForEpisode
+      )
       const keys = Array.from(primaryGroups.keys())
         .filter((key) => supplementalGroups.has(key))
         .sort()
@@ -324,10 +329,12 @@ export function alignSupplementalRecord(primarySeasons, supplementalRecord) {
     const ambiguousSupplemental = new Set()
 
     for (const primaryEpisode of unmatchedPrimary) {
-      const candidates = Array.from(unmatchedSupplemental).filter((supplementalEpisode) => {
-        const evidence = matchingEvidence(primaryEpisode, supplementalEpisode)
-        return evidence.title || evidence.date
-      })
+      const candidates = Array.from(unmatchedSupplemental).filter(
+        (supplementalEpisode) => {
+          const evidence = matchingEvidence(primaryEpisode, supplementalEpisode)
+          return evidence.title || evidence.date
+        }
+      )
 
       if (candidates.length === 0) {
         continue
@@ -373,8 +380,11 @@ export function alignSupplementalRecord(primarySeasons, supplementalRecord) {
       primaryCount: primaryEpisodes.length,
       supplementalCount: supplementalEpisodes.length,
       matched: seasonEntries.filter((entry) => entry.type === 'matched').length,
-      ambiguous: seasonEntries.filter((entry) => entry.type === 'ambiguous').length,
-      unmatchedPrimary: seasonEntries.filter((entry) => entry.type === 'unmatched_primary').length,
+      ambiguous: seasonEntries.filter((entry) => entry.type === 'ambiguous')
+        .length,
+      unmatchedPrimary: seasonEntries.filter(
+        (entry) => entry.type === 'unmatched_primary'
+      ).length,
       unmatchedSupplemental: seasonEntries.filter(
         (entry) => entry.type === 'unmatched_supplemental'
       ).length

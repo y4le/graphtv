@@ -64,9 +64,30 @@ describe('cross-provider episode alignment', () => {
   it('realigns shifted episodes by identity evidence without trusting their numbers', () => {
     const primary = [
       season(2, [
-        episode('tvmaze', 'p1', 2, 1, 'Everything Is Great! Part 1', '2017-09-20'),
-        episode('tvmaze', 'p2', 2, 2, 'Everything Is Great! Part 2', '2017-09-20'),
-        episode('tvmaze', 'dance', 2, 3, 'Dance Dance Resolution', '2017-09-28'),
+        episode(
+          'tvmaze',
+          'p1',
+          2,
+          1,
+          'Everything Is Great! Part 1',
+          '2017-09-20'
+        ),
+        episode(
+          'tvmaze',
+          'p2',
+          2,
+          2,
+          'Everything Is Great! Part 2',
+          '2017-09-20'
+        ),
+        episode(
+          'tvmaze',
+          'dance',
+          2,
+          3,
+          'Dance Dance Resolution',
+          '2017-09-28'
+        ),
         episode('tvmaze', 'finale', 2, 13, 'Somewhere Else', '2018-02-01')
       ])
     ]
@@ -74,8 +95,23 @@ describe('cross-provider episode alignment', () => {
       provider: 'omdb',
       seasons: [
         season(2, [
-          episode('omdb', 'combined', 2, 1, 'Everything Is Great!', '2017-09-20'),
-          episode('omdb', 'dance', 2, 2, 'Dance Dance Resolution', '2017-09-28', 8.2),
+          episode(
+            'omdb',
+            'combined',
+            2,
+            1,
+            'Everything Is Great!',
+            '2017-09-20'
+          ),
+          episode(
+            'omdb',
+            'dance',
+            2,
+            2,
+            'Dance Dance Resolution',
+            '2017-09-28',
+            8.2
+          ),
           episode('omdb', 'duplicate', 2, 2, 'Episode #2.2', null, null),
           episode('omdb', 'finale', 2, 12, 'Somewhere Else', '2018-02-01', 8.8)
         ])
@@ -84,12 +120,12 @@ describe('cross-provider episode alignment', () => {
 
     const alignment = alignSupplementalRecord(primary, supplemental)
 
-    expect(alignment.matches.get('tvmaze:episode:dance')?.supplementalEpisode.id).toBe(
-      'omdb:episode:dance'
-    )
-    expect(alignment.matches.get('tvmaze:episode:finale')?.supplementalEpisode.id).toBe(
-      'omdb:episode:finale'
-    )
+    expect(
+      alignment.matches.get('tvmaze:episode:dance')?.supplementalEpisode.id
+    ).toBe('omdb:episode:dance')
+    expect(
+      alignment.matches.get('tvmaze:episode:finale')?.supplementalEpisode.id
+    ).toBe('omdb:episode:finale')
     expect(alignment.matches.has('tvmaze:episode:p1')).toBe(false)
     expect(alignment.matches.has('tvmaze:episode:p2')).toBe(false)
     expect(alignment.report.entries).toEqual(
@@ -102,7 +138,10 @@ describe('cross-provider episode alignment', () => {
         }),
         expect.objectContaining({
           type: 'ambiguous',
-          primary: expect.objectContaining({ episode: 2, title: 'Everything Is Great! Part 2' })
+          primary: expect.objectContaining({
+            episode: 2,
+            title: 'Everything Is Great! Part 2'
+          })
         }),
         expect.objectContaining({
           type: 'unmatched_supplemental',
@@ -139,11 +178,17 @@ describe('cross-provider episode alignment', () => {
 
   it('uses a unique exact date only after stronger title evidence is exhausted', () => {
     const primary = [
-      season(1, [episode('tvmaze', 'one', 1, 1, 'Localized title', '2020-01-01')])
+      season(1, [
+        episode('tvmaze', 'one', 1, 1, 'Localized title', '2020-01-01')
+      ])
     ]
     const supplemental = {
       provider: 'omdb',
-      seasons: [season(1, [episode('omdb', 'one', 1, 9, 'Original title', '2020-01-01')])]
+      seasons: [
+        season(1, [
+          episode('omdb', 'one', 1, 9, 'Original title', '2020-01-01')
+        ])
+      ]
     }
 
     const alignment = alignSupplementalRecord(primary, supplemental)
@@ -325,7 +370,9 @@ describe('cross-provider episode alignment', () => {
     ]
     const supplemental = {
       provider: 'tmdb',
-      seasons: [season(1, [episode('tmdb', 'exact', 1, 1, 'The Test', '2020-01-01')])]
+      seasons: [
+        season(1, [episode('tmdb', 'exact', 1, 1, 'The Test', '2020-01-01')])
+      ]
     }
 
     const alignment = alignSupplementalRecord(primary, supplemental)
@@ -339,11 +386,17 @@ describe('cross-provider episode alignment', () => {
 
   it('never aligns episodes across season boundaries', () => {
     const primary = [
-      season(1, [episode('tvmaze', 'one', 1, 1, 'A Shared Title', '2020-01-01')])
+      season(1, [
+        episode('tvmaze', 'one', 1, 1, 'A Shared Title', '2020-01-01')
+      ])
     ]
     const supplemental = {
       provider: 'omdb',
-      seasons: [season(2, [episode('omdb', 'one', 2, 1, 'A Shared Title', '2020-01-01')])]
+      seasons: [
+        season(2, [
+          episode('omdb', 'one', 2, 1, 'A Shared Title', '2020-01-01')
+        ])
+      ]
     }
 
     const alignment = alignSupplementalRecord(primary, supplemental)

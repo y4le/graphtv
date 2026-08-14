@@ -99,7 +99,10 @@ const CHART_TOKENS = {
 }
 
 function getSystemTheme() {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+  if (
+    typeof window === 'undefined' ||
+    typeof window.matchMedia !== 'function'
+  ) {
     return SETTINGS_DEFAULTS.theme
   }
 
@@ -113,18 +116,26 @@ function normalizePaletteId(paletteId) {
 
 function sanitizeSettings(candidate = {}) {
   return {
-    theme: THEMES.includes(candidate.theme) ? candidate.theme : getSystemTheme(),
+    theme: THEMES.includes(candidate.theme)
+      ? candidate.theme
+      : getSystemTheme(),
     palette: normalizePaletteId(candidate.palette),
     seasonTrendlines:
-      typeof candidate.seasonTrendlines === 'boolean' ? candidate.seasonTrendlines : SETTINGS_DEFAULTS.seasonTrendlines,
+      typeof candidate.seasonTrendlines === 'boolean'
+        ? candidate.seasonTrendlines
+        : SETTINGS_DEFAULTS.seasonTrendlines,
     fullShowTrendline:
       typeof candidate.fullShowTrendline === 'boolean'
         ? candidate.fullShowTrendline
         : SETTINGS_DEFAULTS.fullShowTrendline,
     showSourceSpread:
-      typeof candidate.showSourceSpread === 'boolean' ? candidate.showSourceSpread : SETTINGS_DEFAULTS.showSourceSpread,
+      typeof candidate.showSourceSpread === 'boolean'
+        ? candidate.showSourceSpread
+        : SETTINGS_DEFAULTS.showSourceSpread,
     absoluteYAxis:
-      typeof candidate.absoluteYAxis === 'boolean' ? candidate.absoluteYAxis : SETTINGS_DEFAULTS.absoluteYAxis,
+      typeof candidate.absoluteYAxis === 'boolean'
+        ? candidate.absoluteYAxis
+        : SETTINGS_DEFAULTS.absoluteYAxis,
     episodeDensity: EPISODE_DENSITIES.includes(candidate.episodeDensity)
       ? candidate.episodeDensity
       : SETTINGS_DEFAULTS.episodeDensity
@@ -168,11 +179,21 @@ function applyCssTokens(settings) {
   root.dataset.palette = settings.palette
   root.dataset.episodeDensity = settings.episodeDensity
 
-  Object.entries(themeTokens).forEach(([token, value]) => setCssVar(root, token, value))
-  Object.entries(TYPOGRAPHY_TOKENS).forEach(([token, value]) => setCssVar(root, `font-${token}`, value))
-  Object.entries(SPACING_TOKENS).forEach(([token, value]) => setCssVar(root, token, value))
-  Object.entries(CHART_TOKENS).forEach(([token, value]) => setCssVar(root, token, value))
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeTokens.canvas)
+  Object.entries(themeTokens).forEach(([token, value]) =>
+    setCssVar(root, token, value)
+  )
+  Object.entries(TYPOGRAPHY_TOKENS).forEach(([token, value]) =>
+    setCssVar(root, `font-${token}`, value)
+  )
+  Object.entries(SPACING_TOKENS).forEach(([token, value]) =>
+    setCssVar(root, token, value)
+  )
+  Object.entries(CHART_TOKENS).forEach(([token, value]) =>
+    setCssVar(root, token, value)
+  )
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute('content', themeTokens.canvas)
 }
 
 let uiSettings = SETTINGS_DEFAULTS
@@ -181,7 +202,10 @@ export function initializeTheme() {
   uiSettings = readStoredSettings()
   applyCssTokens(uiSettings)
 
-  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+  if (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function'
+  ) {
     const mediaQuery = window.matchMedia(MEDIA_QUERY)
     mediaQuery.addEventListener('change', () => {
       const stored = readStoredSettings()
@@ -197,7 +221,9 @@ export function initializeTheme() {
 }
 
 function emitSettingsChange() {
-  document.dispatchEvent(new CustomEvent('graphtv:settings-change', { detail: uiSettings }))
+  document.dispatchEvent(
+    new CustomEvent('graphtv:settings-change', { detail: uiSettings })
+  )
 }
 
 export function getUiSettings() {
@@ -226,7 +252,12 @@ export function cyclePalette() {
   })
 }
 
-export function seasonColor(paletteId, seasonIndex, totalSeasons, themeId = uiSettings.theme) {
+export function seasonColor(
+  paletteId,
+  seasonIndex,
+  totalSeasons,
+  themeId = uiSettings.theme
+) {
   const normalizedPaletteId = normalizePaletteId(paletteId)
   const safeTotal = Math.max(totalSeasons, 1)
   const safeIndex = Math.max(0, Math.trunc(seasonIndex))
@@ -252,7 +283,8 @@ export function seasonColor(paletteId, seasonIndex, totalSeasons, themeId = uiSe
   }
 
   if (normalizedPaletteId === 'zigzag') {
-    const hue = (25 + Math.floor(safeIndex / 2) * 65 + (safeIndex % 2) * 180) % 360
+    const hue =
+      (25 + Math.floor(safeIndex / 2) * 65 + (safeIndex % 2) * 180) % 360
     const lightness = themeId === 'dark' ? 72 : 58
     const chroma = fitChromaToSrgb(
       lightness / 100,
@@ -311,13 +343,15 @@ function getMaximinPaletteState(themeId) {
   }
 
   const config = MAXIMIN_CONFIG[themeId]
-  const candidates = config.lightnesses.flatMap((lightness) =>
-    config.chromas.flatMap((chroma) =>
-      Array.from({ length: 24 }, (_, index) =>
-        createOklchCandidate(lightness, chroma, index * 15)
+  const candidates = config.lightnesses
+    .flatMap((lightness) =>
+      config.chromas.flatMap((chroma) =>
+        Array.from({ length: 24 }, (_, index) =>
+          createOklchCandidate(lightness, chroma, index * 15)
+        )
       )
     )
-  ).filter(isInSrgbGamut)
+    .filter(isInSrgbGamut)
   const seedIndex = candidates.reduce((bestIndex, candidate, index) => {
     const bestDistance = oklchParameterDistance(
       candidates[bestIndex],
@@ -413,6 +447,7 @@ export function getChartTheme(settings = uiSettings) {
     spotColor: themeTokens.spotColor,
     spotColorMuted: themeTokens.spotColorMuted,
     canvasSubtle: themeTokens.canvasSubtle,
-    seasonColor: (seasonIndex, totalSeasons) => seasonColor(settings.palette, seasonIndex, totalSeasons, settings.theme)
+    seasonColor: (seasonIndex, totalSeasons) =>
+      seasonColor(settings.palette, seasonIndex, totalSeasons, settings.theme)
   }
 }

@@ -5,9 +5,7 @@ import { clientSecrets } from '../generated/clientSecrets.js'
 // It does not make them secret in the browser. Please be cool and do not abuse or scrape them.
 export const CLIENT_SECRET_KEYS = {
   omdb: 'omdbApiKey',
-  tmdb: 'tmdbBearerToken',
-  tvdbApiKey: 'tvdbApiKey',
-  tvdbReadToken: 'tvdbReadToken'
+  tmdb: 'tmdbBearerToken'
 }
 
 export function getClientSecret(secretKey) {

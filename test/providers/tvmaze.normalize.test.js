@@ -19,7 +19,8 @@ describe('tvmaze normalization', () => {
         title: 'The Wire',
         year: '2002',
         plot: null,
-        poster: 'https://static.tvmaze.com/uploads/images/original_untouched/8/20216.jpg',
+        poster:
+          'https://static.tvmaze.com/uploads/images/original_untouched/8/20216.jpg',
         totalSeasons: 0,
         genres: ['Crime', 'Drama'],
         ratings: [],
@@ -34,7 +35,8 @@ describe('tvmaze normalization', () => {
       title: 'The Wire',
       year: '2002',
       plot: 'Told from the points of view of both the Baltimore homicide and narcotics detectives and their targets.',
-      poster: 'https://static.tvmaze.com/uploads/images/original_untouched/8/20216.jpg',
+      poster:
+        'https://static.tvmaze.com/uploads/images/original_untouched/8/20216.jpg',
       totalSeasons: 1,
       genres: ['Crime', 'Drama'],
       ratings: [{ source: 'tvmaze', rating: 8.9, votes: null }],
@@ -56,7 +58,8 @@ describe('tvmaze normalization', () => {
             episode: 1,
             date: '2002-06-02',
             ratings: [{ source: 'tvmaze', rating: 8.3, votes: null }],
-            poster: 'https://static.tvmaze.com/uploads/images/original_untouched/1/1111.jpg',
+            poster:
+              'https://static.tvmaze.com/uploads/images/original_untouched/1/1111.jpg',
             sourceIds: { tvmaze: '1001' }
           },
           {
@@ -67,7 +70,8 @@ describe('tvmaze normalization', () => {
             episode: 2,
             date: '2002-06-09',
             ratings: [{ source: 'tvmaze', rating: 8.1, votes: null }],
-            poster: 'https://static.tvmaze.com/uploads/images/original_untouched/1/1112.jpg',
+            poster:
+              'https://static.tvmaze.com/uploads/images/original_untouched/1/1112.jpg',
             sourceIds: { tvmaze: '1002' }
           },
           {

@@ -1,6 +1,6 @@
 # GraphTV Style Guide
 
-Grounded in Edward Tufte's analytical design principles, especially *The Visual Display of Quantitative Information*, and adapted for the web rather than copied from print.
+Grounded in Edward Tufte's analytical design principles, especially _The Visual Display of Quantitative Information_, and adapted for the web rather than copied from print.
 
 ## Purpose
 
@@ -15,6 +15,7 @@ This guide is the visual and interaction baseline for the rewrite. It establishe
 Every meaningful screen should make the underlying evidence legible quickly. Decorative structure is not neutral; it competes with the signal.
 
 Rules:
+
 - Remove borders, boxes, fills, shadows, and separators unless they clarify structure or interaction.
 - Prefer direct labels and spatial grouping over legends.
 - Use one accent color for interaction or emphasis, not for atmosphere.
@@ -25,6 +26,7 @@ Rules:
 The goal is not "minimalism" in the abstract. The goal is to devote as much visual weight as possible to meaningful information.
 
 Rules:
+
 - Delete non-data ink first: decorative panels, unnecessary gridlines, ornamental gradients, oversized controls, duplicate metadata.
 - Delete redundant data-ink next: repeated labels, repeated titles, duplicated values, chart keys that restate obvious grouping.
 - Keep context that improves judgment: axes, units, trendlines, comparison frames, notes, and annotations when they materially help interpretation.
@@ -34,6 +36,7 @@ Rules:
 Charts should not visually exaggerate or suppress differences.
 
 Rules:
+
 - Keep visual encodings proportional to the underlying values.
 - Avoid distorted axes, fake perspective, inflated marker sizes, and ornamental smoothing that implies false precision.
 - Use interpolation and trendlines as aids, not as substitutes for the actual observations.
@@ -44,6 +47,7 @@ Rules:
 Tufte's work consistently keeps evidence adjacent to explanation. GraphTV should do the same.
 
 Rules:
+
 - Put narrative context, metadata, and chart interpretation beside the chart, not in separate modules far away.
 - Desktop detail should live in a persistent sidenote region, not in a detached floating tooltip.
 - Mobile detail should expand inline near the chart, not in a modal.
@@ -54,6 +58,7 @@ Rules:
 Tufte's sparkline work argues for design minimization, not data minimization. The right move is often to add compact context, not to hide information.
 
 Rules:
+
 - Dense shows should use a full-series overview plus a detailed viewport.
 - Provide macro and micro trend context together.
 - Show cross-provider comparisons where they increase confidence or reveal disagreement.
@@ -65,6 +70,7 @@ Rules:
 We should borrow Tufte's methods, not imitate a book page literally.
 
 Rules:
+
 - Responsive behavior is part of the design, not a fallback.
 - Sidenotes may collapse or move inline on small screens.
 - Interactive states must be keyboard accessible and touch-appropriate.
@@ -80,6 +86,7 @@ The following sections define GraphTV's visual and interaction language — how 
 ### Tone
 
 GraphTV should feel:
+
 - analytical
 - literary
 - restrained
@@ -87,6 +94,7 @@ GraphTV should feel:
 - calm
 
 GraphTV should not feel:
+
 - dashboard-like
 - glossy
 - gamified
@@ -99,6 +107,7 @@ GraphTV should not feel:
 Typography should carry most of the visual identity.
 
 Rules:
+
 - Use system fonts only.
 - Use the publisher signature's Geist Mono hierarchy for every text surface,
   including narrative material, controls, metadata, debug output, and chart
@@ -111,7 +120,9 @@ Rules:
 Canonical stack and compatibility aliases:
 
 ```css
---font-app: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+--font-app:
+  'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas,
+  'Liberation Mono', monospace;
 --font-serif: var(--font-app);
 --font-sans: var(--font-app);
 --font-mono: var(--font-app);
@@ -122,6 +133,7 @@ Canonical stack and compatibility aliases:
 Color should support reading and comparison, not define the product.
 
 Rules:
+
 - Default to warm off-white for light theme and rich charcoal for dark theme.
 - Body text should be near-black or near-white, never pure black/white.
 - Reserve vivid color for interaction, focus, and selective data emphasis.
@@ -130,6 +142,7 @@ Rules:
 - When multiple providers rate the same episode, make the comparison legible without requiring interaction. Disagreement should be visually distinct from consensus.
 
 Required settings:
+
 - Theme: `light`, `dark`. Default follows `prefers-color-scheme`. User choice persisted in `localStorage`.
 - Season palette: `monotone`, `alternating`, `rainbow`, `zigzag`, `maximin`. User choice persisted in `localStorage`.
 - Episode density: `roomy`, `balanced`, `dense`, `all`. Default is `balanced`; user choice persisted in `localStorage`.
@@ -139,6 +152,7 @@ Required settings:
 Layout should behave like a page composition, not a grid of components.
 
 Rules:
+
 - Avoid card shells for primary content.
 - Use generous whitespace and alignment to create structure instead of visible containers.
 - On desktop, prefer asymmetric two-column layouts with context on the left and evidence on the right.
@@ -153,6 +167,7 @@ Responsive approach: fluid, not breakpoint-driven. Use relative units, flexible 
 Charts are the product core. They should feel engineered, not skinned.
 
 Rules:
+
 - Remove full plot boxes and heavy grid systems.
 - Use one season row inside the graph with its rule serving as the graph's bottom edge, bridging left to the Y-axis, and boundary ticks pointing upward. Show `Season N` when it fits and only `N` when space is tight. Selectable labels and season trendlines share one selection state.
 - Show episode points clearly; trendlines should support interpretation without overpowering the points.
@@ -166,6 +181,7 @@ Rules:
 Interaction should reveal detail without breaking reading flow.
 
 Rules:
+
 - Hover, focus, and tap should reveal the same underlying information.
 - Desktop detail belongs in a sidenote region adjacent to the chart.
 - Mobile detail belongs inline below the chart.
@@ -181,6 +197,7 @@ Rules:
 Loading and empty states are editorial content, not UI widgets. They should match the typographic and tonal quality of the rest of the app.
 
 Rules:
+
 - Prefer text-based loading indicators over animated spinners. State the action in progress: "Searching..." or "Loading seasons..." in the shared app face and secondary color.
 - Add a subtle pulse or shimmer to loading text so the interface does not appear frozen. The effect should be gentle — the page breathing, not blinking. A slow opacity oscillation or a soft luminance sweep across the text.
 - Empty states should be specific: "No shows found for 'query'" rather than a generic empty illustration.
@@ -192,6 +209,7 @@ Rules:
 The copy should match the visual system.
 
 Rules:
+
 - Use short declarative labels.
 - Prefer specific metadata over marketing language.
 - Avoid hype, jokes, and anthropomorphic UI text.
@@ -201,6 +219,7 @@ Rules:
 Analytical restraint is not enough; the interface must stay operable and legible.
 
 Rules:
+
 - Meet contrast requirements in both themes.
 - Do not rely on color alone for season identification or provider disagreement cues.
 - Ensure all interactive chart points are focusable.
@@ -213,6 +232,7 @@ Rules:
 Debug mode is a first-class feature, not an afterthought. It may be denser and more utilitarian than the product surface, but it should not feel like a different app.
 
 Rules:
+
 - Preserve the shared monospaced alignment for data dumps, identifiers, and raw values.
 - Use flat structure — dense, scannable, and copy-pasteable. No collapsible trees or nested modals.
 - Debug UI should be visually distinct enough that it's clearly not part of the product surface — a gated overlay or panel with a subtle background tint.
@@ -273,7 +293,7 @@ Before shipping a screen, ask:
 
 ## Sources
 
-- Edward Tufte, *The Visual Display of Quantitative Information* (Graphics Press, 1983; 2nd ed. 2001)
+- Edward Tufte, _The Visual Display of Quantitative Information_ (Graphics Press, 1983; 2nd ed. 2001)
 - Edward Tufte, "Sparkline theory and practice"
   https://www.edwardtufte.com/notebook/sparkline-theory-and-practice-edward-tufte/
 - Tufte CSS project documentation

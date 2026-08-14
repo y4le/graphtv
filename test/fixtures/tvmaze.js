@@ -7,8 +7,10 @@ export const tvmazeSearchFixture = [
       premiered: '2002-06-02',
       genres: ['Crime', 'Drama'],
       image: {
-        medium: 'https://static.tvmaze.com/uploads/images/medium_portrait/8/20216.jpg',
-        original: 'https://static.tvmaze.com/uploads/images/original_untouched/8/20216.jpg'
+        medium:
+          'https://static.tvmaze.com/uploads/images/medium_portrait/8/20216.jpg',
+        original:
+          'https://static.tvmaze.com/uploads/images/original_untouched/8/20216.jpg'
       }
     }
   }
@@ -22,8 +24,10 @@ export const tvmazeShowFixture = {
     '<p>Told from the points of view of both the Baltimore homicide and narcotics detectives and their targets.</p>',
   genres: ['Crime', 'Drama'],
   image: {
-    medium: 'https://static.tvmaze.com/uploads/images/medium_portrait/8/20216.jpg',
-    original: 'https://static.tvmaze.com/uploads/images/original_untouched/8/20216.jpg'
+    medium:
+      'https://static.tvmaze.com/uploads/images/medium_portrait/8/20216.jpg',
+    original:
+      'https://static.tvmaze.com/uploads/images/original_untouched/8/20216.jpg'
   },
   rating: {
     average: 8.9
@@ -54,8 +58,10 @@ export const tvmazeEpisodesFixture = [
     airdate: '2002-06-02',
     summary: '<p>McNulty gets pulled into a new detail.</p>',
     image: {
-      medium: 'https://static.tvmaze.com/uploads/images/medium_landscape/1/1111.jpg',
-      original: 'https://static.tvmaze.com/uploads/images/original_untouched/1/1111.jpg'
+      medium:
+        'https://static.tvmaze.com/uploads/images/medium_landscape/1/1111.jpg',
+      original:
+        'https://static.tvmaze.com/uploads/images/original_untouched/1/1111.jpg'
     },
     rating: {
       average: 8.3
@@ -69,8 +75,10 @@ export const tvmazeEpisodesFixture = [
     airdate: '2002-06-09',
     summary: '<p>The unit starts to organize its surveillance.</p>',
     image: {
-      medium: 'https://static.tvmaze.com/uploads/images/medium_landscape/1/1112.jpg',
-      original: 'https://static.tvmaze.com/uploads/images/original_untouched/1/1112.jpg'
+      medium:
+        'https://static.tvmaze.com/uploads/images/medium_landscape/1/1112.jpg',
+      original:
+        'https://static.tvmaze.com/uploads/images/original_untouched/1/1112.jpg'
     },
     rating: {
       average: 8.1

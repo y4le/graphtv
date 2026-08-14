@@ -4,16 +4,16 @@ Research completed March 12, 2026. Updated after a D3-focused follow-up review. 
 
 ## Summary
 
-| Option | Visual quality | Customization | Responsive | Cross-platform story | Cost / license | Fit for GraphTV | Verdict |
-|-----|-----|-----|-----|-----|-----|-----|-----|
-| **Apache ECharts** | High | High | Strong | Web-first, SSR, SVG/Canvas | Apache 2.0 | Excellent | Best OSS library |
-| **Highcharts** | Very high | Very high | Strong | Web + official integrations incl. Flutter | Commercial for many uses | Excellent | Best premium library |
-| **D3** | As good as you build | Maximum | Strong if implemented well | Works in any JavaScript environment; SVG and Canvas capable | ISC | Excellent for a narrow custom chart layer | Best bespoke foundation |
-| **visx** | Good | High | Depends on implementation | React web only | MIT | Poor fit today | Good only after React migration |
-| **Vega-Lite** | Good | Medium | Strong | Web-focused | BSD-3-Clause | Fair | Better for analytics than product UI |
-| **Observable Plot** | Good defaults | Medium | Strong | Web-focused | ISC | Fair | Great for fast iteration, not best for branded UI |
-| **Plotly.js** | Good | High | Strong | Web-focused | MIT | Fair | Broad but heavier and less GraphTV-like |
-| **Roll our own engine** | Potentially highest | Maximum | Fully owned | Fully owned | Highest engineering cost | Poor | Not justified |
+| Option                  | Visual quality       | Customization | Responsive                 | Cross-platform story                                        | Cost / license           | Fit for GraphTV                           | Verdict                                           |
+| ----------------------- | -------------------- | ------------- | -------------------------- | ----------------------------------------------------------- | ------------------------ | ----------------------------------------- | ------------------------------------------------- |
+| **Apache ECharts**      | High                 | High          | Strong                     | Web-first, SSR, SVG/Canvas                                  | Apache 2.0               | Excellent                                 | Best OSS library                                  |
+| **Highcharts**          | Very high            | Very high     | Strong                     | Web + official integrations incl. Flutter                   | Commercial for many uses | Excellent                                 | Best premium library                              |
+| **D3**                  | As good as you build | Maximum       | Strong if implemented well | Works in any JavaScript environment; SVG and Canvas capable | ISC                      | Excellent for a narrow custom chart layer | Best bespoke foundation                           |
+| **visx**                | Good                 | High          | Depends on implementation  | React web only                                              | MIT                      | Poor fit today                            | Good only after React migration                   |
+| **Vega-Lite**           | Good                 | Medium        | Strong                     | Web-focused                                                 | BSD-3-Clause             | Fair                                      | Better for analytics than product UI              |
+| **Observable Plot**     | Good defaults        | Medium        | Strong                     | Web-focused                                                 | ISC                      | Fair                                      | Great for fast iteration, not best for branded UI |
+| **Plotly.js**           | Good                 | High          | Strong                     | Web-focused                                                 | MIT                      | Fair                                      | Broad but heavier and less GraphTV-like           |
+| **Roll our own engine** | Potentially highest  | Maximum       | Fully owned                | Fully owned                                                 | Highest engineering cost | Poor                                      | Not justified                                     |
 
 ## Updated conclusion
 

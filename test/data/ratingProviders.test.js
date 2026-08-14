@@ -19,12 +19,9 @@ describe('rating provider registry', () => {
     expect(getRatingSourceLabel('omdb')).toBe('IMDb')
     expect(getRatingMinimumVotes('tmdb')).toBe(5)
     expect(getRatingMinimumVotes('omdb')).toBe(0)
-    expect(orderVisibleRatings(ratings).map((rating) => rating.source)).toEqual([
-      'omdb',
-      'tvmaze',
-      'tmdb',
-      'unknown'
-    ])
+    expect(orderVisibleRatings(ratings).map((rating) => rating.source)).toEqual(
+      ['omdb', 'tvmaze', 'tmdb', 'unknown']
+    )
   })
 
   it('builds provider-owned series links from normalized external ids', () => {

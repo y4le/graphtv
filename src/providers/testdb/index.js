@@ -13,11 +13,22 @@ import {
   tvmazeShowFixture
 } from '../../../test/fixtures/tvmaze.js'
 import { normalizeOmdbSeason, normalizeOmdbShow } from '../omdb/normalize.js'
-import { normalizeTmdbExternalIds, normalizeTmdbSeason, normalizeTmdbShow } from '../tmdb/normalize.js'
-import { normalizeTvmazeEpisodes, normalizeTvmazeSearch, normalizeTvmazeShow } from '../tvmaze/normalize.js'
+import {
+  normalizeTmdbExternalIds,
+  normalizeTmdbSeason,
+  normalizeTmdbShow
+} from '../tmdb/normalize.js'
+import {
+  normalizeTvmazeEpisodes,
+  normalizeTvmazeSearch,
+  normalizeTvmazeShow
+} from '../tvmaze/normalize.js'
 
 const tvmazeShow = normalizeTvmazeShow(tvmazeShowFixture)
-const tmdbShow = normalizeTmdbShow(tmdbShowFixture, normalizeTmdbExternalIds(tmdbExternalIdsFixture))
+const tmdbShow = normalizeTmdbShow(
+  tmdbShowFixture,
+  normalizeTmdbExternalIds(tmdbExternalIdsFixture)
+)
 const omdbShow = normalizeOmdbShow(omdbShowFixture)
 
 const primaryRecord = {
@@ -40,11 +51,15 @@ const supplementalRecords = [
 ]
 
 export async function search(query, _options = {}) {
-  const normalizedSearch = normalizeTvmazeSearch(tvmazeSearchFixture).map((show) => ({
-    ...show,
-    id: 'testdb:the-wire'
-  }))
-  return normalizedSearch.filter((show) => show.title.toLowerCase().includes(query.toLowerCase()))
+  const normalizedSearch = normalizeTvmazeSearch(tvmazeSearchFixture).map(
+    (show) => ({
+      ...show,
+      id: 'testdb:the-wire'
+    })
+  )
+  return normalizedSearch.filter((show) =>
+    show.title.toLowerCase().includes(query.toLowerCase())
+  )
 }
 
 export async function getShow(id) {

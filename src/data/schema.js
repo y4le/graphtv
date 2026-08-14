@@ -10,7 +10,12 @@ function dedupeRatings(ratings = []) {
   return Array.from(seen.values())
 }
 
-export function createProviderRating(source, rating, votes = null, metadata = {}) {
+export function createProviderRating(
+  source,
+  rating,
+  votes = null,
+  metadata = {}
+) {
   return {
     ...metadata,
     source,

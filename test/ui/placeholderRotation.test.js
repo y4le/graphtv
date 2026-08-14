@@ -26,20 +26,31 @@ function installMotionPreference(initialMatches = false) {
   const motionQuery = {
     matches: initialMatches,
     addEventListener: vi.fn((_event, listener) => listeners.add(listener)),
-    removeEventListener: vi.fn((_event, listener) => listeners.delete(listener)),
+    removeEventListener: vi.fn((_event, listener) =>
+      listeners.delete(listener)
+    ),
     setMatches(matches) {
       this.matches = matches
       listeners.forEach((listener) => listener({ matches }))
     }
   }
-  vi.stubGlobal('matchMedia', vi.fn(() => motionQuery))
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn(() => motionQuery)
+  )
   return motionQuery
 }
 
 beforeEach(() => {
   vi.useFakeTimers()
-  originalVisibilityState = Object.getOwnPropertyDescriptor(document, 'visibilityState')
-  Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
+  originalVisibilityState = Object.getOwnPropertyDescriptor(
+    document,
+    'visibilityState'
+  )
+  Object.defineProperty(document, 'visibilityState', {
+    configurable: true,
+    value: 'visible'
+  })
 })
 
 afterEach(() => {
@@ -58,7 +69,10 @@ afterEach(() => {
 describe('createPlaceholderRotation', () => {
   it('sets the initial title synchronously and advances after a full hold and fade', () => {
     const input = createInput()
-    const controller = createPlaceholderRotation(input, { titles: TITLES, startIndex: 0 })
+    const controller = createPlaceholderRotation(input, {
+      titles: TITLES,
+      startIndex: 0
+    })
 
     expect(input.placeholder).toBe('Alpha')
     vi.advanceTimersByTime(PLACEHOLDER_ROTATION_MS)
@@ -74,7 +88,10 @@ describe('createPlaceholderRotation', () => {
 
   it('wraps from the final title to the first', () => {
     const input = createInput()
-    const controller = createPlaceholderRotation(input, { titles: TITLES, startIndex: 2 })
+    const controller = createPlaceholderRotation(input, {
+      titles: TITLES,
+      startIndex: 2
+    })
 
     advanceOneCycle()
 
@@ -84,7 +101,10 @@ describe('createPlaceholderRotation', () => {
 
   it('derives and normalizes the starting index without mutating the title list', () => {
     const input = createInput()
-    const controller = createPlaceholderRotation(input, { titles: TITLES, random: () => 0.5 })
+    const controller = createPlaceholderRotation(input, {
+      titles: TITLES,
+      random: () => 0.5
+    })
 
     expect(input.placeholder).toBe('Bravo')
     expect(TITLES).toEqual(['Alpha', 'Bravo', 'Charlie'])
@@ -108,7 +128,9 @@ describe('createPlaceholderRotation', () => {
       fadeMs: 50
     })
 
-    expect(input.style.getPropertyValue('--placeholderFadeDuration')).toBe('50ms')
+    expect(input.style.getPropertyValue('--placeholderFadeDuration')).toBe(
+      '50ms'
+    )
     vi.advanceTimersByTime(499)
     expect(input.classList.contains('is-placeholder-swapping')).toBe(false)
     vi.advanceTimersByTime(1)
@@ -121,7 +143,10 @@ describe('createPlaceholderRotation', () => {
 
   it('pauses while the input has a value and resumes from the next title when cleared', () => {
     const input = createInput()
-    const controller = createPlaceholderRotation(input, { titles: TITLES, startIndex: 0 })
+    const controller = createPlaceholderRotation(input, {
+      titles: TITLES,
+      startIndex: 0
+    })
 
     input.value = 'br'
     input.dispatchEvent(new Event('input'))
@@ -140,7 +165,10 @@ describe('createPlaceholderRotation', () => {
   it('does not mutate the input value or focus', () => {
     const input = createInput()
     input.focus()
-    const controller = createPlaceholderRotation(input, { titles: TITLES, startIndex: 0 })
+    const controller = createPlaceholderRotation(input, {
+      titles: TITLES,
+      startIndex: 0
+    })
 
     advanceOneCycle()
     advanceOneCycle()
@@ -153,7 +181,10 @@ describe('createPlaceholderRotation', () => {
   it('stays static and timer-free when reduced motion is preferred', () => {
     installMotionPreference(true)
     const input = createInput()
-    const controller = createPlaceholderRotation(input, { titles: TITLES, startIndex: 0 })
+    const controller = createPlaceholderRotation(input, {
+      titles: TITLES,
+      startIndex: 0
+    })
 
     vi.advanceTimersByTime((PLACEHOLDER_ROTATION_MS + PLACEHOLDER_FADE_MS) * 3)
 
@@ -165,16 +196,25 @@ describe('createPlaceholderRotation', () => {
   it('responds to live reduced-motion and page-visibility changes', () => {
     const motionQuery = installMotionPreference(false)
     const input = createInput()
-    const controller = createPlaceholderRotation(input, { titles: TITLES, startIndex: 0 })
+    const controller = createPlaceholderRotation(input, {
+      titles: TITLES,
+      startIndex: 0
+    })
 
     motionQuery.setMatches(true)
     expect(vi.getTimerCount()).toBe(0)
     motionQuery.setMatches(false)
-    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' })
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'hidden'
+    })
     document.dispatchEvent(new Event('visibilitychange'))
     expect(vi.getTimerCount()).toBe(0)
 
-    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'visible'
+    })
     document.dispatchEvent(new Event('visibilitychange'))
     advanceOneCycle()
     expect(input.placeholder).toBe('Bravo')
@@ -222,7 +262,10 @@ describe('createPlaceholderRotation', () => {
     const input = createInput()
     const inputRemoveListener = vi.spyOn(input, 'removeEventListener')
     const documentRemoveListener = vi.spyOn(document, 'removeEventListener')
-    const controller = createPlaceholderRotation(input, { titles: TITLES, startIndex: 0 })
+    const controller = createPlaceholderRotation(input, {
+      titles: TITLES,
+      startIndex: 0
+    })
 
     vi.advanceTimersByTime(PLACEHOLDER_ROTATION_MS)
     controller.destroy()
@@ -232,16 +275,28 @@ describe('createPlaceholderRotation', () => {
     expect(input.classList.contains('is-placeholder-swapping')).toBe(false)
     expect(input.style.getPropertyValue('--placeholderFadeDuration')).toBe('')
     expect(motionQuery.removeEventListener).toHaveBeenCalledOnce()
-    expect(inputRemoveListener).toHaveBeenCalledWith('input', expect.any(Function))
-    expect(inputRemoveListener).toHaveBeenCalledWith('search', expect.any(Function))
-    expect(documentRemoveListener).toHaveBeenCalledWith('visibilitychange', expect.any(Function))
+    expect(inputRemoveListener).toHaveBeenCalledWith(
+      'input',
+      expect.any(Function)
+    )
+    expect(inputRemoveListener).toHaveBeenCalledWith(
+      'search',
+      expect.any(Function)
+    )
+    expect(documentRemoveListener).toHaveBeenCalledWith(
+      'visibilitychange',
+      expect.any(Function)
+    )
     expect(vi.getTimerCount()).toBe(0)
   })
 
   it('handles empty and single-title lists without scheduling rotation', () => {
     const emptyInput = createInput()
     emptyInput.placeholder = 'Fallback'
-    const emptyController = createPlaceholderRotation(emptyInput, { titles: [], startIndex: 0 })
+    const emptyController = createPlaceholderRotation(emptyInput, {
+      titles: [],
+      startIndex: 0
+    })
     expect(emptyInput.placeholder).toBe('Fallback')
     expect(vi.getTimerCount()).toBe(0)
     emptyController.destroy()

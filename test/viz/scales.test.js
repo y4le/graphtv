@@ -18,12 +18,8 @@ describe('rating scale domains', () => {
       {
         number: 4,
         episodes: [
-          createEpisode('low-vote', [
-            { source: 'tmdb', rating: 1, votes: 2 }
-          ]),
-          createEpisode('eligible', [
-            { source: 'tmdb', rating: 8, votes: 5 }
-          ])
+          createEpisode('low-vote', [{ source: 'tmdb', rating: 1, votes: 2 }]),
+          createEpisode('eligible', [{ source: 'tmdb', rating: 8, votes: 5 }])
         ]
       }
     ])
@@ -44,9 +40,7 @@ describe('rating scale domains', () => {
       { number: 2, episodes: [] },
       {
         number: 3,
-        episodes: [
-          createEpisode('three', [{ source: 'test', rating: 7.2 }])
-        ]
+        episodes: [createEpisode('three', [{ source: 'test', rating: 7.2 }])]
       }
     ])
 
@@ -346,12 +340,13 @@ describe('viewport clamping', () => {
       end: 331
     })
 
-    expect(
-      createDefaultViewport({ xMax: 30 }, 600, false, 'roomy')
-    ).toEqual({ start: 1, end: 20 })
-    expect(
-      createDefaultViewport({ xMax: 30 }, 600, false, 'balanced')
-    ).toEqual({ start: 1, end: 30 })
+    expect(createDefaultViewport({ xMax: 30 }, 600, false, 'roomy')).toEqual({
+      start: 1,
+      end: 20
+    })
+    expect(createDefaultViewport({ xMax: 30 }, 600, false, 'balanced')).toEqual(
+      { start: 1, end: 30 }
+    )
   })
 
   it('retains the compact default window on mobile', () => {
@@ -371,9 +366,10 @@ describe('viewport clamping', () => {
     expect(
       createDefaultViewport({ xMax: 71 }, 1200, false, 'balanced')
     ).toEqual({ start: 1, end: 60 })
-    expect(
-      createDefaultViewport({ xMax: 15 }, 240, false, 'roomy')
-    ).toEqual({ start: 1, end: 12 })
+    expect(createDefaultViewport({ xMax: 15 }, 240, false, 'roomy')).toEqual({
+      start: 1,
+      end: 12
+    })
   })
 
   it('extends a nearby default edge through the end of a season', () => {

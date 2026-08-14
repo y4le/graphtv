@@ -29,8 +29,7 @@ export function clearAppStorage(storage) {
 
 export async function resetAllAppData(options = {}) {
   const clearCaches = options.clearCaches ?? clearApiCache
-  const localStorage =
-    options.localStorage ?? getBrowserStorage('localStorage')
+  const localStorage = options.localStorage ?? getBrowserStorage('localStorage')
   const sessionStorage =
     options.sessionStorage ?? getBrowserStorage('sessionStorage')
 

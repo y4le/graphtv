@@ -35,14 +35,14 @@ export function createKeyboardController({ page, overlayController }) {
     const activeElement = document.activeElement
     const isSearchResultTarget = Boolean(
       page.kind === 'search' &&
-        activeElement?.closest?.('[data-focus-zone="search-results"]')
+      activeElement?.closest?.('[data-focus-zone="search-results"]')
     )
     const isLocalKeyboardTarget = Boolean(
       activeElement?.closest?.('[data-keyboard-local]')
     )
     const isChartKeyboardTarget = Boolean(
       page.kind === 'results' &&
-        activeElement?.closest?.('[data-keyboard-chart]')
+      activeElement?.closest?.('[data-keyboard-chart]')
     )
 
     if (isEditableElement(activeElement)) {
@@ -105,12 +105,12 @@ export function createKeyboardController({ page, overlayController }) {
   function isChartHalfViewportShortcut(event) {
     return Boolean(
       page.kind === 'results' &&
-        page.chart &&
-        event.ctrlKey &&
-        !event.altKey &&
-        !event.metaKey &&
-        !event.shiftKey &&
-        (event.key === 'u' || event.key === 'd')
+      page.chart &&
+      event.ctrlKey &&
+      !event.altKey &&
+      !event.metaKey &&
+      !event.shiftKey &&
+      (event.key === 'u' || event.key === 'd')
     )
   }
 

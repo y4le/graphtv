@@ -12,7 +12,11 @@ async function bootstrap() {
   const canonicalSearch = normalizedParams.toString()
 
   if (canonicalSearch !== window.location.search.slice(1)) {
-    window.history.replaceState({}, '', canonicalSearch ? `?${canonicalSearch}` : window.location.pathname)
+    window.history.replaceState(
+      {},
+      '',
+      canonicalSearch ? `?${canonicalSearch}` : window.location.pathname
+    )
   }
 
   const params = getUrlParams()

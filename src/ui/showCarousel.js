@@ -258,7 +258,7 @@ function setControlDisabled(control, disabled) {
 function prefersReducedMotion(view) {
   return Boolean(
     typeof view?.matchMedia === 'function' &&
-      view.matchMedia('(prefers-reduced-motion: reduce)').matches
+    view.matchMedia('(prefers-reduced-motion: reduce)').matches
   )
 }
 

@@ -496,7 +496,7 @@ function averageRanks(values) {
   const ranks = Array(values.length)
   let tieTerm = 0
 
-  for (let start = 0; start < ordered.length; ) {
+  for (let start = 0; start < ordered.length;) {
     let end = start + 1
     while (
       end < ordered.length &&

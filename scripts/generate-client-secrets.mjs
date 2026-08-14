@@ -12,14 +12,6 @@ const SECRET_SPECS = [
   {
     exportKey: 'omdbApiKey',
     envKeys: ['OMDB_API_KEY', 'VITE_OMDB_API_KEY']
-  },
-  {
-    exportKey: 'tvdbApiKey',
-    envKeys: ['TVDB_API_KEY']
-  },
-  {
-    exportKey: 'tvdbReadToken',
-    envKeys: ['TVDB_READ_TOKEN']
   }
 ]
 

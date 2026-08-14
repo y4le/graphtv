@@ -17,14 +17,18 @@ export function createPlaceholderRotation(input, options = {}) {
     startIndex = Math.floor(random() * titles.length)
   } = options
   const titleCount = titles.length
-  let index = titleCount ? ((startIndex % titleCount) + titleCount) % titleCount : 0
+  let index = titleCount
+    ? ((startIndex % titleCount) + titleCount) % titleCount
+    : 0
   let completedCycles = 0
   let cycleTimer = null
   let fadeTimer = null
   let destroyed = false
 
   const motionQuery =
-    typeof window.matchMedia === 'function' ? window.matchMedia(REDUCED_MOTION_QUERY) : null
+    typeof window.matchMedia === 'function'
+      ? window.matchMedia(REDUCED_MOTION_QUERY)
+      : null
 
   function canRotate() {
     return (

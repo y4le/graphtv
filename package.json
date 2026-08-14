@@ -20,8 +20,11 @@
     "test:watch": "vitest",
     "prelint": "npm run prepare:client-secrets",
     "lint": "eslint src test scripts eslint.config.js vite.config.js",
+    "format:check": "prettier --check .",
     "format": "prettier --write .",
-    "size": "node scripts/report-bundle-size.mjs"
+    "audit": "npm audit --audit-level=high",
+    "size": "node scripts/report-bundle-size.mjs",
+    "verify": "npm run lint && npm test && npm run format:check && npm run build && npm run size"
   },
   "keywords": [
     "tv",
@@ -33,11 +36,11 @@
     "d3": "^7.9.0"
   },
   "devDependencies": {
-    "eslint": "^9.22.0",
+    "eslint": "^9.39.5",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^26.1.0",
-    "prettier": "^3.5.3",
-    "vite": "^8.0.0",
-    "vitest": "^4.1.0"
+    "prettier": "^3.9.6",
+    "vite": "^8.2.1",
+    "vitest": "^4.1.10"
   }
 }

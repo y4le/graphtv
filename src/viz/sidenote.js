@@ -3,10 +3,7 @@ import {
   getRatingSourceUrl,
   orderVisibleRatings
 } from '../data/ratingProviders.js'
-import {
-  isTrustedRating,
-  isUsableProviderRating
-} from '../data/stats.js'
+import { isTrustedRating, isUsableProviderRating } from '../data/stats.js'
 import { formatCompactNumber } from '../lib/number.js'
 
 let trendInfoSequence = 0

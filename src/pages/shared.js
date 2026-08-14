@@ -5,7 +5,10 @@ import {
 } from '../data/ratingProviders.js'
 import { formatCompactNumber } from '../lib/number.js'
 
-export function renderLoading(message = 'Loading...', { announce = true } = {}) {
+export function renderLoading(
+  message = 'Loading...',
+  { announce = true } = {}
+) {
   return `<p class="state-copy"${announce ? ' role="status"' : ''}>${message}</p>`
 }
 

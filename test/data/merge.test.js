@@ -162,10 +162,12 @@ describe('data/merge', () => {
       seasons: [
         {
           ...supplementalRecord.seasons[0],
-          episodes: supplementalRecord.seasons[0].episodes.slice(0, 3).map((episode) => ({
-            ...episode,
-            episode: episode.episode + 1
-          }))
+          episodes: supplementalRecord.seasons[0].episodes
+            .slice(0, 3)
+            .map((episode) => ({
+              ...episode,
+              episode: episode.episode + 1
+            }))
         }
       ]
     }
@@ -173,10 +175,16 @@ describe('data/merge', () => {
     const merged = mergeShowRecords(primaryRecord, [shiftedRecord])
 
     expect(
-      merged.seasons[0].episodes.map((episode) =>
-        episode.ratings.find((rating) => rating.source === 'tmdb')?.provenance.providerEpisodeId
+      merged.seasons[0].episodes.map(
+        (episode) =>
+          episode.ratings.find((rating) => rating.source === 'tmdb')?.provenance
+            .providerEpisodeId
       )
-    ).toEqual(['tmdb:episode:66452', 'tmdb:episode:66453', 'tmdb:episode:66454'])
+    ).toEqual([
+      'tmdb:episode:66452',
+      'tmdb:episode:66453',
+      'tmdb:episode:66454'
+    ])
     expect(merged.alignment[0].entries).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -239,7 +247,9 @@ describe('data/merge', () => {
     const merged = mergeShowRecords(primaryRecord, [missingSeasonRecord])
 
     expect(merged.mismatches).toHaveLength(3)
-    expect(merged.mismatches.every((entry) => entry.type === 'unmatched_primary')).toBe(true)
+    expect(
+      merged.mismatches.every((entry) => entry.type === 'unmatched_primary')
+    ).toBe(true)
     expect(merged.alignmentIssues).toEqual([])
   })
 

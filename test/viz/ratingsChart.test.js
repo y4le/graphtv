@@ -500,12 +500,12 @@ describe('createChart', () => {
       'Season 2'
     ])
     expect(new Set(labels.map((label) => label.getAttribute('y'))).size).toBe(1)
-    expect(labels.every((label) => label.getAttribute('role') === 'button')).toBe(
-      true
-    )
-    expect(labels.every((label) => label.getAttribute('tabindex') === '0')).toBe(
-      true
-    )
+    expect(
+      labels.every((label) => label.getAttribute('role') === 'button')
+    ).toBe(true)
+    expect(
+      labels.every((label) => label.getAttribute('tabindex') === '0')
+    ).toBe(true)
     expect(
       labels.every(
         (label) => label.getAttribute('data-keyboard-chart') === 'true'
@@ -587,10 +587,7 @@ describe('createChart', () => {
     })
     document.body.appendChild(container)
 
-    chart = createChart(
-      container,
-      createTwoSeasons({ secondEpisodeCount: 2 })
-    )
+    chart = createChart(container, createTwoSeasons({ secondEpisodeCount: 2 }))
     const secondSeason = Array.from(
       container.querySelectorAll('.season-axis-label')
     ).find((label) => label.__data__.seasonNumber === 2)
