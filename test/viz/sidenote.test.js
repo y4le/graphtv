@@ -310,11 +310,11 @@ describe('createSidenote', () => {
     sidenote.renderTrendSummary({
       label: 'Full series',
       kind: 'series',
-      n: 24,
-      totalEpisodes: 32,
-      excludedFallback: 0,
+      n: 13,
+      totalEpisodes: 19,
+      excludedFallback: 6,
       source: 'omdb',
-      plottingStatus: 'Plotting IMDb · source spread shows TMDB',
+      plottingStatus: 'Plotting IMDb · source spread shows TVmaze and TMDB',
       mean: 8.2,
       direction: 'up',
       delta: 0.4,
@@ -324,7 +324,7 @@ describe('createSidenote', () => {
     })
 
     expect(root.querySelector('.trend-summary-provenance').textContent).toBe(
-      '24 of 32 rated · Plotting IMDb · source spread shows TMDB'
+      'Plotting IMDb · source spread shows TVmaze and TMDB · 13 of 19 rated, 6 episodes use other sources and are excluded'
     )
   })
 

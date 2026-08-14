@@ -667,7 +667,7 @@ describe('createChart', () => {
 
     expect(
       container.querySelector('.trend-summary-provenance').textContent
-    ).toContain('rated · Plotting TEST · source spread shows TMDB')
+    ).toContain('Plotting TEST · source spread shows TMDB · 72 of 72 rated')
     expect(getAxisLabels(container)).toEqual(
       expect.arrayContaining(['0.0', '10.0'])
     )
@@ -700,7 +700,7 @@ describe('createChart', () => {
 
     expect(
       container.querySelector('.trend-summary-provenance').textContent
-    ).toContain('rated · Plotting TEST')
+    ).toContain('Plotting TEST · 72 of 72 rated')
     expect(
       container.querySelector('.trend-summary-provenance').textContent
     ).not.toContain('source spread shows TMDB')

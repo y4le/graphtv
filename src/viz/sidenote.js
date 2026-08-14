@@ -231,11 +231,12 @@ export function createSidenote({
       summary.kind === 'series' && summary.plottingStatus
         ? summary.plottingStatus
         : getRatingSourceLabel(summary.source)
-    const provenance = `${summary.n} of ${summary.totalEpisodes} rated · ${escapeHtml(sourceCopy)}${
-      provenanceNotes.length > 0
-        ? ` — ${escapeHtml(provenanceNotes.join('; '))}`
-        : ''
-    }`
+    const ratedCopy = `${summary.n} of ${summary.totalEpisodes} rated`
+    const notesCopy = escapeHtml(provenanceNotes.join('; '))
+    const provenance =
+      summary.kind === 'series' && summary.plottingStatus
+        ? `${escapeHtml(sourceCopy)} · ${ratedCopy}${notesCopy ? `, ${notesCopy}` : ''}`
+        : `${ratedCopy} · ${escapeHtml(sourceCopy)}${notesCopy ? ` — ${notesCopy}` : ''}`
 
     setMarkup(`
       <div class="sidenote-card sidenote-trend-card">
