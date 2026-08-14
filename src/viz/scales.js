@@ -348,13 +348,15 @@ function snapDefaultViewportEnd(
   availableWidth,
   targetSpacing
 ) {
-  const canSnapTo = (end) =>
+  const hasComfortableSpacing = (end) =>
     end > defaultEnd &&
-    end - defaultEnd <= DEFAULT_VIEWPORT_SNAP_EPISODES &&
-    availableWidth / end >=
+    (availableWidth - X_EDGE_INSET * 2) / Math.max(end - 1, 1) >=
       targetSpacing * DEFAULT_VIEWPORT_MIN_SPACING_RATIO
+  const canSnapToNearbyEdge = (end) =>
+    end - defaultEnd <= DEFAULT_VIEWPORT_SNAP_EPISODES &&
+    hasComfortableSpacing(end)
 
-  if (canSnapTo(model.xMax)) {
+  if (hasComfortableSpacing(model.xMax)) {
     return model.xMax
   }
 
@@ -362,7 +364,7 @@ function snapDefaultViewportEnd(
     .map((season) => season.end)
     .filter(
       (end) =>
-        canSnapTo(end) &&
+        canSnapToNearbyEdge(end) &&
         model.xMax - end > DEFAULT_VIEWPORT_SNAP_EPISODES
     )
     .sort((left, right) => left - right)[0]

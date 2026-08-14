@@ -361,12 +361,15 @@ describe('viewport clamping', () => {
     })
   })
 
-  it('absorbs a small trailing remainder when spacing remains comfortable', () => {
+  it('fits the full series whenever its point spacing remains comfortable', () => {
     expect(
       createDefaultViewport({ xMax: 62 }, 1200, false, 'balanced')
     ).toEqual({ start: 1, end: 62 })
     expect(
-      createDefaultViewport({ xMax: 64 }, 1200, false, 'balanced')
+      createDefaultViewport({ xMax: 65 }, 1200, false, 'balanced')
+    ).toEqual({ start: 1, end: 65 })
+    expect(
+      createDefaultViewport({ xMax: 71 }, 1200, false, 'balanced')
     ).toEqual({ start: 1, end: 60 })
     expect(
       createDefaultViewport({ xMax: 15 }, 240, false, 'roomy')
@@ -391,18 +394,18 @@ describe('viewport clamping', () => {
     expect(
       createDefaultViewport(
         {
-          xMax: 64,
+          xMax: 71,
           seasonSpans: [
             { start: 1, end: 31 },
             { start: 32, end: 62 },
-            { start: 63, end: 64 }
+            { start: 63, end: 71 }
           ]
         },
         1200,
         false,
         'balanced'
       )
-    ).toEqual({ start: 1, end: 60 })
+    ).toEqual({ start: 1, end: 62 })
   })
 
   it('preserves fractional movement while keeping the viewport in bounds', () => {
