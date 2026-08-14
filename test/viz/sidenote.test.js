@@ -72,6 +72,31 @@ describe('createSidenote', () => {
     )
   })
 
+  it('preserves detail DOM when its rendered content is unchanged', () => {
+    const root = document.createElement('section')
+    const sidenote = createSidenote({ root })
+    const point = {
+      id: 'episode-1',
+      title: 'Pilot',
+      season: 1,
+      episode: 1,
+      date: null,
+      plot: 'First synopsis',
+      rating: 8,
+      ratingSource: 'test',
+      ratings: [{ source: 'test', rating: 8 }]
+    }
+
+    sidenote.renderPoint(point)
+    const firstCard = root.querySelector('.sidenote-card')
+    sidenote.renderPoint({ ...point })
+
+    expect(root.querySelector('.sidenote-card')).toBe(firstCard)
+
+    sidenote.renderPoint({ ...point, plot: 'Updated synopsis' })
+    expect(root.querySelector('.sidenote-card')).not.toBe(firstCard)
+  })
+
   it('removes delegated listeners when destroyed', () => {
     const root = document.createElement('section')
     const firstNavigate = vi.fn()

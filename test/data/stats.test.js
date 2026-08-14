@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import {
+  createCachedSeriesBreakpointDetector,
   detectSeriesBreakpoint,
   getRatingSpread,
   isUsableProviderRating,
@@ -14,6 +15,93 @@ import {
 } from '../../src/data/stats.js'
 
 describe('data/stats', () => {
+  it('reuses identical breakpoint analysis while rebinding fresh point objects', () => {
+    const detector = vi.fn((points) => ({
+      beforePoints: points.slice(0, 1),
+      afterPoints: points.slice(1)
+    }))
+    const cachedDetector = createCachedSeriesBreakpointDetector(detector)
+    const firstPoints = createBreakpointPoints([8, 7, 6])
+    const first = cachedDetector(firstPoints)
+    const refreshedPoints = firstPoints.map((point) => ({
+      ...point,
+      title: `Refreshed ${point.id}`,
+      ratings: point.ratings.map((rating) => ({ ...rating }))
+    }))
+    const refreshed = cachedDetector(refreshedPoints)
+
+    expect(detector).toHaveBeenCalledOnce()
+    expect(refreshed).not.toBe(first)
+    expect(refreshed.beforePoints[0]).toBe(refreshedPoints[0])
+    expect(refreshed.afterPoints[0]).toBe(refreshedPoints[1])
+
+    refreshedPoints[1].rating = 5
+    cachedDetector(refreshedPoints)
+    expect(detector).toHaveBeenCalledTimes(2)
+  })
+
+  it('caches a missing breakpoint without growing a result collection', () => {
+    const detector = vi.fn(() => null)
+    const cachedDetector = createCachedSeriesBreakpointDetector(detector)
+    const points = createBreakpointPoints([8, 8, 8])
+
+    expect(cachedDetector(points)).toBeNull()
+    expect(cachedDetector(points.map((point) => ({ ...point })))).toBeNull()
+    expect(detector).toHaveBeenCalledOnce()
+  })
+
+  it('invalidates cached analysis when primary vote evidence changes', () => {
+    const detector = vi.fn(() => null)
+    const cachedDetector = createCachedSeriesBreakpointDetector(detector)
+    const points = createBreakpointPoints([8, 7, 6]).map((point) => ({
+      ...point,
+      ratings: point.ratings.map((rating) => ({ ...rating, votes: 100 }))
+    }))
+
+    cachedDetector(points)
+    const updatedPoints = points.map((point) => ({
+      ...point,
+      ratings: point.ratings.map((rating) => ({ ...rating }))
+    }))
+    updatedPoints[0].ratings[0].votes = 200
+    cachedDetector(updatedPoints)
+
+    expect(detector).toHaveBeenCalledTimes(2)
+  })
+
+  it.each([
+    ['rating source', (points) => (points[0].ratingSource = 'other')],
+    ['fallback status', (points) => (points[0].isFallbackRating = true)],
+    ['season', (points) => (points[0].season = 2)],
+    ['x position', (points) => (points[0].x = 99)],
+    ['order', (points) => points.reverse()],
+    ['length', (points) => points.pop()]
+  ])('invalidates cached analysis when %s changes', (_label, mutate) => {
+    const detector = vi.fn(() => null)
+    const cachedDetector = createCachedSeriesBreakpointDetector(detector)
+    const points = createBreakpointPoints([8, 7, 6])
+    cachedDetector(points)
+    const updatedPoints = points.map((point) => ({ ...point }))
+
+    mutate(updatedPoints)
+    cachedDetector(updatedPoints)
+
+    expect(detector).toHaveBeenCalledTimes(2)
+  })
+
+  it('bypasses caching when point IDs cannot be rebound uniquely', () => {
+    const detector = vi.fn(() => null)
+    const cachedDetector = createCachedSeriesBreakpointDetector(detector)
+    const points = createBreakpointPoints([8, 7, 6])
+
+    cachedDetector(points)
+    points[1].id = points[0].id
+    cachedDetector(points)
+    cachedDetector(points)
+
+    expect(detector).toHaveBeenCalledTimes(3)
+  })
+
   it('requires at least five TMDB votes for a usable rating', () => {
     expect(
       isUsableProviderRating({ source: 'tmdb', rating: 1, votes: 2 })

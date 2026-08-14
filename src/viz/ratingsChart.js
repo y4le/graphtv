@@ -23,6 +23,7 @@ import {
 import { createSidenote } from './sidenote.js'
 import { createSparkline } from './sparkline.js'
 import { getChartTheme, getUiSettings, updateUiSettings } from './theme.js'
+import { createCachedSeriesBreakpointDetector } from '../data/stats.js'
 
 const MOBILE_QUERY = '(max-width: 767px)'
 const MOBILE_LANDSCAPE_QUERY = '(max-width: 767px) and (orientation: landscape)'
@@ -86,7 +87,9 @@ export function createChart(container, seasons, options = {}) {
   const finePointerQuery = window.matchMedia(FINE_POINTER_QUERY)
   const coarsePointerQuery = window.matchMedia(COARSE_POINTER_QUERY)
 
-  let model = buildChartModel(seasons)
+  const breakpointDetector =
+    options.breakpointDetector ?? createCachedSeriesBreakpointDetector()
+  let model = buildChartModel(seasons, { breakpointDetector })
   let show = options.show ?? null
   let viewport = null
   let episodeDensity = getUiSettings().episodeDensity
@@ -162,7 +165,7 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function getPointById(id) {
-    return id ? (model.points.find((point) => point.id === id) ?? null) : null
+    return id ? (model.pointById.get(id) ?? null) : null
   }
 
   function getRatedPoints() {
@@ -193,10 +196,9 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function getScopeRatedPoints(summary) {
+    // Model collections are shared read-only views in every branch.
     if (summary?.kind === 'season') {
-      return model.ratedPoints.filter(
-        (point) => point.season === summary.seasonNumber
-      )
+      return model.ratedPointsBySeason.get(summary.seasonNumber) ?? []
     }
 
     if (summary?.kind === 'breakpoint') {
@@ -257,7 +259,7 @@ export function createChart(container, seasons, options = {}) {
 
     const activePoint = getActivePoint()
     if (activePoint) {
-      const index = points.findIndex((point) => point.id === activePoint.id)
+      const index = model.ratedPointIndexById.get(activePoint.id) ?? -1
       const hasSeriesStop = Boolean(getSeriesNavigationStop())
       const canNavigate = points.length > 1 || hasSeriesStop
       return {
@@ -737,9 +739,7 @@ export function createChart(container, seasons, options = {}) {
       return
     }
 
-    const currentIndex = points.findIndex(
-      (point) => point.id === selectedPoint.id
-    )
+    const currentIndex = model.ratedPointIndexById.get(selectedPoint.id) ?? -1
     const seriesStop = getSeriesNavigationStop()
     const sequenceLength = points.length + (seriesStop ? 1 : 0)
     const currentSequenceIndex = currentIndex + (seriesStop ? 1 : 0)
@@ -1041,7 +1041,7 @@ export function createChart(container, seasons, options = {}) {
     const previousPoint = getPointById(selectedPointId)
     const previousTrend = getTrendSummary(selectedTrendId)
     const shouldRefreshDefaultViewport = Boolean(viewport && !hasUserInteracted)
-    model = buildChartModel(nextSeasons)
+    model = buildChartModel(nextSeasons, { breakpointDetector })
     failedDetailPointIds.clear()
     if (!getPointById(hoverPointId)) {
       hoverPointId = null
@@ -1053,9 +1053,12 @@ export function createChart(container, seasons, options = {}) {
     if (!hasUserInteracted) {
       resolveDefaultSelection()
     } else if (previousPoint) {
-      const survivingPoint = model.ratedPoints.find(
-        (point) => point.id === previousPoint.id
+      const survivingPointIndex = model.ratedPointIndexById.get(
+        previousPoint.id
       )
+      const survivingPoint = Number.isInteger(survivingPointIndex)
+        ? model.ratedPoints[survivingPointIndex]
+        : null
       const nearestPoint = model.ratedPoints.reduce((nearest, point) => {
         if (!nearest) {
           return point
@@ -1798,12 +1801,18 @@ function getWheelZoomScale(event) {
 function renderSourceStatus(root, model, defaultViewport) {
   root.hidden = false
   if (!model.primaryRatingSource) {
-    root.textContent = 'No usable episode ratings.'
+    setTextContent(root, 'No usable episode ratings.')
     return
   }
 
   root.hidden = defaultViewport.start <= 1 && defaultViewport.end >= model.xMax
-  root.textContent = 'Drag the overview window to pan; resize it to zoom.'
+  setTextContent(root, 'Drag the overview window to pan; resize it to zoom.')
+}
+
+function setTextContent(element, value) {
+  if (element.textContent !== value) {
+    element.textContent = value
+  }
 }
 
 function getPlottingContext(model, settings) {

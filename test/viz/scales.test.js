@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import {
   buildChartModel,
@@ -12,6 +12,26 @@ import {
 } from '../../src/viz/scales.js'
 
 describe('rating scale domains', () => {
+  it('uses an injected breakpoint detector for model construction', () => {
+    const breakpointDetector = vi.fn(() => null)
+
+    buildChartModel(createBreakpointSeasons(), { breakpointDetector })
+
+    expect(breakpointDetector).toHaveBeenCalledOnce()
+  })
+
+  it('preserves first-match lookup semantics for malformed duplicate IDs', () => {
+    const first = createEpisode('duplicate', [{ source: 'test', rating: 7 }])
+    const second = {
+      ...createEpisode('duplicate', [{ source: 'test', rating: 8 }]),
+      title: 'Second'
+    }
+    const model = buildChartModel([{ number: 1, episodes: [first, second] }])
+
+    expect(model.pointById.get('duplicate').title).toBe(first.title)
+    expect(model.ratedPointIndexById.get('duplicate')).toBe(0)
+  })
+
   it('excludes TMDB episode ratings below five votes', () => {
     const model = buildChartModel([
       {
@@ -39,7 +59,12 @@ describe('rating scale domains', () => {
       { number: 2, episodes: [] },
       {
         number: 3,
-        episodes: [createEpisode('three', [{ source: 'test', rating: 7.2 }])]
+        episodes: [
+          {
+            ...createEpisode('three', [{ source: 'test', rating: 7.2 }]),
+            season: 3
+          }
+        ]
       }
     ])
 
@@ -58,6 +83,12 @@ describe('rating scale domains', () => {
         end: 3,
         midpoint: 3
       }
+    ])
+    expect(model.pointById.get('three')?.season).toBe(3)
+    expect(model.ratedPointIndexById.get('three')).toBe(2)
+    expect(model.ratedPointsBySeason.get(1).map((point) => point.id)).toEqual([
+      'one',
+      'two'
     ])
   })
 

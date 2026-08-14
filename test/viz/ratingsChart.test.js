@@ -103,6 +103,41 @@ describe('createChart', () => {
     expect(sparklineWidth).toBe(mainPlotWidth)
   })
 
+  it('does not rewrite an unchanged chart status live region', async () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+    chart = createChart(container, createSeasons())
+    const status = container.querySelector('.chart-source-status')
+    const onMutation = vi.fn()
+    const observer = new MutationObserver(onMutation)
+    observer.observe(status, { childList: true, characterData: true })
+
+    chart.panHalfViewport(1)
+    await Promise.resolve()
+
+    expect(onMutation).not.toHaveBeenCalled()
+    observer.disconnect()
+  })
+
+  it('threads an injected breakpoint detector through chart updates', () => {
+    const container = document.createElement('div')
+    const breakpointDetector = vi.fn(() => null)
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons(), { breakpointDetector })
+    chart.updateSeasons(createSeasons())
+
+    expect(breakpointDetector).toHaveBeenCalledTimes(2)
+  })
+
   it('opens rating details with the highest-priority enabled selection', () => {
     updateUiSettings({ fullShowTrendline: true })
     const container = document.createElement('div')

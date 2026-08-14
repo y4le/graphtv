@@ -31,7 +31,9 @@ const VIEWPORT_DENSITY_CONFIG = {
   }
 }
 
-export function buildChartModel(seasons) {
+export function buildChartModel(seasons, options = {}) {
+  const breakpointDetector =
+    options.breakpointDetector ?? detectSeriesBreakpoint
   const episodes = seasons.flatMap((season) => season.episodes)
   const primaryRating = selectPrimaryRatingSource(episodes)
   const points = []
@@ -149,7 +151,7 @@ export function buildChartModel(seasons) {
       label: 'Full series'
     }
 
-    seriesBreakpointCandidate = detectSeriesBreakpoint(points)
+    seriesBreakpointCandidate = breakpointDetector(points)
     if (seriesBreakpointCandidate) {
       seriesBreakpoint = createSeriesBreakpointSummary(
         seriesBreakpointCandidate,
@@ -171,9 +173,31 @@ export function buildChartModel(seasons) {
     }
   }
 
+  const pointById = new Map()
+  for (const point of points) {
+    if (!pointById.has(point.id)) {
+      pointById.set(point.id, point)
+    }
+  }
+  const ratedPointIndexById = new Map()
+  ratedPoints.forEach((point, index) => {
+    if (!ratedPointIndexById.has(point.id)) {
+      ratedPointIndexById.set(point.id, index)
+    }
+  })
+  const ratedPointsBySeason = new Map()
+  for (const point of ratedPoints) {
+    const seasonPoints = ratedPointsBySeason.get(point.season) ?? []
+    seasonPoints.push(point)
+    ratedPointsBySeason.set(point.season, seasonPoints)
+  }
+
   return {
     points,
+    pointById,
     ratedPoints,
+    ratedPointIndexById,
+    ratedPointsBySeason,
     primaryRatedPoints,
     primaryRatingSource: primaryRating.source,
     ratingSourceCoverage: primaryRating.coverage,

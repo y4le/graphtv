@@ -459,6 +459,89 @@ export function detectSeriesBreakpoint(points, options = {}) {
   }
 }
 
+export function createCachedSeriesBreakpointDetector(
+  detector = detectSeriesBreakpoint
+) {
+  let previousInputs = null
+  let previousCandidate = null
+
+  return (points) => {
+    const nextInputs = captureBreakpointInputs(points)
+
+    if (!nextInputs) {
+      previousInputs = null
+      previousCandidate = null
+      return detector(points)
+    }
+
+    if (sameBreakpointInputs(previousInputs, nextInputs)) {
+      return rebindBreakpointCandidate(previousCandidate, points)
+    }
+
+    previousInputs = nextInputs
+    previousCandidate = detector(points)
+    return previousCandidate
+  }
+}
+
+function captureBreakpointInputs(points) {
+  const ids = new Set()
+  const inputs = []
+
+  for (const point of points) {
+    if (point.id == null || ids.has(point.id)) {
+      return null
+    }
+
+    ids.add(point.id)
+    inputs.push({
+      id: point.id,
+      season: point.season,
+      x: point.x,
+      rating: point.rating,
+      ratingSource: point.ratingSource,
+      isFallbackRating: point.isFallbackRating,
+      votes: getPointVoteCount(point)
+    })
+  }
+
+  return inputs
+}
+
+function sameBreakpointInputs(previous, next) {
+  return Boolean(
+    previous &&
+    previous.length === next.length &&
+    previous.every((input, index) => {
+      const candidate = next[index]
+      return (
+        input.id === candidate.id &&
+        input.season === candidate.season &&
+        input.x === candidate.x &&
+        input.rating === candidate.rating &&
+        input.ratingSource === candidate.ratingSource &&
+        input.isFallbackRating === candidate.isFallbackRating &&
+        input.votes === candidate.votes
+      )
+    })
+  )
+}
+
+function rebindBreakpointCandidate(candidate, points) {
+  if (!candidate) {
+    return null
+  }
+
+  const pointsById = new Map(points.map((point) => [point.id, point]))
+  return {
+    ...candidate,
+    beforePoints: candidate.beforePoints.map((point) =>
+      pointsById.get(point.id)
+    ),
+    afterPoints: candidate.afterPoints.map((point) => pointsById.get(point.id))
+  }
+}
+
 function scanRankCusum(values, minimumSegment) {
   if (values.length < minimumSegment * 2) {
     return null

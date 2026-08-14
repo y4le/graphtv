@@ -162,8 +162,14 @@ export function createSidenote({
   const nextButton = root.querySelector('[data-sidenote-nav="next"]')
   const trendInfoId = `trend-info-tooltip-${++trendInfoSequence}`
   let navigatorKey = null
+  let contentMarkup = null
 
   function setMarkup(markup) {
+    if (markup === contentMarkup) {
+      return
+    }
+
+    contentMarkup = markup
     contentRoot.innerHTML = markup
   }
 
