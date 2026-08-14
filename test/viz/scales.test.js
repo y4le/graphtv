@@ -115,6 +115,41 @@ describe('rating scale domains', () => {
     })
   })
 
+  it('adds comparable season context to trend summaries', () => {
+    const model = buildChartModel(
+      [
+        { number: 1, ratings: [7, 7, 9] },
+        { number: 2, ratings: [8, 8, 10] }
+      ].map((season) => ({
+        number: season.number,
+        episodes: season.ratings.map((rating, index) => ({
+          ...createEpisode(`s${season.number}e${index + 1}`, [
+            { source: 'tmdb', rating }
+          ]),
+          season: season.number,
+          episode: index + 1
+        }))
+      }))
+    )
+
+    expect(model.trendSummaries['season:1'].seriesMeanDifference).toBeCloseTo(
+      -0.5
+    )
+    expect(model.trendSummaries['season:2'].seriesMeanDifference).toBeCloseTo(
+      0.5
+    )
+    expect(model.trendSummaries.series.ratingStandardDeviation).toBeCloseTo(
+      Math.sqrt(8 / 9)
+    )
+    expect(model.trendSummaries.series.betweenSeasonVariationShare).toBeCloseTo(
+      9 / 41
+    )
+    expect(model.trendSummaries.series.seasonExtremes).toEqual({
+      best: { mean: 26 / 3, seasonNumbers: [2], ratedEpisodes: 3 },
+      worst: { mean: 23 / 3, seasonNumbers: [1], ratedEpisodes: 3 }
+    })
+  })
+
   it('keeps the adaptive y-axis stable across viewports', () => {
     const model = buildChartModel([
       {

@@ -1075,6 +1075,10 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+.trend-summary-context {
+  color: var(--textSecondary);
+}
+
 .trend-summary-trend-value {
   display: inline-flex;
   gap: 0.4rem;
@@ -1147,6 +1151,26 @@ button {
   list-style: none;
 }
 
+.trend-info-statistics {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0.6rem 0 0;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--lineStrong);
+}
+
+.trend-info-statistics div {
+  display: block;
+}
+
+.trend-info-statistics dt {
+  color: var(--textSecondary);
+}
+
+.trend-info-statistics dd {
+  margin: 0.05rem 0 0;
+}
+
 .trend-info-check {
   display: grid;
   grid-template-columns: 1rem minmax(0, 1fr);
@@ -1185,6 +1209,61 @@ button {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.trend-summary-season-ranking {
+  min-width: 0;
+  color: var(--textPrimary);
+  font-variant-numeric: tabular-nums;
+}
+
+.trend-summary-season-ranking .trend-summary-ranking-title {
+  margin-bottom: 0.25rem;
+}
+
+.trend-summary-season-extreme {
+  display: flex;
+  min-width: 0;
+  gap: 0.3rem;
+  margin: 0;
+  min-height: 1.75rem;
+  padding: 0.15rem 0;
+  align-items: center;
+}
+
+.trend-summary-season-buttons {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trend-summary-season-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--lineStrong);
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+
+.trend-summary-season-button:hover,
+.trend-summary-season-button:focus-visible {
+  color: var(--spotColor);
+  text-decoration-color: currentColor;
+}
+
+.trend-summary-season-button:focus-visible {
+  outline: 2px solid var(--spotColor);
+  outline-offset: 2px;
+}
+
+.trend-summary-season-extreme .trend-summary-context {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .trend-summary-extreme {

@@ -338,6 +338,32 @@ describe('createChart', () => {
     expect(chart.getDebugState().selectedTrendId).toBeNull()
   })
 
+  it('selects best and worst season trendlines from the series summary', () => {
+    updateUiSettings({ fullShowTrendline: true, seasonTrendlines: false })
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+    const seasons = createTwoSeasons()
+    seasons[1].episodes.forEach((episode) => {
+      episode.ratings[0].rating += 1
+    })
+
+    chart = createChart(container, seasons, { detailRoot })
+
+    expect(chart.getDebugState().selectedTrendId).toBe('series')
+    detailRoot.querySelector('[data-trend-season-number="2"]').click()
+
+    expect(chart.getDebugState()).toMatchObject({
+      selectedTrendId: 'season:2',
+      selectedPointId: null,
+      uiSettings: { seasonTrendlines: true }
+    })
+  })
+
   it('does not expose season labels without a trendline as controls', () => {
     const container = document.createElement('div')
     Object.defineProperty(container, 'clientWidth', {

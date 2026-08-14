@@ -20,6 +20,7 @@ export function buildChartModel(seasons) {
   const seasonSpans = []
   const seasonTrendlines = []
   const trendSummaries = {}
+  const comparableSeasonSummaries = []
   let absoluteIndex = 1
 
   seasons.forEach((season, seasonIndex) => {
@@ -64,8 +65,21 @@ export function buildChartModel(seasons) {
       }))
     )
 
-    if (regression && ratedSeasonPoints.length >= 3) {
+    const seasonSummary = summarizeTrendScope(seasonPoints, {
+      totalEpisodes: seasonPoints.length,
+      source: primaryRating.source
+    })
+
+    if (regression && ratedSeasonPoints.length >= 3 && seasonSummary) {
       const id = `season:${season.number}`
+      const decoratedSummary = {
+        ...seasonSummary,
+        id,
+        kind: 'season',
+        label: `Season ${season.number}`,
+        seasonNumber: season.number
+      }
+
       seasonTrendlines.push({
         id,
         kind: 'season',
@@ -75,16 +89,8 @@ export function buildChartModel(seasons) {
         endX: ratedSeasonPoints[ratedSeasonPoints.length - 1].x,
         regression
       })
-      trendSummaries[id] = {
-        ...summarizeTrendScope(seasonPoints, {
-          totalEpisodes: seasonPoints.length,
-          source: primaryRating.source
-        }),
-        id,
-        kind: 'season',
-        label: `Season ${season.number}`,
-        seasonNumber: season.number
-      }
+      trendSummaries[id] = decoratedSummary
+      comparableSeasonSummaries.push(decoratedSummary)
     }
   })
 
@@ -103,14 +109,27 @@ export function buildChartModel(seasons) {
       : null
 
   if (macroRegression) {
+    const seriesSummary = summarizeTrendScope(points, {
+      totalEpisodes: points.length,
+      source: primaryRating.source
+    })
+    const seasonVariation = summarizeSeasonVariation(primaryRatedPoints)
+
     trendSummaries.series = {
-      ...summarizeTrendScope(points, {
-        totalEpisodes: points.length,
-        source: primaryRating.source
-      }),
+      ...seriesSummary,
+      ratingStandardDeviation:
+        seasonVariation?.withinSeasonStandardDeviation ??
+        seriesSummary.ratingStandardDeviation,
+      betweenSeasonVariationShare:
+        seasonVariation?.betweenSeasonVariationShare ?? null,
+      seasonExtremes: summarizeSeasonExtremes(comparableSeasonSummaries),
       id: 'series',
       kind: 'series',
       label: 'Full series'
+    }
+
+    for (const summary of comparableSeasonSummaries) {
+      summary.seriesMeanDifference = summary.mean - seriesSummary.mean
     }
   }
 
@@ -127,6 +146,74 @@ export function buildChartModel(seasons) {
     macroRegression,
     xMax: Math.max(points.length, 1),
     totalSeasons: seasonSpans.length
+  }
+}
+
+function summarizeSeasonVariation(points) {
+  if (points.length === 0) {
+    return null
+  }
+
+  const seasonValues = new Map()
+
+  for (const point of points) {
+    const values = seasonValues.get(point.seasonIndex) ?? []
+    values.push(point.rating)
+    seasonValues.set(point.seasonIndex, values)
+  }
+
+  const overallMean =
+    points.reduce((sum, point) => sum + point.rating, 0) / points.length
+  let withinSeasonSquares = 0
+  let betweenSeasonSquares = 0
+
+  for (const values of seasonValues.values()) {
+    const seasonMean =
+      values.reduce((sum, value) => sum + value, 0) / values.length
+    withinSeasonSquares += values.reduce(
+      (sum, value) => sum + (value - seasonMean) ** 2,
+      0
+    )
+    betweenSeasonSquares += values.length * (seasonMean - overallMean) ** 2
+  }
+
+  const totalSquares = withinSeasonSquares + betweenSeasonSquares
+
+  return {
+    withinSeasonStandardDeviation: Math.sqrt(
+      withinSeasonSquares / points.length
+    ),
+    betweenSeasonVariationShare:
+      totalSquares > 0 ? betweenSeasonSquares / totalSquares : null
+  }
+}
+
+function summarizeSeasonExtremes(summaries) {
+  if (summaries.length < 2) {
+    return null
+  }
+
+  const highestMean = Math.max(...summaries.map((summary) => summary.mean))
+  const lowestMean = Math.min(...summaries.map((summary) => summary.mean))
+
+  if (highestMean === lowestMean) {
+    return null
+  }
+
+  return {
+    best: toSeasonExtreme(summaries, highestMean),
+    worst: toSeasonExtreme(summaries, lowestMean)
+  }
+}
+
+function toSeasonExtreme(summaries, mean) {
+  const matchingSummaries = summaries.filter((summary) => summary.mean === mean)
+
+  return {
+    mean,
+    seasonNumbers: matchingSummaries.map((summary) => summary.seasonNumber),
+    ratedEpisodes:
+      matchingSummaries.length === 1 ? matchingSummaries[0].n : null
   }
 }
 

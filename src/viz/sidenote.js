@@ -135,7 +135,8 @@ export function createSidenote({
   root,
   onInteract,
   onNavigate,
-  onSelectPoint
+  onSelectPoint,
+  onSelectSeasonTrend
 }) {
   ensureOutsideTrendInfoDismissal(root.ownerDocument)
   const eventController = new root.ownerDocument.defaultView.AbortController()
@@ -276,25 +277,32 @@ export function createSidenote({
       summary.kind === 'series' && summary.plottingContext
         ? `${sourceCopy} · ${ratedCopy}${notesCopy ? `, ${notesCopy}` : ''}`
         : `${ratedCopy} · ${sourceCopy}${notesCopy ? ` — ${notesCopy}` : ''}`
+    const meanContext = formatMeanContext(summary)
+    const spreadContext =
+      summary.kind === 'series'
+        ? '<span class="trend-summary-context"> · within seasons</span>'
+        : ''
 
     setMarkup(`
       <div class="sidenote-card sidenote-trend-card">
         <dl class="trend-summary-metrics">
           <div class="trend-summary-metric">
             <dt>Mean</dt>
-            <dd>${summary.mean.toFixed(1)}</dd>
+            <dd>${summary.mean.toFixed(1)}${meanContext}</dd>
           </div>
+          ${renderSpreadMetric(summary.ratingStandardDeviation, spreadContext)}
           <div class="trend-summary-metric">
             <dt>Trend</dt>
             <dd class="trend-summary-trend-value">
               <span>${trendCopy}</span>
               <div class="trend-info-control">
-                <button type="button" class="trend-info-button" data-trend-info aria-label="Explain trend classification" aria-expanded="false" aria-controls="${trendInfoId}" aria-describedby="${trendInfoId}">ⓘ</button>
+                <button type="button" class="trend-info-button" data-trend-info aria-label="Explain trend statistics" aria-expanded="false" aria-controls="${trendInfoId}" aria-describedby="${trendInfoId}">ⓘ</button>
                 ${renderTrendInfo(summary, trendInfoId)}
               </div>
             </dd>
           </div>
         </dl>
+        ${renderSeasonExtremes(summary.seasonExtremes)}
         <div class="trend-summary-rankings" aria-label="Highest and lowest rated episodes">
           ${renderRanking('Top Rated', summary.top)}
           ${renderRanking('Bottom Rated', summary.bottom)}
@@ -319,6 +327,15 @@ export function createSidenote({
     if (trendPointButton) {
       onInteract?.()
       onSelectPoint?.(trendPointButton.dataset.trendPointId)
+      return
+    }
+
+    const seasonTrendButton = event.target.closest?.(
+      '[data-trend-season-number]'
+    )
+    if (seasonTrendButton) {
+      onInteract?.()
+      onSelectSeasonTrend?.(Number(seasonTrendButton.dataset.trendSeasonNumber))
       return
     }
 
@@ -456,8 +473,129 @@ function renderTrendInfo(summary, id) {
       <ul>
         ${checks.map(renderTrendCheck).join('')}
       </ul>
+      ${renderTrendStatistics(summary)}
     </aside>
   `
+}
+
+function renderTrendStatistics(summary) {
+  const statistics = []
+
+  if (Number.isFinite(summary.residualMeanAbsoluteError)) {
+    statistics.push({
+      label: 'Typical deviation',
+      value: `${summary.residualMeanAbsoluteError.toFixed(1)} points from the trendline`
+    })
+  }
+
+  if (summary.n >= 5 && Number.isFinite(summary.deltaStandardError)) {
+    statistics.push({
+      label: 'Change uncertainty',
+      value: `±${formatMagnitude(summary.deltaStandardError * 2)} points (about two standard errors)`
+    })
+  }
+
+  if (summary.n >= 5 && Number.isFinite(summary.rSquared)) {
+    statistics.push({
+      label: 'Trend fit',
+      value: `${Math.round(summary.rSquared * 100)}% of rating variation`
+    })
+  }
+
+  if (Number.isFinite(summary.betweenSeasonVariationShare)) {
+    statistics.push({
+      label: 'Season shifts',
+      value: `${Math.round(summary.betweenSeasonVariationShare * 100)}% of series variation`
+    })
+  }
+
+  if (statistics.length === 0) {
+    return ''
+  }
+
+  return `
+    <dl class="trend-info-statistics">
+      ${statistics
+        .map(
+          (statistic) => `
+            <div>
+              <dt>${escapeHtml(statistic.label)}</dt>
+              <dd>${escapeHtml(statistic.value)}</dd>
+            </div>
+          `
+        )
+        .join('')}
+    </dl>
+  `
+}
+
+function renderSeasonExtremes(extremes) {
+  if (!extremes) {
+    return ''
+  }
+
+  return `
+    <div class="trend-summary-rankings trend-summary-season-rankings" aria-label="Best and worst rated seasons">
+      ${renderSeasonExtreme('Best Season', extremes.best)}
+      ${renderSeasonExtreme('Worst Season', extremes.worst)}
+    </div>
+  `
+}
+
+function renderSeasonExtreme(label, extreme) {
+  const ratedContext = Number.isFinite(extreme.ratedEpisodes)
+    ? `<span aria-hidden="true">·</span> <span class="trend-summary-context">${extreme.ratedEpisodes} rated</span>`
+    : ''
+
+  return `
+    <section class="trend-summary-ranking trend-summary-season-ranking">
+      <h2 class="trend-summary-ranking-title">${escapeHtml(label)}</h2>
+      <p class="trend-summary-season-extreme">
+        ${renderSeasonTrendButtons(extreme.seasonNumbers)}
+        <span aria-hidden="true">·</span>
+        <span>${extreme.mean.toFixed(1)}</span>
+        ${ratedContext}
+      </p>
+    </section>
+  `
+}
+
+function renderSeasonTrendButtons(seasonNumbers) {
+  const buttons = seasonNumbers.map(
+    (seasonNumber) =>
+      `<button type="button" class="trend-summary-season-button" data-trend-season-number="${escapeHtml(seasonNumber)}" aria-label="Select Season ${escapeHtml(seasonNumber)} trendline">Season ${escapeHtml(seasonNumber)}</button>`
+  )
+  const content = new Intl.ListFormat('en', {
+    style: 'long',
+    type: 'conjunction'
+  }).format(buttons)
+
+  return `<span class="trend-summary-season-buttons">${content}</span>`
+}
+
+function renderSpreadMetric(standardDeviation, context) {
+  if (!Number.isFinite(standardDeviation)) {
+    return ''
+  }
+
+  return `
+    <div class="trend-summary-metric">
+      <dt>Spread</dt>
+      <dd>${standardDeviation.toFixed(1)} points${context}</dd>
+    </div>
+  `
+}
+
+function formatMeanContext(summary) {
+  if (!Number.isFinite(summary.seriesMeanDifference)) {
+    return ''
+  }
+
+  if (Math.abs(summary.seriesMeanDifference) < 0.05) {
+    return '<span class="trend-summary-context"> · matches series</span>'
+  }
+
+  return `<span class="trend-summary-context"> · ${formatSignedDelta(summary.seriesMeanDifference)} vs series</span>`
 }
 
 function renderTrendCheck(check) {
@@ -493,6 +631,10 @@ function renderExtreme(extreme, index) {
 function formatSignedDelta(value) {
   const rounded = Math.abs(value).toFixed(1)
   return value >= 0 ? `+${rounded}` : `−${rounded}`
+}
+
+function formatMagnitude(value) {
+  return value > 0 && value < 0.05 ? '<0.1' : value.toFixed(1)
 }
 
 function escapeHtml(value) {

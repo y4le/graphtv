@@ -126,6 +126,13 @@ export function summarizeTrendScope(
   )
   const values = ratedPoints.map((point) => point.rating)
   const mean = values.reduce((sum, value) => sum + value, 0) / values.length
+  const sumSquaredDeviations = values.reduce(
+    (sum, value) => sum + (value - mean) ** 2,
+    0
+  )
+  const ratingStandardDeviation = Math.sqrt(
+    sumSquaredDeviations / ratedPoints.length
+  )
   const topRanked = [...ratedPoints].sort(
     (left, right) => right.rating - left.rating || left.x - right.x
   )
@@ -151,6 +158,15 @@ export function summarizeTrendScope(
     const projected = regression.slope * point.x + regression.intercept
     return sum + (point.rating - projected) ** 2
   }, 0)
+  const residualMeanAbsoluteError =
+    ratedPoints.reduce((sum, point) => {
+      const projected = regression.slope * point.x + regression.intercept
+      return sum + Math.abs(point.rating - projected)
+    }, 0) / ratedPoints.length
+  const rSquared =
+    sumSquaredDeviations > 0
+      ? Math.max(0, Math.min(1, 1 - sumSquaredErrors / sumSquaredDeviations))
+      : null
   const slopeStandardError =
     ratedPoints.length > 2 && sumSquaredX > 0
       ? Math.sqrt(sumSquaredErrors / (ratedPoints.length - 2) / sumSquaredX)
@@ -163,6 +179,10 @@ export function summarizeTrendScope(
       : slopeStandardError
         ? Math.abs(regression.slope) / slopeStandardError
         : 0
+  const deltaStandardError =
+    slopeStandardError === null
+      ? null
+      : slopeStandardError * (lastRatedX - firstRatedX)
   const trendCriteria = {
     ratedEpisodes: ratedPoints.length,
     minimumRatedEpisodes: MIN_TREND_RATED_EPISODES,
@@ -185,6 +205,9 @@ export function summarizeTrendScope(
     excludedFallback,
     source,
     mean,
+    ratingStandardDeviation,
+    residualMeanAbsoluteError,
+    rSquared,
     top,
     bottom,
     high: toTrendExtreme(topRanked[0]),
@@ -193,6 +216,7 @@ export function summarizeTrendScope(
     lastRatedX,
     slope: regression.slope,
     delta,
+    deltaStandardError,
     slopeStandardError,
     trendCriteria,
     direction: hasClearDirection

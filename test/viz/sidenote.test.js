@@ -186,11 +186,17 @@ describe('createSidenote', () => {
 
     sidenote.renderTrendSummary({
       label: 'Season 2',
+      kind: 'season',
       n: 6,
       totalEpisodes: 7,
       excludedFallback: 1,
       source: 'omdb',
       mean: 8.24,
+      seriesMeanDifference: 0.34,
+      ratingStandardDeviation: 0.44,
+      residualMeanAbsoluteError: 0.24,
+      deltaStandardError: 0.14,
+      rSquared: 0.76,
       direction: 'up',
       delta: 0.62,
       trendCriteria: createTrendCriteria({ signalRatio: Infinity }),
@@ -234,7 +240,21 @@ describe('createSidenote', () => {
     expect(root.querySelector('.sidenote-kicker')).toBeNull()
     expect(root.textContent).toContain('Mean')
     expect(root.textContent).toContain('8.2')
+    expect(root.textContent).toContain('+0.3 vs series')
+    expect(root.textContent).toContain('Spread')
+    expect(root.textContent).toContain('0.4 points')
     expect(root.textContent).toContain('Trending up +0.6')
+    const trendStatistics = root.querySelector('.trend-info-statistics')
+    expect(trendStatistics.textContent).toContain('Typical deviation')
+    expect(trendStatistics.textContent).toContain(
+      '0.2 points from the trendline'
+    )
+    expect(trendStatistics.textContent).toContain('Change uncertainty')
+    expect(trendStatistics.textContent).toContain(
+      '±0.3 points (about two standard errors)'
+    )
+    expect(trendStatistics.textContent).toContain('Trend fit')
+    expect(trendStatistics.textContent).toContain('76% of rating variation')
     expect(root.textContent).toContain('6 of 7 rated · IMDb')
     expect(root.textContent).toContain(
       '1 episode uses other sources and is excluded'
@@ -324,7 +344,8 @@ describe('createSidenote', () => {
 
   it('places full-series plotting context beside the rated episode count', () => {
     const root = document.createElement('section')
-    const sidenote = createSidenote({ root })
+    const onSelectSeasonTrend = vi.fn()
+    const sidenote = createSidenote({ root, onSelectSeasonTrend })
 
     sidenote.renderTrendSummary(
       {
@@ -339,6 +360,12 @@ describe('createSidenote', () => {
           spreadSources: ['tvmaze', 'tmdb']
         },
         mean: 8.2,
+        ratingStandardDeviation: 0.61,
+        betweenSeasonVariationShare: 0.62,
+        seasonExtremes: {
+          best: { mean: 8.7, seasonNumbers: [3], ratedEpisodes: 8 },
+          worst: { mean: 7.4, seasonNumbers: [5, 6] }
+        },
         direction: 'up',
         delta: 0.4,
         trendCriteria: createTrendCriteria(),
@@ -354,6 +381,37 @@ describe('createSidenote', () => {
 
     expect(root.querySelector('.trend-summary-provenance').textContent).toBe(
       'Plotting IMDb · source spread shows TVmaze and TMDB · 13 of 19 rated, 6 episodes use other sources and are excluded'
+    )
+    expect(root.textContent).toContain('0.6 points · within seasons')
+    const seasonRankings = root.querySelector('.trend-summary-season-rankings')
+    expect(seasonRankings).not.toBeNull()
+    expect(
+      seasonRankings.querySelectorAll('.trend-summary-ranking')
+    ).toHaveLength(2)
+    expect(
+      Array.from(
+        seasonRankings.querySelectorAll('.trend-summary-ranking'),
+        (extreme) => extreme.textContent.replace(/\s+/g, ' ').trim()
+      )
+    ).toEqual([
+      'Best Season Season 3 · 8.7 · 8 rated',
+      'Worst Season Season 5 and Season 6 · 7.4'
+    ])
+    const seasonButtons = Array.from(
+      seasonRankings.querySelectorAll('[data-trend-season-number]')
+    )
+    expect(
+      seasonButtons.map((button) => button.getAttribute('aria-label'))
+    ).toEqual([
+      'Select Season 3 trendline',
+      'Select Season 5 trendline',
+      'Select Season 6 trendline'
+    ])
+    seasonButtons[0].click()
+    seasonButtons[1].click()
+    expect(onSelectSeasonTrend.mock.calls).toEqual([[3], [5]])
+    expect(root.querySelector('.trend-info-statistics').textContent).toContain(
+      '62% of series variation'
     )
     expect(
       Array.from(

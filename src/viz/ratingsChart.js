@@ -133,6 +133,9 @@ export function createChart(container, seasons, options = {}) {
     },
     onSelectPoint(pointId) {
       setSelectedPoint(getPointById(pointId), 'pointer')
+    },
+    onSelectSeasonTrend(seasonNumber) {
+      selectSeasonTrend(seasonNumber)
     }
   })
 

@@ -146,6 +146,30 @@ describe('data/stats', () => {
     expect(noisy.trendCriteria.consistentSlope).toBe(false)
   })
 
+  it('describes rating spread, residual fit, and trend uncertainty', () => {
+    const summary = summarizeTrendScope(
+      [6, 7, 8, 9, 10].map((rating, index) =>
+        createTrendPoint(String(index + 1), index + 1, rating)
+      )
+    )
+
+    expect(summary.ratingStandardDeviation).toBeCloseTo(Math.sqrt(2))
+    expect(summary.residualMeanAbsoluteError).toBeCloseTo(0)
+    expect(summary.rSquared).toBeCloseTo(1)
+    expect(summary.deltaStandardError).toBeCloseTo(0)
+  })
+
+  it('leaves trend fit undefined when every rating is identical', () => {
+    const summary = summarizeTrendScope(
+      Array.from({ length: 5 }, (_, index) =>
+        createTrendPoint(String(index + 1), index + 1, 8)
+      )
+    )
+
+    expect(summary.ratingStandardDeviation).toBe(0)
+    expect(summary.rSquared).toBeNull()
+  })
+
   it('keeps top and bottom rankings disjoint for short seasons', () => {
     const summary = summarizeTrendScope([
       createTrendPoint('one', 1, 7),
