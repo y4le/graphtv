@@ -306,6 +306,34 @@ describe('viewport clamping', () => {
     })
   })
 
+  it('maps episode-density choices to distinct default windows', () => {
+    const model = { xMax: 331 }
+
+    expect(createDefaultViewport(model, 1200, false, 'roomy')).toEqual({
+      start: 1,
+      end: 40
+    })
+    expect(createDefaultViewport(model, 1200, false, 'balanced')).toEqual({
+      start: 1,
+      end: 60
+    })
+    expect(createDefaultViewport(model, 1200, false, 'dense')).toEqual({
+      start: 1,
+      end: 100
+    })
+    expect(createDefaultViewport(model, 1200, false, 'all')).toEqual({
+      start: 1,
+      end: 331
+    })
+
+    expect(
+      createDefaultViewport({ xMax: 30 }, 600, false, 'roomy')
+    ).toEqual({ start: 1, end: 20 })
+    expect(
+      createDefaultViewport({ xMax: 30 }, 600, false, 'balanced')
+    ).toEqual({ start: 1, end: 30 })
+  })
+
   it('retains the compact default window on mobile', () => {
     expect(createDefaultViewport({ xMax: 331 }, 600, true)).toEqual({
       start: 1,

@@ -14,6 +14,20 @@ import {
 const MIN_RATING = 0
 const MAX_RATING = 10
 const X_EDGE_INSET = 6
+const VIEWPORT_DENSITY_CONFIG = {
+  roomy: {
+    desktop: { targetSpacing: 30, minimum: 12, maximum: 40 },
+    mobile: { targetSpacing: 26, minimum: 8, maximum: 12 }
+  },
+  balanced: {
+    desktop: { targetSpacing: 20, minimum: 18, maximum: 72 },
+    mobile: { targetSpacing: 18, minimum: 12, maximum: 18 }
+  },
+  dense: {
+    desktop: { targetSpacing: 12, minimum: 30, maximum: 120 },
+    mobile: { targetSpacing: 12, minimum: 18, maximum: 30 }
+  }
+}
 
 export function buildChartModel(seasons) {
   const episodes = seasons.flatMap((season) => season.episodes)
@@ -286,22 +300,31 @@ function toSeasonExtreme(summaries, mean) {
   }
 }
 
-export function createDefaultViewport(model, width, isMobile) {
-  if (model.xMax <= 40) {
+export function createDefaultViewport(
+  model,
+  width,
+  isMobile,
+  density = 'balanced'
+) {
+  if (density === 'all' || (model.xMax <= 40 && density !== 'roomy')) {
     return {
       start: 1,
       end: model.xMax
     }
   }
 
-  const targetSpacing = isMobile ? 18 : 20
+  const densityConfig =
+    VIEWPORT_DENSITY_CONFIG[density] ?? VIEWPORT_DENSITY_CONFIG.balanced
+  const deviceConfig = densityConfig[isMobile ? 'mobile' : 'desktop']
   const axisWidth = isMobile ? 44 : 0
   const availableWidth = Math.max(width - axisWidth, 240)
-  const preferredWindow = Math.floor(availableWidth / targetSpacing)
+  const preferredWindow = Math.floor(
+    availableWidth / deviceConfig.targetSpacing
+  )
   const episodeCount = clamp(
     preferredWindow,
-    isMobile ? 12 : 18,
-    isMobile ? 18 : 72
+    deviceConfig.minimum,
+    deviceConfig.maximum
   )
 
   return {

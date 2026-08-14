@@ -90,6 +90,7 @@ export function createChart(container, seasons, options = {}) {
   let model = buildChartModel(seasons)
   let show = options.show ?? null
   let viewport = null
+  let episodeDensity = getUiSettings().episodeDensity
   let selectedPointId = null
   let hoverPointId = null
   let selectedTrendId = null
@@ -557,7 +558,7 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function ensureViewport(width) {
-    const defaultViewport = createDefaultViewport(model, width, isMobile())
+    const defaultViewport = getDefaultViewport(width)
 
     if (!viewport) {
       viewport = defaultViewport
@@ -565,6 +566,10 @@ export function createChart(container, seasons, options = {}) {
     }
 
     viewport = clampViewport(viewport, model)
+  }
+
+  function getDefaultViewport(width) {
+    return createDefaultViewport(model, width, isMobile(), episodeDensity)
   }
 
   function setSelectedPoint(point, source = 'keyboard') {
@@ -896,11 +901,7 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function getViewportCenter() {
-    const fallbackViewport = createDefaultViewport(
-      model,
-      getCurrentChartWidth(),
-      isMobile()
-    )
+    const fallbackViewport = getDefaultViewport(getCurrentChartWidth())
     const currentViewport = viewport ?? fallbackViewport
     return (
       currentViewport.start + (currentViewport.end - currentViewport.start) / 2
@@ -1116,7 +1117,7 @@ export function createChart(container, seasons, options = {}) {
     isScrollable,
     center = getViewportCenter()
   ) {
-    const defaultViewport = createDefaultViewport(model, chartWidth, isMobile())
+    const defaultViewport = getDefaultViewport(chartWidth)
     const defaultWidth = defaultViewport.end - defaultViewport.start + 1
     const centeredStart = center - (defaultWidth - 1) / 2
 
@@ -1507,7 +1508,7 @@ export function createChart(container, seasons, options = {}) {
     const axisWidth = isMobile() ? 40 : 56
     const chartWidth = Math.max(width - axisWidth - 16, 240)
     const { chartHeight, sparklineHeight } = getChartDimensions()
-    const defaultViewport = createDefaultViewport(model, chartWidth, isMobile())
+    const defaultViewport = getDefaultViewport(chartWidth)
 
     shell.style.setProperty('--axis-width', `${axisWidth}px`)
     shell.style.setProperty('--chart-height', `${chartHeight}px`)
@@ -1888,6 +1889,10 @@ export function createChart(container, seasons, options = {}) {
   resizeObserver.observe(container)
 
   const settingsListener = () => {
+    const nextEpisodeDensity = getUiSettings().episodeDensity
+    const densityChanged = nextEpisodeDensity !== episodeDensity
+    episodeDensity = nextEpisodeDensity
+
     if (selectedTrendId && !isTrendEnabled(selectedTrendId)) {
       const previousTrend = getTrendSummary(selectedTrendId)
       selectedTrendId = null
@@ -1900,6 +1905,15 @@ export function createChart(container, seasons, options = {}) {
     }
     if (hoverTrendId && !isTrendEnabled(hoverTrendId)) {
       hoverTrendId = null
+    }
+
+    if (densityChanged) {
+      resetViewportWidth(
+        getCurrentChartWidth(),
+        usesScrollableBody(),
+        getKeyboardViewportAnchor()
+      )
+      return
     }
     render()
   }

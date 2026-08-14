@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import {
   APP_FONT_STACK,
+  EPISODE_DENSITIES,
   PALETTES,
   getChartTheme,
   initializeTheme,
@@ -30,6 +31,25 @@ describe('theme defaults', () => {
       'zigzag',
       'maximin'
     ])
+  })
+
+  it('defaults to balanced episode density and persists another choice', () => {
+    expect(EPISODE_DENSITIES).toEqual([
+      'roomy',
+      'balanced',
+      'dense',
+      'all'
+    ])
+    expect(initializeTheme().episodeDensity).toBe('balanced')
+    expect(document.documentElement.dataset.episodeDensity).toBe('balanced')
+
+    updateUiSettings({ episodeDensity: 'dense' })
+
+    expect(
+      JSON.parse(window.localStorage.getItem('graphtv-ui-settings'))
+        .episodeDensity
+    ).toBe('dense')
+    expect(initializeTheme().episodeDensity).toBe('dense')
   })
 
   it.each([

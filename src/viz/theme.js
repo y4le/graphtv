@@ -2,6 +2,7 @@ const STORAGE_KEY = 'graphtv-ui-settings'
 const MEDIA_QUERY = '(prefers-color-scheme: dark)'
 
 export const THEMES = ['light', 'dark']
+export const EPISODE_DENSITIES = ['roomy', 'balanced', 'dense', 'all']
 export const PALETTES = [
   'monotone',
   'alternating',
@@ -71,7 +72,8 @@ const SETTINGS_DEFAULTS = {
   seasonTrendlines: true,
   fullShowTrendline: true,
   showSourceSpread: true,
-  absoluteYAxis: false
+  absoluteYAxis: false,
+  episodeDensity: 'balanced'
 }
 
 const TYPOGRAPHY_TOKENS = {
@@ -122,7 +124,10 @@ function sanitizeSettings(candidate = {}) {
     showSourceSpread:
       typeof candidate.showSourceSpread === 'boolean' ? candidate.showSourceSpread : SETTINGS_DEFAULTS.showSourceSpread,
     absoluteYAxis:
-      typeof candidate.absoluteYAxis === 'boolean' ? candidate.absoluteYAxis : SETTINGS_DEFAULTS.absoluteYAxis
+      typeof candidate.absoluteYAxis === 'boolean' ? candidate.absoluteYAxis : SETTINGS_DEFAULTS.absoluteYAxis,
+    episodeDensity: EPISODE_DENSITIES.includes(candidate.episodeDensity)
+      ? candidate.episodeDensity
+      : SETTINGS_DEFAULTS.episodeDensity
   }
 }
 
@@ -161,6 +166,7 @@ function applyCssTokens(settings) {
 
   root.dataset.theme = settings.theme
   root.dataset.palette = settings.palette
+  root.dataset.episodeDensity = settings.episodeDensity
 
   Object.entries(themeTokens).forEach(([token, value]) => setCssVar(root, token, value))
   Object.entries(TYPOGRAPHY_TOKENS).forEach(([token, value]) => setCssVar(root, `font-${token}`, value))

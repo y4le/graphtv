@@ -19,7 +19,8 @@ beforeEach(() => {
     absoluteYAxis: false,
     seasonTrendlines: true,
     fullShowTrendline: false,
-    showSourceSpread: true
+    showSourceSpread: true,
+    episodeDensity: 'balanced'
   })
   vi.stubGlobal(
     'matchMedia',
@@ -745,6 +746,27 @@ describe('createChart', () => {
     chart = createChart(container, seasons)
 
     expect(chart.getDebugState().viewport).toEqual({ start: 1, end: 50 })
+    expect(container.querySelector('.chart-source-status').hidden).toBe(true)
+  })
+
+  it('applies episode density to the initial view and live setting changes', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    updateUiSettings({ episodeDensity: 'roomy' })
+    chart = createChart(container, createSeasons())
+
+    expect(viewportEpisodeCount(chart)).toBe(17)
+
+    updateUiSettings({ episodeDensity: 'dense' })
+    expect(viewportEpisodeCount(chart)).toBe(44)
+
+    updateUiSettings({ episodeDensity: 'all' })
+    expect(chart.getDebugState().viewport).toEqual({ start: 1, end: 72 })
     expect(container.querySelector('.chart-source-status').hidden).toBe(true)
   })
 
@@ -1805,6 +1827,11 @@ function getAxisLabels(container) {
     container.querySelectorAll('.range-tick text'),
     (node) => node.textContent
   )
+}
+
+function viewportEpisodeCount(chartInstance) {
+  const { start, end } = chartInstance.getDebugState().viewport
+  return end - start + 1
 }
 
 function getPathMidpoint(pathData) {
