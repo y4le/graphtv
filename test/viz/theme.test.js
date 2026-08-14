@@ -1,6 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { APP_FONT_STACK, getChartTheme, initializeTheme, updateUiSettings } from '../../src/viz/theme.js'
+import {
+  APP_FONT_STACK,
+  PALETTES,
+  getChartTheme,
+  initializeTheme,
+  seasonColor,
+  updateUiSettings
+} from '../../src/viz/theme.js'
 
 beforeEach(() => {
   window.localStorage.clear()
@@ -13,6 +20,29 @@ describe('theme defaults', () => {
 
     expect(settings.palette).toBe('monotone')
     expect(document.documentElement.dataset.palette).toBe('monotone')
+  })
+
+  it('offers the five season palettes in display order', () => {
+    expect(PALETTES).toEqual([
+      'monotone',
+      'alternating',
+      'rainbow',
+      'zigzag',
+      'maximin'
+    ])
+  })
+
+  it.each([
+    ['mono', 'monotone'],
+    ['subtle', 'alternating'],
+    ['vivid', 'rainbow']
+  ])('migrates the legacy %s palette to %s', (legacy, current) => {
+    window.localStorage.setItem(
+      'graphtv-ui-settings',
+      JSON.stringify({ palette: legacy })
+    )
+
+    expect(initializeTheme().palette).toBe(current)
   })
 
   it('defaults to an adaptive y-axis and persists the absolute-scale option', () => {
@@ -48,8 +78,8 @@ describe('theme defaults', () => {
 
 describe('theme accents', () => {
   it.each(['light', 'dark'])('uses the single house accent in the %s theme', (theme) => {
-    updateUiSettings({ theme, palette: 'subtle' })
-    const chartTheme = getChartTheme({ theme, palette: 'subtle' })
+    updateUiSettings({ theme, palette: 'alternating' })
+    const chartTheme = getChartTheme({ theme, palette: 'alternating' })
 
     expect(chartTheme.spotColor).toBe('#C1432E')
     expect(chartTheme.spotColorMuted).toBe('#C1432E')
@@ -59,12 +89,67 @@ describe('theme accents', () => {
 
 describe('theme typography', () => {
   it('maps every typography role to the publisher-signature font stack', () => {
-    updateUiSettings({ theme: 'light', palette: 'subtle' })
+    updateUiSettings({ theme: 'light', palette: 'alternating' })
     const rootStyle = document.documentElement.style
 
     expect(rootStyle.getPropertyValue('--font-app')).toBe(APP_FONT_STACK)
     expect(rootStyle.getPropertyValue('--font-serif')).toBe('var(--font-app)')
     expect(rootStyle.getPropertyValue('--font-sans')).toBe('var(--font-app)')
     expect(rootStyle.getPropertyValue('--font-mono')).toBe('var(--font-app)')
+  })
+})
+
+describe('season palettes', () => {
+  it('alternates between the foreground and a desaturated house accent', () => {
+    expect(
+      Array.from({ length: 4 }, (_, index) =>
+        seasonColor('alternating', index, 4, 'light')
+      )
+    ).toEqual(['#1A1A1A', '#B36D61', '#1A1A1A', '#B36D61'])
+
+    expect(seasonColor('alternating', 1, 2, 'dark')).toBe('#B38780')
+  })
+
+  it('preserves the former vivid palette as rainbow', () => {
+    expect(seasonColor('rainbow', 0, 1, 'light')).toBe('hsl(150 68% 42%)')
+    expect(seasonColor('rainbow', 0, 1, 'dark')).toBe('hsl(150 76% 66%)')
+    expect(seasonColor('vivid', 0, 1, 'light')).toBe(
+      seasonColor('rainbow', 0, 1, 'light')
+    )
+  })
+
+  it('zigzags between opposite hues before rotating', () => {
+    const darkColors = Array.from({ length: 4 }, (_, index) =>
+      seasonColor('zigzag', index, 4, 'dark')
+    )
+    const lightColors = Array.from({ length: 4 }, (_, index) =>
+      seasonColor('zigzag', index, 4, 'light')
+    )
+
+    expect(darkColors).toEqual([
+      'oklch(72% 0.13 25)',
+      'oklch(72% 0.12 205)',
+      'oklch(72% 0.13 90)',
+      'oklch(72% 0.13 270)'
+    ])
+    expect(lightColors).toEqual([
+      'oklch(58% 0.16 25)',
+      'oklch(58% 0.09 205)',
+      'oklch(58% 0.11 90)',
+      'oklch(58% 0.16 270)'
+    ])
+  })
+
+  it.each(['light', 'dark'])('builds a stable, unique maximin prefix in %s mode', (theme) => {
+    const colors = Array.from({ length: 12 }, (_, index) =>
+      seasonColor('maximin', index, 12, theme)
+    )
+
+    expect(new Set(colors)).toHaveLength(colors.length)
+    expect(
+      Array.from({ length: 12 }, (_, index) =>
+        seasonColor('maximin', index, 12, theme)
+      )
+    ).toEqual(colors)
   })
 })

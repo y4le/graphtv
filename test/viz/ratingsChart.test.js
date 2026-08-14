@@ -838,7 +838,7 @@ describe('createChart', () => {
       }
     ]
 
-    updateUiSettings({ palette: 'vivid' })
+    updateUiSettings({ palette: 'rainbow' })
     chart = createChart(container, seasons)
 
     const fallback = container.querySelector('[data-rating-fallback="true"]')

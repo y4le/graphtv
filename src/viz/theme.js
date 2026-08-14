@@ -2,9 +2,35 @@ const STORAGE_KEY = 'graphtv-ui-settings'
 const MEDIA_QUERY = '(prefers-color-scheme: dark)'
 
 export const THEMES = ['light', 'dark']
-export const PALETTES = ['monotone', 'subtle', 'vivid']
+export const PALETTES = [
+  'monotone',
+  'alternating',
+  'rainbow',
+  'zigzag',
+  'maximin'
+]
 export const APP_FONT_STACK =
   '"Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace'
+
+const LEGACY_PALETTE_IDS = {
+  mono: 'monotone',
+  subtle: 'alternating',
+  vivid: 'rainbow'
+}
+
+const MAXIMIN_PALETTE_STATE = new Map()
+const MAXIMIN_CONFIG = {
+  light: {
+    lightnesses: [0.42, 0.52, 0.62],
+    chromas: [0.09, 0.15, 0.21],
+    seed: { lightness: 0.52, chroma: 0.15, hue: 30 }
+  },
+  dark: {
+    lightnesses: [0.62, 0.72, 0.82],
+    chromas: [0.09, 0.15, 0.21],
+    seed: { lightness: 0.72, chroma: 0.15, hue: 30 }
+  }
+}
 
 const THEME_TOKENS = {
   light: {
@@ -19,6 +45,7 @@ const THEME_TOKENS = {
     trendMicro: '#A3A3A3',
     spotColor: '#C1432E',
     spotColorMuted: '#C1432E',
+    seasonAccentMuted: '#B36D61',
     publisherAccent: '#C1432E'
   },
   dark: {
@@ -33,6 +60,7 @@ const THEME_TOKENS = {
     trendMicro: '#777269',
     spotColor: '#C1432E',
     spotColorMuted: '#C1432E',
+    seasonAccentMuted: '#B38780',
     publisherAccent: '#C1432E'
   }
 }
@@ -76,10 +104,15 @@ function getSystemTheme() {
   return window.matchMedia(MEDIA_QUERY).matches ? 'dark' : 'light'
 }
 
+function normalizePaletteId(paletteId) {
+  const normalized = LEGACY_PALETTE_IDS[paletteId] ?? paletteId
+  return PALETTES.includes(normalized) ? normalized : SETTINGS_DEFAULTS.palette
+}
+
 function sanitizeSettings(candidate = {}) {
   return {
     theme: THEMES.includes(candidate.theme) ? candidate.theme : getSystemTheme(),
-    palette: PALETTES.includes(candidate.palette) ? candidate.palette : SETTINGS_DEFAULTS.palette,
+    palette: normalizePaletteId(candidate.palette),
     seasonTrendlines:
       typeof candidate.seasonTrendlines === 'boolean' ? candidate.seasonTrendlines : SETTINGS_DEFAULTS.seasonTrendlines,
     fullShowTrendline:
@@ -188,26 +221,174 @@ export function cyclePalette() {
 }
 
 export function seasonColor(paletteId, seasonIndex, totalSeasons, themeId = uiSettings.theme) {
+  const normalizedPaletteId = normalizePaletteId(paletteId)
   const safeTotal = Math.max(totalSeasons, 1)
-  const position = safeTotal === 1 ? 0.5 : seasonIndex / safeTotal
+  const safeIndex = Math.max(0, Math.trunc(seasonIndex))
+  const position = safeTotal === 1 ? 0.5 : safeIndex / safeTotal
   const themeTokens = THEME_TOKENS[themeId]
 
-  if (paletteId === 'monotone') {
+  if (normalizedPaletteId === 'monotone') {
     return themeTokens.textPrimary
   }
 
-  const baseHue = (position * 300 + seasonIndex * 17) % 360
+  if (normalizedPaletteId === 'alternating') {
+    return safeIndex % 2 === 0
+      ? themeTokens.textPrimary
+      : themeTokens.seasonAccentMuted
+  }
 
-  if (paletteId === 'vivid') {
+  const baseHue = (position * 300 + safeIndex * 17) % 360
+
+  if (normalizedPaletteId === 'rainbow') {
     const saturation = themeId === 'dark' ? 76 : 68
     const lightness = themeId === 'dark' ? 66 : 42
     return `hsl(${baseHue} ${saturation}% ${lightness}%)`
   }
 
-  const hue = (baseHue + 18) % 360
-  const saturation = themeId === 'dark' ? 34 : 28
-  const lightness = themeId === 'dark' ? 62 : 44
-  return `hsl(${hue} ${saturation}% ${lightness}%)`
+  if (normalizedPaletteId === 'zigzag') {
+    const hue = (25 + Math.floor(safeIndex / 2) * 65 + (safeIndex % 2) * 180) % 360
+    const lightness = themeId === 'dark' ? 72 : 58
+    const chroma = fitChromaToSrgb(
+      lightness / 100,
+      hue,
+      themeId === 'dark' ? 0.13 : 0.16
+    )
+    return `oklch(${lightness}% ${chroma} ${hue})`
+  }
+
+  if (normalizedPaletteId === 'maximin') {
+    return maximinSeasonColor(themeId, safeIndex, safeTotal)
+  }
+
+  return themeTokens.textPrimary
+}
+
+function maximinSeasonColor(themeId, seasonIndex, totalSeasons) {
+  const state = getMaximinPaletteState(themeId)
+  const requestedCount = Math.min(
+    Math.max(Math.ceil(totalSeasons), seasonIndex + 1),
+    state.selected.length + state.remaining.length
+  )
+
+  while (state.selected.length < requestedCount && state.remaining.length > 0) {
+    let bestIndex = 0
+    let bestMinimumDistance = -Infinity
+    let bestPreviousDistance = -Infinity
+
+    state.remaining.forEach((candidate, candidateIndex) => {
+      const distances = state.selected.map((selected) =>
+        oklabDistanceSquared(candidate, selected)
+      )
+      const minimumDistance = Math.min(...distances)
+      const previousDistance = distances.at(-1)
+
+      if (
+        minimumDistance > bestMinimumDistance ||
+        (minimumDistance === bestMinimumDistance &&
+          previousDistance > bestPreviousDistance)
+      ) {
+        bestIndex = candidateIndex
+        bestMinimumDistance = minimumDistance
+        bestPreviousDistance = previousDistance
+      }
+    })
+
+    state.selected.push(state.remaining.splice(bestIndex, 1)[0])
+  }
+
+  return formatOklch(state.selected[seasonIndex % state.selected.length])
+}
+
+function getMaximinPaletteState(themeId) {
+  if (MAXIMIN_PALETTE_STATE.has(themeId)) {
+    return MAXIMIN_PALETTE_STATE.get(themeId)
+  }
+
+  const config = MAXIMIN_CONFIG[themeId]
+  const candidates = config.lightnesses.flatMap((lightness) =>
+    config.chromas.flatMap((chroma) =>
+      Array.from({ length: 24 }, (_, index) =>
+        createOklchCandidate(lightness, chroma, index * 15)
+      )
+    )
+  ).filter(isInSrgbGamut)
+  const seedIndex = candidates.reduce((bestIndex, candidate, index) => {
+    const bestDistance = oklchParameterDistance(
+      candidates[bestIndex],
+      config.seed
+    )
+    return oklchParameterDistance(candidate, config.seed) < bestDistance
+      ? index
+      : bestIndex
+  }, 0)
+  const state = {
+    selected: candidates.splice(seedIndex, 1),
+    remaining: candidates
+  }
+
+  MAXIMIN_PALETTE_STATE.set(themeId, state)
+  return state
+}
+
+function createOklchCandidate(lightness, chroma, hue) {
+  const radians = (hue * Math.PI) / 180
+  return {
+    lightness,
+    chroma,
+    hue,
+    a: chroma * Math.cos(radians),
+    b: chroma * Math.sin(radians)
+  }
+}
+
+function oklchParameterDistance(candidate, target) {
+  const hueDistance = Math.min(
+    Math.abs(candidate.hue - target.hue),
+    360 - Math.abs(candidate.hue - target.hue)
+  )
+  return (
+    Math.abs(candidate.lightness - target.lightness) +
+    Math.abs(candidate.chroma - target.chroma) +
+    hueDistance / 360
+  )
+}
+
+function oklabDistanceSquared(left, right) {
+  return (
+    (left.lightness - right.lightness) ** 2 +
+    (left.a - right.a) ** 2 +
+    (left.b - right.b) ** 2
+  )
+}
+
+function isInSrgbGamut({ lightness, a, b }) {
+  const l = (lightness + 0.3963377774 * a + 0.2158037573 * b) ** 3
+  const m = (lightness - 0.1055613458 * a - 0.0638541728 * b) ** 3
+  const s = (lightness - 0.0894841775 * a - 1.291485548 * b) ** 3
+  const channels = [
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s
+  ]
+
+  return channels.every((channel) => channel >= 0 && channel <= 1)
+}
+
+function fitChromaToSrgb(lightness, hue, targetChroma) {
+  let chroma = targetChroma
+
+  while (
+    chroma > 0.04 &&
+    !isInSrgbGamut(createOklchCandidate(lightness, chroma, hue))
+  ) {
+    chroma = Number((chroma - 0.01).toFixed(2))
+  }
+
+  return chroma
+}
+
+function formatOklch({ lightness, chroma, hue }) {
+  return `oklch(${lightness * 100}% ${chroma} ${hue})`
 }
 
 export function getChartTheme(settings = uiSettings) {

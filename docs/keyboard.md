@@ -120,7 +120,7 @@ The panel shows the available options as a short list. Each option displays its 
 
 #### Interaction model
 
-- **Click:** Clicking a specific value (e.g., "dark" or "vivid") selects it directly.
+- **Click:** Clicking a specific value (e.g., "dark" or "rainbow") selects it directly.
 - **Spatial editing:** Navigate to a row, then use left/right to set its value or Enter/Space to toggle or cycle it.
 - **Direct keys:** An accelerator toggles its option and focuses the corresponding row, enabling quick modal sequences such as `v`, `y`, `v`.
 - **Key repeat:** Direct toggles ignore repeated keydown events so holding a key cannot toggle twice.

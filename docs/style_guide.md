@@ -131,7 +131,7 @@ Rules:
 
 Required settings:
 - Theme: `light`, `dark`. Default follows `prefers-color-scheme`. User choice persisted in `localStorage`.
-- Season palette: `monotone`, `subtle`, `vivid`. User choice persisted in `localStorage`.
+- Season palette: `monotone`, `alternating`, `rainbow`, `zigzag`, `maximin`. User choice persisted in `localStorage`.
 
 ### Layout
 

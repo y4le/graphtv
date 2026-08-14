@@ -75,6 +75,11 @@ describe('view options overlay', () => {
     const yAxisRow = document.querySelector('[data-option="absolute-y-axis"]')
     const yAxisValues = Array.from(yAxisRow.querySelectorAll('.view-value'))
 
+    expect(
+      Array.from(paletteRow.querySelectorAll('.view-value'), (value) =>
+        value.textContent
+      )
+    ).toEqual(['Mono', 'Alternating', 'Rainbow', 'Zigzag', 'Maximin'])
     expect(yAxisValues.map((value) => value.textContent)).toEqual(['Off', 'On'])
 
     themeRow.dispatchEvent(
@@ -86,7 +91,7 @@ describe('view options overlay', () => {
     paletteRow.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'l', bubbles: true })
     )
-    expect(getUiSettings().palette).toBe('subtle')
+    expect(getUiSettings().palette).toBe('alternating')
 
     yAxisRow.focus()
     yAxisRow.dispatchEvent(

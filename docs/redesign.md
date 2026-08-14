@@ -8,7 +8,7 @@ These redesign goals are already implemented:
 
 - Tufte-inspired search page and results-page visual language
 - light and dark themes
-- season palettes: monotone, subtle, vivid
+- season palettes: monotone, alternating, rainbow, zigzag, maximin
 - system-font typography
 - desktop two-column results composition
 - sparkline minimap + viewport-based main chart
