@@ -220,7 +220,7 @@ export function createSidenote({
         ? `Trending up ${formatSignedDelta(summary.delta)}`
         : summary.direction === 'down'
           ? `Trending down ${formatSignedDelta(summary.delta)}`
-          : 'No clear trend'
+          : `No clear trend${Number.isFinite(summary.delta) ? ` ${formatSignedDelta(summary.delta)}` : ''}`
     const provenanceNotes = [
       fallbackCopy,
       !summary.trendCriteria.enoughRatedEpisodes

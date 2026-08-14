@@ -330,7 +330,7 @@ describe('createSidenote', () => {
     )
   })
 
-  it('does not show a numeric delta when the trend is unclear', () => {
+  it('reports the measured delta when the trend direction is unclear', () => {
     const root = document.createElement('section')
     const sidenote = createSidenote({ root })
 
@@ -365,8 +365,7 @@ describe('createSidenote', () => {
       ]
     })
 
-    expect(root.textContent).toContain('No clear trend')
-    expect(root.textContent).not.toContain('+1.2')
+    expect(root.textContent).toContain('No clear trend +1.2')
     expect(root.textContent).toContain('too few rated episodes for a trend')
 
     root.querySelector('[data-trend-info]').click()
