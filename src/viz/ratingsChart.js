@@ -10,14 +10,12 @@ import {
   getMacroTrendline,
   getVisiblePoints,
   getVisibleSeriesBreakpoint,
-  getVisibleSeasonSpans,
   getVisibleSeasonTrendlines
 } from './scales.js'
 import {
   renderCrosshair,
   renderPoints,
   renderRangeFrame,
-  renderSeasonLabels,
   renderSourceSpreads,
   renderSeriesBreakpoint,
   renderTrendlines
@@ -1179,19 +1177,6 @@ export function createChart(container, seasons, options = {}) {
     }
   }
 
-  function getSeasonLabelInteractions() {
-    const selectedTrend = getTrendSummary(selectedTrendId)
-    return {
-      activeSeasonNumber:
-        selectedTrend?.kind === 'season' ? selectedTrend.seasonNumber : null,
-      isSelectable(seasonNumber) {
-        return Boolean(getTrendSummary(`season:${seasonNumber}`))
-      },
-      onSelect: selectSeasonTrend,
-      shouldSuppressClick
-    }
-  }
-
   function renderDesktopChart(
     chartTheme,
     axisWidth,
@@ -1267,15 +1252,6 @@ export function createChart(container, seasons, options = {}) {
         visible: uiSettings.showSourceSpread,
         activePointId: getActivePoint()?.id ?? null
       }
-    )
-    renderSeasonLabels(
-      mainSvg,
-      getVisibleSeasonSpans(model, viewport),
-      viewport,
-      mainScales,
-      { width: chartWidth, height: chartHeight },
-      chartTheme,
-      getSeasonLabelInteractions()
     )
     renderCrosshair(
       mainSvg,
@@ -1411,15 +1387,6 @@ export function createChart(container, seasons, options = {}) {
         visible: uiSettings.showSourceSpread,
         activePointId: getActivePoint()?.id ?? null
       }
-    )
-    renderSeasonLabels(
-      mainSvg,
-      model.seasonSpans,
-      { start: 1, end: model.xMax },
-      fullScales,
-      { width: contentWidth, height: chartHeight },
-      chartTheme,
-      getSeasonLabelInteractions()
     )
     renderCrosshair(
       mainSvg,

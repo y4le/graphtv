@@ -1452,30 +1452,6 @@ button {
   pointer-events: none;
 }
 
-.season-label {
-  -webkit-user-select: none;
-  user-select: none;
-}
-
-.season-label:not([role='button']) {
-  pointer-events: none;
-}
-
-.season-label[role='button'] {
-  touch-action: manipulation;
-}
-
-.season-label[role='button']:focus-visible {
-  outline: 2px solid var(--spotColor);
-  outline-offset: 2px;
-}
-
-.season-label[role='button']:hover,
-.season-label[role='button']:focus-visible {
-  fill: var(--spotColor);
-  text-decoration: underline;
-}
-
 .point-layer .episode-point,
 .point-layer .episode-point-hit {
   cursor: pointer;

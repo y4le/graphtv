@@ -19,7 +19,6 @@ export function buildChartModel(seasons) {
   const episodes = seasons.flatMap((season) => season.episodes)
   const primaryRating = selectPrimaryRatingSource(episodes)
   const points = []
-  const seasonSpans = []
   const seasonTrendlines = []
   const trendSummaries = {}
   const comparableSeasonSummaries = []
@@ -29,7 +28,6 @@ export function buildChartModel(seasons) {
 
   seasons.forEach((season, seasonIndex) => {
     const seasonPoints = []
-    const start = absoluteIndex
 
     season.episodes.forEach((episode) => {
       const resolvedRating = resolveEpisodeRating(
@@ -47,16 +45,6 @@ export function buildChartModel(seasons) {
       points.push(point)
       seasonPoints.push(point)
       absoluteIndex += 1
-    })
-
-    const end = absoluteIndex - 1
-
-    seasonSpans.push({
-      seasonNumber: season.number,
-      seasonIndex,
-      start,
-      end,
-      midpoint: start + (end - start) / 2
     })
 
     const ratedSeasonPoints = seasonPoints.filter(
@@ -161,14 +149,13 @@ export function buildChartModel(seasons) {
     primaryRatingSource: primaryRating.source,
     ratingSourceCoverage: primaryRating.coverage,
     minimumPrimaryCoverage: primaryRating.minimumCoverage,
-    seasonSpans,
     seasonTrendlines,
     trendSummaries,
     seriesBreakpointCandidate,
     seriesBreakpoint,
     macroRegression,
     xMax: Math.max(points.length, 1),
-    totalSeasons: seasonSpans.length
+    totalSeasons: seasons.length
   }
 }
 
@@ -332,12 +319,6 @@ export function getVisiblePoints(model, viewport) {
 export function getVisibleRatedPoints(model, viewport) {
   return model.ratedPoints.filter(
     (point) => point.x >= viewport.start && point.x <= viewport.end
-  )
-}
-
-export function getVisibleSeasonSpans(model, viewport) {
-  return model.seasonSpans.filter(
-    (span) => span.end >= viewport.start && span.start <= viewport.end
   )
 }
 
