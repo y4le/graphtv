@@ -777,6 +777,50 @@ describe('createChart', () => {
     )
   })
 
+  it('refits an untouched viewport when a provider snapshot adds an episode', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 1368
+    })
+    document.body.appendChild(container)
+    const initialSeasons = createSeasons()
+    initialSeasons[0].episodes = initialSeasons[0].episodes.slice(0, 64)
+
+    chart = createChart(container, initialSeasons)
+    expect(chart.getDebugState().viewport).toEqual({ start: 1, end: 64 })
+
+    const updatedSeasons = createSeasons()
+    updatedSeasons[0].episodes = updatedSeasons[0].episodes.slice(0, 65)
+    chart.updateSeasons(updatedSeasons)
+
+    expect(chart.getDebugState()).toMatchObject({
+      hasUserInteracted: false,
+      viewport: { start: 1, end: 65 }
+    })
+
+    const body = container.querySelector('.chart-body-shell')
+    Object.defineProperty(body, 'clientWidth', {
+      configurable: true,
+      value: 1296
+    })
+    body.dispatchEvent(
+      new WheelEvent('wheel', {
+        bubbles: true,
+        cancelable: true,
+        deltaX: 5
+      })
+    )
+
+    expect(chart.getDebugState().viewport).toEqual({ start: 1, end: 65 })
+    expect(
+      Array.from(
+        container.querySelectorAll('.episode-point'),
+        (point) => point.__data__.id
+      )
+    ).toEqual(expect.arrayContaining(['episode-1', 'episode-65']))
+  })
+
   it('moves and enriches a vanished user-selected episode at the nearest rated point', async () => {
     vi.useFakeTimers()
     const container = document.createElement('div')

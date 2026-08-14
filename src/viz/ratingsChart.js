@@ -1133,6 +1133,7 @@ export function createChart(container, seasons, options = {}) {
 
     const previousPoint = getPointById(selectedPointId)
     const previousTrend = getTrendSummary(selectedTrendId)
+    const shouldRefreshDefaultViewport = Boolean(viewport && !hasUserInteracted)
     model = buildChartModel(nextSeasons)
     failedDetailPointIds.clear()
     if (!getPointById(hoverPointId)) {
@@ -1180,7 +1181,9 @@ export function createChart(container, seasons, options = {}) {
       detailCache.set(episodeId, mergeEpisodeDetails(point, cachedPoint))
     }
 
-    if (viewport) {
+    if (shouldRefreshDefaultViewport) {
+      viewport = getDefaultViewport(getCurrentChartWidth())
+    } else if (viewport) {
       viewport = clampViewport(viewport, model)
     }
     render()
