@@ -624,7 +624,11 @@ function renderViewOptionsContent() {
         <kbd class="view-option-hint keycap">c</kbd>
       </div>
       <div class="view-option-row" data-option="episode-density" tabindex="0">
-        <span class="view-option-label">Episode density</span>
+        ${renderViewOptionLabel(
+          'Episode density',
+          'Sets how tightly episodes can be packed in the default view. Shows with only a few episodes are shown in full, so this setting will not affect them.',
+          'view-option-episode-density-info'
+        )}
         <span class="view-option-values">
           ${EPISODE_DENSITIES.map((density) => renderValueButton('episodeDensity', density, settings.episodeDensity === density)).join('')}
         </span>
@@ -647,7 +651,8 @@ function renderViewOptionsContent() {
       <div class="view-option-row" data-option="source-spread" tabindex="0">
         ${renderViewOptionLabel(
           'Rating source spread',
-          'When an episode has ratings from multiple sources, such as IMDb and TMDB, a vertical mark shows the range between their scores. Turn this off to show only the score used for the episode point.'
+          'When an episode has ratings from multiple sources, such as IMDb and TMDB, a vertical mark shows the range between their scores. Turn this off to show only the score used for the episode point.',
+          'view-option-source-spread-info'
         )}
         <span class="view-option-values">
           ${renderToggleButtons('showSourceSpread', settings.showSourceSpread)}
@@ -756,12 +761,11 @@ function formatViewValueLabel(value) {
   return value.charAt(0).toUpperCase() + value.slice(1)
 }
 
-function renderViewOptionLabel(label, tooltip = null) {
+function renderViewOptionLabel(label, tooltip = null, tooltipId = null) {
   if (!tooltip) {
     return `<span class="view-option-label">${label}</span>`
   }
 
-  const tooltipId = 'view-option-source-spread-info'
   return `
     <span class="view-option-label">
       <span>${label}</span>

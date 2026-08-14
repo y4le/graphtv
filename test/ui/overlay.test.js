@@ -97,6 +97,8 @@ describe('view options overlay', () => {
     const denseButton = row.querySelector(
       '[data-view-episode-density="dense"]'
     )
+    const infoButton = row.querySelector('[data-view-option-info]')
+    const tooltip = row.querySelector('[role="tooltip"]')
 
     expect(values.map((value) => value.textContent)).toEqual([
       'Roomy',
@@ -104,6 +106,25 @@ describe('view options overlay', () => {
       'Dense',
       'Full series'
     ])
+    expect(infoButton.getAttribute('aria-describedby')).toBe(tooltip.id)
+    expect(
+      new Set(
+        Array.from(
+          document.querySelectorAll('.view-option-info-tooltip'),
+          (candidate) => candidate.id
+        )
+      ).size
+    ).toBe(2)
+    expect(tooltip.textContent).toBe(
+      'Sets how tightly episodes can be packed in the default view. Shows with only a few episodes are shown in full, so this setting will not affect them.'
+    )
+    expect(tooltip.hidden).toBe(true)
+
+    infoButton.click()
+    expect(tooltip.hidden).toBe(false)
+    infoButton.click()
+    expect(tooltip.hidden).toBe(true)
+
     expect(
       row.querySelector('[data-view-episode-density="balanced"]')
         .getAttribute('aria-pressed')
