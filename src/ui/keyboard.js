@@ -264,6 +264,12 @@ export function createKeyboardController({ page, overlayController }) {
       return
     }
 
+    if (key === 'b') {
+      event.preventDefault()
+      page.chart.toggleSeriesBreakpoint()
+      return
+    }
+
     if (key === 'T') {
       event.preventDefault()
       page.chart.toggleSeasonTrend()

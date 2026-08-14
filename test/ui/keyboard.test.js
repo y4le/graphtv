@@ -203,6 +203,7 @@ describe('createKeyboardController', () => {
       resetZoom: vi.fn(),
       clearSelection: vi.fn(),
       toggleSeasonTrend: vi.fn(),
+      toggleSeriesBreakpoint: vi.fn(),
       toggleSeriesTrend: vi.fn(),
       zoomBy: vi.fn()
     }
@@ -223,6 +224,7 @@ describe('createKeyboardController', () => {
     pressKey('=')
     pressKey('+', { shiftKey: true })
     pressKey('t')
+    pressKey('b')
     pressKey('T', { shiftKey: true })
     pressKey('Escape')
 
@@ -233,10 +235,11 @@ describe('createKeyboardController', () => {
     expect(chart.resetZoom).toHaveBeenCalledOnce()
     expect(chart.zoomBy.mock.calls).toEqual([[1.5], [1 / 1.5], [1 / 1.5]])
     expect(chart.toggleSeriesTrend).toHaveBeenCalledOnce()
+    expect(chart.toggleSeriesBreakpoint).toHaveBeenCalledOnce()
     expect(chart.toggleSeasonTrend).toHaveBeenCalledOnce()
     expect(chart.clearSelection).toHaveBeenCalledOnce()
 
-    for (const removedKey of ['b', 'w', '0', '$']) {
+    for (const removedKey of ['w', '0', '$']) {
       pressKey(removedKey)
     }
 

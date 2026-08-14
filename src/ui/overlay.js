@@ -812,6 +812,10 @@ function resultsHelpSections() {
       items: [
         { keys: ['t'], action: 'Select full-series trend' },
         {
+          keys: ['b'],
+          action: 'Select best breakpoint (ignores confidence threshold)'
+        },
+        {
           keys: ['T'],
           action: 'Select current season / reset to first available'
         },

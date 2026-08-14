@@ -172,10 +172,24 @@ describe('keyboard help overlay', () => {
       document.querySelector('.help-key[aria-label="Left arrow"]').textContent
     ).toBe('←')
     expect(keycapLabels).toEqual(
-      expect.arrayContaining(['o', 'f', 'r', '-', '=', '+', 't', 'T', 'Escape'])
+      expect.arrayContaining([
+        'o',
+        'f',
+        'r',
+        '-',
+        '=',
+        '+',
+        't',
+        'b',
+        'T',
+        'Escape'
+      ])
     )
     expect(keycapLabels).not.toEqual(
-      expect.arrayContaining(['b', 'w', '0', '$', 'd'])
+      expect.arrayContaining(['w', '0', '$', 'd'])
+    )
+    expect(document.querySelector('.help-sections').textContent).toContain(
+      'Select best breakpoint (ignores confidence threshold)'
     )
     expect(document.querySelector('[data-help-action="debug"]')).toMatchObject({
       tagName: 'BUTTON'
