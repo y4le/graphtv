@@ -963,6 +963,8 @@ function resultsHelpSections() {
     {
       title: 'Viewport',
       items: [
+        { keys: ['Ctrl-U'], action: 'Pan back half a viewport' },
+        { keys: ['Ctrl-D'], action: 'Pan forward half a viewport' },
         { keys: ['f'], action: 'Fit entire series' },
         { keys: ['r'], action: 'Reset zoom' },
         { keys: ['-'], action: 'Zoom out' },

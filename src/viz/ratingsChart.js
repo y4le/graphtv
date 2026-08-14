@@ -907,6 +907,28 @@ export function createChart(container, seasons, options = {}) {
     render()
   }
 
+  function panHalfViewport(direction) {
+    hasUserInteracted = true
+    if (!viewport || !Number.isFinite(direction) || direction === 0) {
+      return
+    }
+
+    const span = viewport.end - viewport.start
+    panViewport((Math.sign(direction) * span) / 2)
+
+    if (usesScrollableBody()) {
+      const width = Math.max(bodyShell.clientWidth, 240)
+      const contentWidth = getScrollableBodyWidth(width)
+      const maxScrollLeft = Math.max(contentWidth - width, 0)
+      const viewportWidth = viewport.end - viewport.start + 1
+      const maxStart = Math.max(1, model.xMax - viewportWidth + 1)
+      const ratio = maxStart > 1 ? (viewport.start - 1) / (maxStart - 1) : 0
+      setScrollLeftSuppressed(ratio * maxScrollLeft)
+    }
+
+    announceViewport()
+  }
+
   function zoomViewport(scale, anchorRatio) {
     if (!viewport || !Number.isFinite(scale) || scale <= 0) {
       return
@@ -1956,6 +1978,7 @@ export function createChart(container, seasons, options = {}) {
     moveEpisode,
     moveSeason,
     jumpBoundary,
+    panHalfViewport,
     fitSeries,
     resetZoom,
     zoomBy,

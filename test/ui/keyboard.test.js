@@ -223,6 +223,7 @@ describe('createKeyboardController', () => {
       jumpBoundary: vi.fn(),
       moveEpisode: vi.fn(),
       moveSeason: vi.fn(),
+      panHalfViewport: vi.fn(),
       resetZoom: vi.fn(),
       clearSelection: vi.fn(),
       toggleSeasonTrend: vi.fn(),
@@ -241,6 +242,8 @@ describe('createKeyboardController', () => {
     pressKey('j')
     pressKey('Home')
     pressKey('G')
+    const halfBack = pressKey('u', { ctrlKey: true })
+    const halfForward = pressKey('d', { ctrlKey: true })
     pressKey('f')
     pressKey('r')
     pressKey('-')
@@ -254,6 +257,9 @@ describe('createKeyboardController', () => {
     expect(chart.moveEpisode.mock.calls).toEqual([[-1], [1]])
     expect(chart.moveSeason.mock.calls).toEqual([[-1], [1]])
     expect(chart.jumpBoundary.mock.calls).toEqual([['start'], ['end']])
+    expect(chart.panHalfViewport.mock.calls).toEqual([[-1], [1]])
+    expect(halfBack.defaultPrevented).toBe(true)
+    expect(halfForward.defaultPrevented).toBe(true)
     expect(chart.fitSeries).toHaveBeenCalledOnce()
     expect(chart.resetZoom).toHaveBeenCalledOnce()
     expect(chart.zoomBy.mock.calls).toEqual([[1.5], [1 / 1.5], [1 / 1.5]])
@@ -291,7 +297,7 @@ describe('createKeyboardController', () => {
     const reload = pressKey('r', { ctrlKey: true })
     const addressBar = pressKey('l', { metaKey: true })
     const browserZoom = pressKey('-', { ctrlKey: true })
-    const browserBookmark = pressKey('d', { ctrlKey: true })
+    const browserBookmark = pressKey('d', { metaKey: true })
     pressKey('d')
 
     expect(reload.defaultPrevented).toBe(false)

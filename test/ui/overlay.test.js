@@ -263,6 +263,8 @@ describe('keyboard help overlay', () => {
     expect(keycapLabels).toEqual(
       expect.arrayContaining([
         'o',
+        'Ctrl-U',
+        'Ctrl-D',
         'f',
         'r',
         '-',

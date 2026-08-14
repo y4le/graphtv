@@ -16,7 +16,7 @@ export function createKeyboardController({ page, overlayController }) {
   const chordTracker = createChordTracker()
 
   function onKeyDown(event) {
-    if (hasCommandModifier(event)) {
+    if (hasCommandModifier(event) && !isChartHalfViewportShortcut(event)) {
       chordTracker.reset()
       return
     }
@@ -100,6 +100,18 @@ export function createKeyboardController({ page, overlayController }) {
 
   function keyWorksFromInteractiveControl(key) {
     return ['/', '?', 'F1', 'Escape', 'q'].includes(key)
+  }
+
+  function isChartHalfViewportShortcut(event) {
+    return Boolean(
+      page.kind === 'results' &&
+        page.chart &&
+        event.ctrlKey &&
+        !event.altKey &&
+        !event.metaKey &&
+        !event.shiftKey &&
+        (event.key === 'u' || event.key === 'd')
+    )
   }
 
   function onClick(event) {
@@ -212,6 +224,12 @@ export function createKeyboardController({ page, overlayController }) {
     }
 
     if (!page.chart) {
+      return
+    }
+
+    if (isChartHalfViewportShortcut(event)) {
+      event.preventDefault()
+      page.chart.panHalfViewport(key === 'u' ? -1 : 1)
       return
     }
 

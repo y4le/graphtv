@@ -71,18 +71,20 @@ On the results page, chart navigation is the default keyboard target in normal m
 
 The vim spatial metaphor: episodes within a season are characters within a line (`h`/`l`), and seasons are lines (`j`/`k`).
 
-| Action                 | Vim        | Conventional | Notes                                                                        |
-| ---------------------- | ---------- | ------------ | ---------------------------------------------------------------------------- |
-| Previous episode       | `h`        | `ArrowLeft`  | Wraps across season boundaries and the enabled full-series trend             |
-| Next episode           | `l`        | `ArrowRight` | Wraps across season boundaries and the enabled full-series trend             |
-| Previous season        | `k`        | `ArrowUp`    | Cycles season trendlines when one is selected; otherwise jumps to the season |
-| Next season            | `j`        | `ArrowDown`  | Cycles season trendlines when one is selected; otherwise jumps to the season |
-| First episode (series) | `gg`       | `Home`       |                                                                              |
-| Last episode (series)  | `G`        | `End`        |                                                                              |
-| Fit entire series      | `f`        | —            | Preserves the selected episode                                               |
-| Reset zoom             | `r`        | —            | Restores default density without losing the current location                 |
-| Zoom out               | `-`        | —            | Anchors on the visible selected episode, otherwise the viewport center       |
-| Zoom in                | `=` or `+` | —            | Anchors on the visible selected episode, otherwise the viewport center       |
+| Action                    | Vim        | Conventional | Notes                                                                        |
+| ------------------------- | ---------- | ------------ | ---------------------------------------------------------------------------- |
+| Previous episode          | `h`        | `ArrowLeft`  | Wraps across season boundaries and the enabled full-series trend             |
+| Next episode              | `l`        | `ArrowRight` | Wraps across season boundaries and the enabled full-series trend             |
+| Previous season           | `k`        | `ArrowUp`    | Cycles season trendlines when one is selected; otherwise jumps to the season |
+| Next season               | `j`        | `ArrowDown`  | Cycles season trendlines when one is selected; otherwise jumps to the season |
+| First episode (series)    | `gg`       | `Home`       |                                                                              |
+| Last episode (series)     | `G`        | `End`        |                                                                              |
+| Pan back half viewport    | `Ctrl-U`   | —            | Preserves the selected episode                                               |
+| Pan forward half viewport | `Ctrl-D`   | —            | Preserves the selected episode                                               |
+| Fit entire series         | `f`        | —            | Preserves the selected episode                                               |
+| Reset zoom                | `r`        | —            | Restores default density without losing the current location                 |
+| Zoom out                  | `-`        | —            | Anchors on the visible selected episode, otherwise the viewport center       |
+| Zoom in                   | `=` or `+` | —            | Anchors on the visible selected episode, otherwise the viewport center       |
 
 #### Automatic behaviors
 
@@ -220,4 +222,4 @@ Overlay ──[Escape, q, toggle key, or outside click]──→ Normal (focus r
 - `?` only triggers help when no text input is focused. Inside the search input, `?` types normally. To open help from insert mode: `Escape` first, then `?`.
 - If focus is on a native interactive control such as a link, button, select, summary, or editable field, page-level single-letter shortcuts do not fire.
 - Composite widgets marked for local keyboard handling suppress page-level navigation while focused; their own documented keys continue to work.
-- Shortcuts do not fire while `Ctrl`, `Command`, or `Alt` is held. Browser and operating-system commands such as reload, address-bar focus, bookmarks, and browser zoom are never intercepted. Shift remains available for intentional keys such as `?`, `D`, `G`, and `+`.
+- Modified shortcuts do not fire except for the chart's intentional `Ctrl-U` and `Ctrl-D` half-viewport pans. Browser and operating-system commands such as reload, address-bar focus, Command-D bookmarks, and browser zoom are never intercepted. Shift remains available for intentional keys such as `?`, `D`, `G`, and `+`.

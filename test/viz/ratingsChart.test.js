@@ -353,6 +353,37 @@ describe('createChart', () => {
     ).toBeCloseTo(0.9)
   })
 
+  it('pans half a viewport in either direction without clearing the selection', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    chart.moveEpisode(1)
+    const initialViewport = chart.getDebugState().viewport
+    const span = initialViewport.end - initialViewport.start
+
+    chart.panHalfViewport(1)
+
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId: 'episode-1',
+      viewport: {
+        start: initialViewport.start + span / 2,
+        end: initialViewport.end + span / 2
+      }
+    })
+
+    chart.panHalfViewport(-1)
+
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId: 'episode-1',
+      viewport: initialViewport
+    })
+  })
+
   it('wraps selected season trendlines through buttons and season shortcuts without entering the series trend', () => {
     const container = document.createElement('div')
     const detailRoot = document.createElement('section')
