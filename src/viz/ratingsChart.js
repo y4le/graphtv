@@ -679,7 +679,7 @@ export function createChart(container, seasons, options = {}) {
       if (summary.kind === 'breakpoint') {
         const confidence = summary.highConfidence
           ? 'High confidence'
-          : 'Below automatic confidence threshold'
+          : 'Confidence below automatic threshold'
         selectionStatus.textContent = `Series breakpoint selected before ${formatEpisodeCode(summary.breakpointPoint)}. ${confidence} rating drop of ${summary.drop.toFixed(1)} points.`
         return
       }

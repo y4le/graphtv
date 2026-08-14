@@ -176,7 +176,9 @@ describe('createChart', () => {
       selectedTrendId: 'series:breakpoint',
       viewport: { start: 1, end: 72 }
     })
-    expect(detailRoot.textContent).toContain('Below threshold')
+    expect(detailRoot.textContent).toMatch(
+      /Confidence below threshold \d+\/100/
+    )
     expect(container.querySelectorAll('.series-breakpoint-trend')).toHaveLength(
       2
     )

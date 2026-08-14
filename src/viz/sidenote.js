@@ -330,7 +330,7 @@ export function createSidenote({
     const confidenceCopy =
       summary.confidence === 'high'
         ? `High confidence ${Math.round(summary.score)}/100`
-        : `Below threshold ${Math.round(summary.score)}/100`
+        : `Confidence below threshold ${Math.round(summary.score)}/100`
     const changeCopy =
       summary.drop >= 0
         ? `Ratings dropped ${summary.drop.toFixed(1)} points`
