@@ -132,6 +132,7 @@ Rules:
 Required settings:
 - Theme: `light`, `dark`. Default follows `prefers-color-scheme`. User choice persisted in `localStorage`.
 - Season palette: `monotone`, `alternating`, `rainbow`, `zigzag`, `maximin`. User choice persisted in `localStorage`.
+- Episode density: `roomy`, `balanced`, `dense`, `all`. Default is `balanced`; user choice persisted in `localStorage`.
 
 ### Layout
 
@@ -232,7 +233,7 @@ These are the practical rules to enforce during implementation and review.
 - asymmetry in layout
 - dense information if it remains legible
 - inline notes, sidenotes, and marginal annotations
-- compact controls for theme, palette, and debug state
+- compact controls for theme, palette, episode density, and debug state
 
 ### Discouraged
 

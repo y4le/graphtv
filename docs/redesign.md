@@ -39,7 +39,7 @@ Theme and palette controls should no longer live as always-visible masthead cont
 Required outcomes:
 
 - compact view options overlay
-- theme toggle and palette selection inside the overlay
+- theme, palette, and episode-density selection inside the overlay
 - direct click support
 - keyboard navigation inside the overlay
 - instant application and persistence to `localStorage`
@@ -85,7 +85,7 @@ Required outcomes:
 The redesign is complete when:
 
 1. [docs/keyboard.md](/Users/yale/dev/graphtv/docs/keyboard.md) is implemented in substance, not partially
-2. theme/palette controls live in the view options overlay instead of the masthead
+2. theme, palette, and episode-density controls live in the view options overlay instead of the masthead
 3. help/debug/view overlays all trap focus and close consistently
 4. mobile sticky-axis scrolling fallback is real, not nominal
 5. the chart no longer paints a boxed background behind itself

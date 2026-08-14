@@ -94,7 +94,7 @@ The vim spatial metaphor: episodes within a season are characters within a line 
 
 ### View options panel (overlay mode)
 
-Opened by `v` in normal mode. A compact panel for changing theme, palette, trendline, rating-spread, and y-axis settings.
+Opened by `v` in normal mode. A compact panel for changing theme, palette, default episode density, trendline, rating-spread, and y-axis settings.
 
 The panel shows the available options as a short list. Each option displays its current value and its shortcut key as a visual hint.
 
@@ -104,7 +104,7 @@ The panel shows the available options as a short list. Each option displays its 
 | --------------------------- | --------------------- | ------------------------ | ------------------------------------------------ |
 | Move between options        | `j`/`k`               | `ArrowUp`/`ArrowDown`    |                                                  |
 | Change focused value        | `h`/`l`               | `ArrowLeft`/`ArrowRight` | Left selects Off/previous; right selects On/next |
-| Toggle/cycle focused option | `Enter`               | `Enter` or `Space`       | Theme and palette cycle; boolean settings toggle |
+| Toggle/cycle focused option | `Enter`               | `Enter` or `Space`       | Theme, palette, and density cycle; boolean settings toggle |
 | Close panel                 | `v`, `q`, or `Escape` | `Escape`                 |                                                  |
 
 #### Direct accelerators
@@ -113,6 +113,7 @@ The panel shows the available options as a short list. Each option displays its 
 | --- | ------------------------------- |
 | `t` | Toggle theme                    |
 | `c` | Cycle color palette             |
+| `d` | Cycle default episode density   |
 | `s` | Toggle season trendlines        |
 | `f` | Toggle full-show trendline      |
 | `r` | Toggle rating source spread     |
@@ -125,6 +126,8 @@ The panel shows the available options as a short list. Each option displays its 
 - **Direct keys:** An accelerator toggles its option and focuses the corresponding row, enabling quick modal sequences such as `v`, `y`, `v`.
 - **Key repeat:** Direct toggles ignore repeated keydown events so holding a key cannot toggle twice.
 - **Immediate feedback:** Changes apply instantly as the user toggles. No "apply" step.
+- **Episode density:** `Roomy`, `Balanced`, and `Dense` set progressively larger default episode windows; `Full series` fits every episode. Reset Zoom returns to the selected density.
+- **Inline explanations:** Options with less obvious visual effects include an info tooltip beside their label.
 - Changes persist to `localStorage`.
 
 ### Help overlay (overlay mode)
