@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  detectSeriesBreakpoint,
   getRatingSpread,
   linearRegression,
   linearRegressionFromPoints,
@@ -170,6 +171,98 @@ describe('data/stats', () => {
     expect(summary.rSquared).toBeNull()
   })
 
+  it('detects only a sustained, high-confidence series breakpoint', () => {
+    const breakpoint = detectSeriesBreakpoint(
+      createBreakpointPoints([...Array(16).fill(8.8), ...Array(16).fill(6.4)])
+    )
+
+    expect(breakpoint).toMatchObject({
+      highConfidence: true,
+      confidence: 'high',
+      splitIndex: 16,
+      separation: 1,
+      sustain: 1
+    })
+    expect(breakpoint.beforeMedian).toBeCloseTo(8.825)
+    expect(breakpoint.afterMedian).toBeCloseTo(6.425)
+    expect(breakpoint.pValue).toBeLessThanOrEqual(0.01)
+    expect(breakpoint.score).toBeGreaterThanOrEqual(70)
+  })
+
+  it('retains a formable candidate below the automatic episode threshold', () => {
+    const breakpoint = detectSeriesBreakpoint(
+      createBreakpointPoints([...Array(6).fill(8.8), ...Array(6).fill(6.4)])
+    )
+
+    expect(breakpoint).toMatchObject({
+      highConfidence: false,
+      confidence: 'below threshold',
+      splitIndex: 6,
+      criteria: {
+        enoughRatedEpisodes: { passed: false }
+      }
+    })
+  })
+
+  it('does not call a temporary bad stretch a high-confidence breakpoint', () => {
+    const breakpoint = detectSeriesBreakpoint(
+      createBreakpointPoints([
+        ...Array(8).fill(8.8),
+        ...Array(8).fill(6.4),
+        ...Array(16).fill(8.8)
+      ])
+    )
+
+    expect(breakpoint.highConfidence).toBe(false)
+    expect(
+      breakpoint.criteria.persistence.passed &&
+        breakpoint.criteria.noRecovery.passed
+    ).toBe(false)
+  })
+
+  it('does not turn a smooth decline into an abrupt breakpoint', () => {
+    const breakpoint = detectSeriesBreakpoint(
+      createBreakpointPoints(
+        Array.from({ length: 64 }, (_, index) => 8.8 - index * 0.015)
+      )
+    )
+
+    expect(breakpoint.highConfidence).toBe(false)
+    expect(breakpoint.criteria.significant.passed).toBe(false)
+  })
+
+  it('detects a short terminal collapse after several stable eras', () => {
+    const breakpoint = detectSeriesBreakpoint(
+      createBreakpointPoints([...Array(64).fill(8.9), ...Array(6).fill(6.7)], {
+        seasonLength: 10
+      })
+    )
+
+    expect(breakpoint).toMatchObject({
+      highConfidence: true,
+      splitIndex: 64,
+      blockLength: 4,
+      driftSlope: 0
+    })
+    expect(breakpoint.drop).toBeGreaterThan(2)
+    expect(breakpoint.pValue).toBeLessThanOrEqual(0.01)
+  })
+
+  it('preserves a strong breakpoint in a long-running series', () => {
+    const breakpoint = detectSeriesBreakpoint(
+      createBreakpointPoints([...Array(248).fill(8), ...Array(442).fill(6.7)], {
+        seasonLength: 20
+      })
+    )
+
+    expect(breakpoint).toMatchObject({
+      highConfidence: true,
+      splitIndex: 248,
+      blockLength: 9
+    })
+    expect(breakpoint.pValue).toBeLessThanOrEqual(0.01)
+  })
+
   it('keeps top and bottom rankings disjoint for short seasons', () => {
     const summary = summarizeTrendScope([
       createTrendPoint('one', 1, 7),
@@ -295,4 +388,17 @@ function createTrendPoint(id, x, rating, isFallbackRating = false) {
     season: 1,
     episode: x
   }
+}
+
+function createBreakpointPoints(ratings, { seasonLength = 8 } = {}) {
+  return ratings.map((rating, index) => ({
+    id: `episode-${index + 1}`,
+    x: index + 1,
+    rating: rating + [0, 0.1, -0.1, 0.05][index % 4],
+    ratingSource: 'test',
+    isFallbackRating: false,
+    season: Math.floor(index / seasonLength) + 1,
+    episode: (index % seasonLength) + 1,
+    ratings: [{ source: 'test', rating }]
+  }))
 }
