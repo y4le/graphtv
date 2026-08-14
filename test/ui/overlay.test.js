@@ -136,6 +136,12 @@ describe('keyboard help overlay', () => {
     const keycaps = Array.from(document.querySelectorAll('.help-key'))
     const keycapLabels = keycaps.map((keycap) => keycap.textContent)
 
+    expect(document.querySelector('.overlay-title').textContent).toBe(
+      'Keyboard shortcuts'
+    )
+    expect(document.querySelector('.overlay-help-results')).not.toBeNull()
+    expect(document.querySelector('.help-sections-results')).not.toBeNull()
+    expect(document.querySelector('[data-overlay-close]').textContent).toBe('×')
     expect(keycaps.every((keycap) => keycap.classList.contains('keycap'))).toBe(
       true
     )
@@ -154,11 +160,9 @@ describe('keyboard help overlay', () => {
     expect(keycapLabels).not.toEqual(
       expect.arrayContaining(['b', 'w', '0', '$', 'd'])
     )
-    expect(document.querySelector('[data-help-action="debug"]')).toMatchObject(
-      {
-        tagName: 'BUTTON'
-      }
-    )
+    expect(document.querySelector('[data-help-action="debug"]')).toMatchObject({
+      tagName: 'BUTTON'
+    })
     expect(
       document
         .querySelector('[data-help-action="debug"]')
@@ -198,15 +202,18 @@ describe('keyboard help overlay', () => {
     ).toBe('KBD')
   })
 
-  it('documents collection navigation on the search page', () => {
+  it('keeps collection navigation out of the search-page help menu', () => {
     const overlayController = createOverlayController()
     openHelpOverlay(overlayController, { kind: 'search' })
 
     const helpText = document.querySelector('.help-sections').textContent
 
-    expect(helpText).toContain('Browse collections')
-    expect(helpText).toContain('Scroll collection backward')
-    expect(helpText).toContain('Scroll collection forward')
+    expect(document.querySelector('.overlay-help-search')).not.toBeNull()
+    expect(document.querySelector('.help-sections-search')).not.toBeNull()
+    expect(document.querySelectorAll('.help-section')).toHaveLength(2)
+    expect(helpText).not.toContain('Browse collections')
+    expect(helpText).not.toContain('Scroll collection backward')
+    expect(helpText).not.toContain('Scroll collection forward')
   })
 })
 

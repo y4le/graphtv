@@ -1384,8 +1384,36 @@ button {
 }
 
 .overlay-help {
+  max-width: 68rem;
   max-height: min(calc(100vh - 2.5rem), 48rem);
   max-height: min(calc(100dvh - 2.5rem), 48rem);
+}
+
+.overlay-help-search {
+  max-width: 44rem;
+}
+
+.overlay-help .overlay-header {
+  padding: 0.85rem 1rem 0.7rem;
+}
+
+.overlay-help .overlay-title {
+  font-size: 1.2rem;
+}
+
+.overlay-help .overlay-close {
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  place-items: center;
+  margin: -0.3rem -0.3rem -0.3rem 0;
+  color: var(--textPrimary);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.overlay-help .overlay-content {
+  padding: 0.85rem 1rem 1rem;
 }
 
 .overlay-header {
@@ -1624,21 +1652,35 @@ button {
   }
 }
 
+.help-sections {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.help-sections-search {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .help-grid {
   display: grid;
-  grid-template-columns: minmax(8rem, 12rem) 1fr;
-  gap: 0.35rem 1rem;
-  margin: 0.55rem 0 0;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.3rem 0.55rem;
+  align-items: start;
+  margin: 0.45rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.35;
 }
 
 .help-section h3 {
   margin: 0;
-  font-size: var(--type-size-body);
+  font-size: 0.82rem;
+  font-weight: 600;
   line-height: 1.3;
 }
 
 .overlay-help .help-section + .help-section {
-  margin-top: 0.8rem;
+  margin-top: 0;
 }
 
 .help-grid dt,
@@ -1654,12 +1696,20 @@ button {
 .help-keys {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem;
+  justify-content: flex-end;
+  gap: 0.15rem;
   align-items: center;
 }
 
 .help-key {
   flex: 0 0 auto;
+  min-width: 1.35rem;
+  min-height: 1.35rem;
+  padding: 0.06rem 0.28rem;
+  border-color: var(--lineSoft);
+  border-radius: 0.2rem;
+  box-shadow: none;
+  font-size: 0.72rem;
 }
 
 .help-key-separator {
@@ -1854,8 +1904,9 @@ button {
     gap: 0.35rem;
   }
 
-  .help-grid {
-    grid-template-columns: 1fr;
+  .help-sections {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
   }
 
   .view-option-row {
@@ -1869,6 +1920,11 @@ button {
 }
 
 @media (max-width: 600px) {
+  .help-sections {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
   .results-masthead {
     gap: 0.5rem;
   }

@@ -60,7 +60,7 @@ export function createOverlayController() {
         <section class="overlay-panel ${config.className ?? ''}" role="dialog" aria-modal="true" aria-labelledby="overlay-title" tabindex="-1">
           <header class="overlay-header">
             <h2 id="overlay-title" class="overlay-title">${config.title}</h2>
-            <button type="button" class="overlay-close" data-overlay-close aria-label="Close overlay">Close</button>
+            <button type="button" class="overlay-close" data-overlay-close aria-label="Close overlay">${config.compactClose ? '<span aria-hidden="true">&times;</span>' : 'Close'}</button>
           </header>
           <div class="overlay-content" data-overlay-content></div>
         </section>
@@ -142,10 +142,11 @@ export function openHelpOverlay(overlayController, page) {
     page.kind === 'results' ? resultsHelpSections() : searchHelpSections()
   overlayController.open({
     id: 'help',
-    title: 'Keyboard help',
-    className: 'overlay-help',
+    title: 'Keyboard shortcuts',
+    className: `overlay-help overlay-help-${page.kind}`,
+    compactClose: true,
     content: `
-      <div class="help-sections">
+      <div class="help-sections help-sections-${page.kind}">
         ${sections
           .map(
             (section) => `
@@ -843,15 +844,6 @@ function searchHelpSections() {
         { keys: ['Enter', 'l'], action: 'Open result' },
         { keys: ['Home', 'gg'], action: 'First result' },
         { keys: ['End', 'G'], action: 'Last result' }
-      ]
-    },
-    {
-      title: 'Browse collections',
-      items: [
-        { keys: ['ArrowLeft'], action: 'Scroll collection backward' },
-        { keys: ['ArrowRight'], action: 'Scroll collection forward' },
-        { keys: ['Home'], action: 'Start of collection' },
-        { keys: ['End'], action: 'End of collection' }
       ]
     }
   ]
