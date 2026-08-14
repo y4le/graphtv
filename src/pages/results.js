@@ -15,6 +15,7 @@ import {
 import { orderVisibleRatings } from '../data/ratingProviders.js'
 import { buildUrl, preserveDebugParams } from '../lib/url.js'
 import { escapeHtml } from '../lib/html.js'
+import { forwardAbort, isAbortError } from '../lib/abort.js'
 
 export function renderResultsMasthead({ interactive = false } = {}) {
   return `
@@ -57,6 +58,8 @@ export async function renderResultsPage(container, showRef, options = {}) {
   let latestBundle = null
   let latestShow = null
   let primaryProvider = null
+  const abortController = new AbortController()
+  const stopForwardingAbort = forwardAbort(options.signal, abortController)
 
   try {
     const debugEnabled = true
@@ -65,7 +68,8 @@ export async function renderResultsPage(container, showRef, options = {}) {
     const progress = bundleStream(showRef, {
       compareProviders:
         options.compareProviders ?? getComparisonProviders(provider),
-      providerLoader: options.providerLoader
+      providerLoader: options.providerLoader,
+      signal: abortController.signal
     })
     iterator = progress[Symbol.asyncIterator]()
     const showSnapshot = await iterator.next()
@@ -114,7 +118,7 @@ export async function renderResultsPage(container, showRef, options = {}) {
         updateProgress(container, snapshot)
       }
     ).catch((error) => {
-      if (!destroyed) {
+      if (!destroyed && !isAbortError(error)) {
         showSupplementalError(container, error)
       }
     })
@@ -167,29 +171,35 @@ export async function renderResultsPage(container, showRef, options = {}) {
       },
       destroy() {
         destroyed = true
+        stopForwardingAbort()
+        abortController.abort()
         void iterator?.return?.().catch(() => {})
         chart.destroy()
       }
     }
   } catch (error) {
+    stopForwardingAbort()
+    abortController.abort()
     void iterator?.return?.().catch(() => {})
-    const chartRoot = container.querySelector('.chart-root')
-    if (chartRoot) {
-      chartRoot.innerHTML = renderError(error.message)
-      container
-        .querySelector('.results-data')
-        ?.setAttribute('aria-busy', 'false')
-      const progressRoot = container.querySelector('.results-progress')
-      if (progressRoot) {
-        progressRoot.hidden = true
+    if (!isAbortError(error)) {
+      const chartRoot = container.querySelector('.chart-root')
+      if (chartRoot) {
+        chartRoot.innerHTML = renderError(error.message)
+        container
+          .querySelector('.results-data')
+          ?.setAttribute('aria-busy', 'false')
+        const progressRoot = container.querySelector('.results-progress')
+        if (progressRoot) {
+          progressRoot.hidden = true
+        }
+      } else {
+        container.innerHTML = `
+          <main class="document-shell">
+            ${renderResultsMasthead()}
+            ${renderError(error.message)}
+          </main>
+        `
       }
-    } else {
-      container.innerHTML = `
-        <main class="document-shell">
-          ${renderResultsMasthead()}
-          ${renderError(error.message)}
-        </main>
-      `
     }
     return {
       kind: 'results',
@@ -214,6 +224,12 @@ export async function renderResultsPage(container, showRef, options = {}) {
       },
       getDebugSections() {
         return []
+      },
+      destroy() {
+        destroyed = true
+        stopForwardingAbort()
+        abortController.abort()
+        void iterator?.return?.().catch(() => {})
       }
     }
   }

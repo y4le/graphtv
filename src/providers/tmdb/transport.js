@@ -11,8 +11,10 @@ import {
   normalizeTmdbSeason,
   normalizeTmdbShow
 } from './normalize.js'
+import { mapWithConcurrency } from '../../lib/concurrency.js'
 
 const API_ROOT = 'https://api.themoviedb.org/3'
+const SEASON_REQUEST_CONCURRENCY = 4
 
 function getHeaders() {
   const token = getClientSecret('tmdbBearerToken')
@@ -107,19 +109,25 @@ export async function getShow(id, options = {}) {
 }
 
 export async function getSeasons(id, totalSeasons, options = {}) {
-  const requests = Array.from({ length: totalSeasons }, (_, index) =>
-    tmdbFetch(
-      `/tv/${id}/season/${index + 1}`,
-      {
-        kind: 'season',
-        id,
-        params: { season: index + 1 },
-        ttlMs: API_CACHE_TTL.season
-      },
-      options
-    )
+  const seasonNumbers = Array.from(
+    { length: totalSeasons },
+    (_, index) => index + 1
   )
-  const seasons = await Promise.all(requests)
+  const seasons = await mapWithConcurrency(
+    seasonNumbers,
+    SEASON_REQUEST_CONCURRENCY,
+    (seasonNumber) =>
+      tmdbFetch(
+        `/tv/${id}/season/${seasonNumber}`,
+        {
+          kind: 'season',
+          id,
+          params: { season: seasonNumber },
+          ttlMs: API_CACHE_TTL.season
+        },
+        options
+      )
+  )
   return seasons.map(normalizeTmdbSeason)
 }
 

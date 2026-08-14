@@ -11,8 +11,10 @@ import {
   normalizeOmdbSeason,
   normalizeOmdbShow
 } from './normalize.js'
+import { mapSettledWithConcurrency } from '../../lib/concurrency.js'
 
 const API_ROOT = 'https://www.omdbapi.com/'
+const SEASON_REQUEST_CONCURRENCY = 4
 
 function getKey() {
   const key = getClientSecret('omdbApiKey')
@@ -94,19 +96,25 @@ export async function getShow(imdbId, options = {}) {
 }
 
 export async function getSeasons(imdbId, totalSeasons, options = {}) {
-  const requests = Array.from({ length: totalSeasons }, (_, index) =>
-    omdbFetch(
-      { i: imdbId, season: index + 1 },
-      {
-        kind: 'season',
-        id: imdbId,
-        params: { season: index + 1 },
-        ttlMs: API_CACHE_TTL.season
-      },
-      options
-    )
+  const seasonNumbers = Array.from(
+    { length: totalSeasons },
+    (_, index) => index + 1
   )
-  const results = await Promise.allSettled(requests)
+  const results = await mapSettledWithConcurrency(
+    seasonNumbers,
+    SEASON_REQUEST_CONCURRENCY,
+    (seasonNumber) =>
+      omdbFetch(
+        { i: imdbId, season: seasonNumber },
+        {
+          kind: 'season',
+          id: imdbId,
+          params: { season: seasonNumber },
+          ttlMs: API_CACHE_TTL.season
+        },
+        options
+      )
+  )
   const seasons = []
   const failures = []
 

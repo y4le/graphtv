@@ -23,6 +23,26 @@ afterEach(() => {
 })
 
 describe('view options overlay', () => {
+  it('destroys its root and runs active overlay cleanup once', () => {
+    const overlayController = createOverlayController()
+    const onClose = vi.fn()
+    overlayController.open({
+      id: 'test',
+      title: 'Test',
+      content: 'content',
+      onClose
+    })
+
+    overlayController.destroy()
+    overlayController.destroy()
+
+    expect(document.querySelector('.overlay-root')).toBeNull()
+    expect(onClose).toHaveBeenCalledOnce()
+    expect(() =>
+      overlayController.open({ id: 'again', title: 'Again', content: '' })
+    ).toThrow('destroyed overlay controller')
+  })
+
   it('offers mouse, keyboard, and persisted control of the absolute y-axis', () => {
     const overlayController = createOverlayController()
     openViewOptionsOverlay(overlayController)

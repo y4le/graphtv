@@ -234,4 +234,119 @@ describe('data/provider', () => {
     ).toEqual(['slow', 'fast'])
     await expect(progress.next()).resolves.toMatchObject({ done: true })
   })
+
+  it('threads one cancellation signal through every provider operation', async () => {
+    const operationSignals = []
+    const recordSignal = (_value, options) => {
+      operationSignals.push(options.signal)
+    }
+    const providers = {
+      tvmaze: {
+        getShow: async (...args) => {
+          recordSignal(...args)
+          return createShow('tvmaze:1', { imdb: 'tt123' })
+        },
+        getSeasons: async (...args) => {
+          recordSignal(args[0], args[2])
+          return []
+        }
+      },
+      omdb: {
+        resolveShowRef: async (...args) => {
+          recordSignal(...args)
+          return 'omdb:tt123'
+        },
+        getShow: async (...args) => {
+          recordSignal(...args)
+          return createShow('omdb:tt123', { imdb: 'tt123' })
+        },
+        getSeasons: async (...args) => {
+          recordSignal(args[0], args[2])
+          return []
+        }
+      }
+    }
+
+    await getShowBundle('tvmaze:1', {
+      compareProviders: ['omdb'],
+      providerLoader: async (provider) => providers[provider]
+    })
+
+    expect(operationSignals).toHaveLength(5)
+    expect(new Set(operationSignals).size).toBe(1)
+    expect(
+      operationSignals.every((signal) => signal instanceof AbortSignal)
+    ).toBe(true)
+  })
+
+  it('aborts supplemental requests when the stream is closed early', async () => {
+    let supplementalSignal
+    let notifyStarted
+    const supplementalStarted = new Promise((resolve) => {
+      notifyStarted = resolve
+    })
+    const providers = {
+      tvmaze: {
+        getShow: async () => createShow('tvmaze:1', { imdb: 'tt123' }),
+        getSeasons: async () => []
+      },
+      omdb: {
+        resolveShowRef: async () => 'omdb:tt123',
+        getShow: async () => createShow('omdb:tt123', { imdb: 'tt123' }),
+        getSeasons: async (_id, _totalSeasons, { signal }) => {
+          supplementalSignal = signal
+          notifyStarted()
+          return new Promise((_resolve, reject) => {
+            signal.addEventListener('abort', () => reject(signal.reason), {
+              once: true
+            })
+          })
+        }
+      }
+    }
+    const progress = streamShowBundle('tvmaze:1', {
+      compareProviders: ['omdb'],
+      providerLoader: async (provider) => providers[provider]
+    })
+
+    await progress.next()
+    await progress.next()
+    await supplementalStarted
+    await progress.return()
+
+    expect(supplementalSignal.aborted).toBe(true)
+  })
+
+  it('propagates external cancellation instead of reporting it as provider failure', async () => {
+    const controller = new AbortController()
+    const waitForAbort = (_id, _totalSeasons, { signal }) =>
+      new Promise((_resolve, reject) => {
+        signal.addEventListener('abort', () => reject(signal.reason), {
+          once: true
+        })
+      })
+    const providers = {
+      tvmaze: {
+        getShow: async () => createShow('tvmaze:1', { imdb: 'tt123' }),
+        getSeasons: async () => []
+      },
+      omdb: {
+        resolveShowRef: async () => 'omdb:tt123',
+        getShow: async () => createShow('omdb:tt123', { imdb: 'tt123' }),
+        getSeasons: waitForAbort
+      }
+    }
+    const progress = streamShowBundle('tvmaze:1', {
+      compareProviders: ['omdb'],
+      providerLoader: async (provider) => providers[provider],
+      signal: controller.signal
+    })
+
+    await progress.next()
+    await progress.next()
+    const nextSnapshot = progress.next()
+    controller.abort()
+
+    await expect(nextSnapshot).rejects.toMatchObject({ name: 'AbortError' })
+  })
 })

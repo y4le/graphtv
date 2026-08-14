@@ -31,11 +31,24 @@ async function bootstrap() {
     pageController = renderSearchPage(app)
   }
 
-  createKeyboardController({
+  const keyboardController = createKeyboardController({
     page: pageController,
     overlayController
   })
   pageController.focusInitial?.()
+
+  let destroyed = false
+  const destroy = () => {
+    if (destroyed) {
+      return
+    }
+    destroyed = true
+    keyboardController.destroy()
+    overlayController.destroy()
+    pageController.destroy?.()
+  }
+
+  return { destroy, pageController }
 }
 
 bootstrap().catch((error) => {

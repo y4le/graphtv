@@ -218,6 +218,76 @@ describe('renderResultsPage', () => {
     expect(chart.destroy).toHaveBeenCalledTimes(1)
   })
 
+  it('aborts the active bundle stream before destroying its chart', async () => {
+    let streamSignal
+    const bundle = createBundle()
+    const bundleStream = async function* (_showRef, { signal }) {
+      streamSignal = signal
+      yield {
+        phase: 'show',
+        show: bundle.show,
+        pendingProviders: ['tmdb'],
+        complete: false
+      }
+      yield {
+        phase: 'primary',
+        bundle,
+        pendingProviders: ['tmdb'],
+        complete: false
+      }
+      await new Promise((_resolve, reject) => {
+        signal.addEventListener('abort', () => reject(signal.reason), {
+          once: true
+        })
+      })
+    }
+    const chart = {
+      updateSeasons: vi.fn(),
+      destroy: vi.fn(() => expect(streamSignal.aborted).toBe(true)),
+      getDebugState: vi.fn(() => ({}))
+    }
+    const container = document.createElement('div')
+    const page = await renderResultsPage(container, 'tvmaze:1', {
+      bundleStream,
+      chartFactory: () => chart,
+      detailLoaderFactory: () => vi.fn(),
+      compareProviders: ['tmdb']
+    })
+
+    page.destroy()
+    await page.whenSettled
+
+    expect(streamSignal.aborted).toBe(true)
+    expect(chart.destroy).toHaveBeenCalledOnce()
+  })
+
+  it('silently aborts initial provider work when its caller cancels', async () => {
+    let streamSignal
+    const controller = new AbortController()
+    const bundleStream = async function* (_showRef, { signal }) {
+      streamSignal = signal
+      await new Promise((_resolve, reject) => {
+        signal.addEventListener('abort', () => reject(signal.reason), {
+          once: true
+        })
+      })
+    }
+    const container = document.createElement('div')
+    const pagePromise = renderResultsPage(container, 'tvmaze:1', {
+      bundleStream,
+      compareProviders: [],
+      signal: controller.signal
+    })
+
+    controller.abort()
+    const page = await pagePromise
+
+    expect(streamSignal.aborted).toBe(true)
+    expect(page.chart).toBeNull()
+    expect(container.querySelector('.error-state')).toBeNull()
+    expect(container.textContent).toContain('Loading show details')
+  })
+
   it('keeps returned show metadata visible when primary episode loading fails', async () => {
     const bundleStream = async function* () {
       yield {

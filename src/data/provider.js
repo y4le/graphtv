@@ -2,6 +2,7 @@ import { mergeShowRecords } from './merge.js'
 import { createEpisodeDetailLoader as createDetailLoader } from './episodeDetails.js'
 import { CLIENT_SECRET_KEYS, hasClientSecret } from '../config/clientSecrets.js'
 import { createErrorDiagnostic } from './errorDiagnostics.js'
+import { forwardAbort, isAbortError } from '../lib/abort.js'
 
 const PROVIDER_LOADERS = {
   omdb: () => import('../providers/omdb/transport.js'),
@@ -119,17 +120,17 @@ function unpackSeasons(result) {
   }
 }
 
-async function loadPrimaryShow(showRef, providerLoader) {
+async function loadPrimaryShow(showRef, providerLoader, signal) {
   const { provider, id } = parseShowRef(showRef)
   const transport = await providerLoader(provider)
-  const show = await transport.getShow(id)
+  const show = await transport.getShow(id, { signal })
   return { provider, id, show, transport }
 }
 
-async function loadProviderRecord(primaryShow) {
+async function loadProviderRecord(primaryShow, signal) {
   const { provider, id, show, transport } = primaryShow
   const seasonResult = unpackSeasons(
-    await transport.getSeasons(id, show.totalSeasons)
+    await transport.getSeasons(id, show.totalSeasons, { signal })
   )
   return { provider, show, ...seasonResult }
 }
@@ -137,7 +138,8 @@ async function loadProviderRecord(primaryShow) {
 async function loadSupplementalRecord(
   primaryRecord,
   providerName,
-  providerLoader
+  providerLoader,
+  signal
 ) {
   if (providerName === primaryRecord.provider) {
     return {
@@ -153,10 +155,13 @@ async function loadSupplementalRecord(
   try {
     const provider = await providerLoader(providerName)
     operation = 'resolve-show'
-    const resolvedRef = await provider.resolveShowRef({
-      externalIds: primaryRecord.show.externalIds,
-      show: primaryRecord.show
-    })
+    const resolvedRef = await provider.resolveShowRef(
+      {
+        externalIds: primaryRecord.show.externalIds,
+        show: primaryRecord.show
+      },
+      { signal }
+    )
 
     if (!resolvedRef) {
       return {
@@ -170,10 +175,10 @@ async function loadSupplementalRecord(
 
     const { id } = parseShowRef(resolvedRef)
     operation = 'load-show'
-    const show = await provider.getShow(id)
+    const show = await provider.getShow(id, { signal })
     operation = 'load-seasons'
     const seasonResult = unpackSeasons(
-      await provider.getSeasons(id, show.totalSeasons)
+      await provider.getSeasons(id, show.totalSeasons, { signal })
     )
 
     return {
@@ -188,6 +193,10 @@ async function loadSupplementalRecord(
       }
     }
   } catch (error) {
+    if (signal?.aborted || isAbortError(error)) {
+      throw signal?.reason ?? error
+    }
+
     return {
       provider: providerName,
       role: 'supplemental',
@@ -232,66 +241,93 @@ export async function* streamShowBundle(showRef, options = {}) {
     compareProviders = getComparisonProviders(primaryProvider),
     providerLoader = loadProvider
   } = options
-  const primaryShow = await loadPrimaryShow(showRef, providerLoader)
+  const streamController = new AbortController()
+  const stopForwardingAbort = forwardAbort(options.signal, streamController)
+  const { signal } = streamController
 
-  yield {
-    phase: 'show',
-    provider: primaryProvider,
-    show: primaryShow.show,
-    pendingProviders: [...compareProviders],
-    complete: false
-  }
-
-  const supplementalDiagnostics = Array(compareProviders.length)
-  const primaryRecordPromise = loadProviderRecord(primaryShow)
-  const settledQueue = []
-  let notifySettlement = null
-  const pending = new Map(
-    compareProviders.map((providerName, index) => [
-      index,
-      loadSupplementalRecord(primaryShow, providerName, providerLoader).then(
-        (diagnostic) => {
-          settledQueue.push({ diagnostic, index, provider: providerName })
-          notifySettlement?.()
-          notifySettlement = null
-        }
-      )
-    ])
-  )
-  const primaryRecord = await primaryRecordPromise
-
-  yield {
-    phase: 'primary',
-    provider: primaryProvider,
-    bundle: mergeProviderRecords(primaryRecord, []),
-    pendingProviders: [...compareProviders],
-    complete: pending.size === 0
-  }
-
-  while (pending.size > 0) {
-    if (settledQueue.length === 0) {
-      await new Promise((resolve) => {
-        notifySettlement = resolve
-      })
-    }
-    const settled = settledQueue.shift()
-    pending.delete(settled.index)
-    supplementalDiagnostics[settled.index] = settled.diagnostic
+  try {
+    const primaryShow = await loadPrimaryShow(showRef, providerLoader, signal)
+    signal.throwIfAborted()
 
     yield {
-      phase: 'supplemental',
-      provider: settled.provider,
-      diagnostic: settled.diagnostic,
-      bundle: mergeProviderRecords(
-        primaryRecord,
-        supplementalDiagnostics.filter(Boolean)
-      ),
-      pendingProviders: Array.from(
-        pending.keys(),
-        (index) => compareProviders[index]
-      ),
+      phase: 'show',
+      provider: primaryProvider,
+      show: primaryShow.show,
+      pendingProviders: [...compareProviders],
+      complete: false
+    }
+
+    const supplementalDiagnostics = Array(compareProviders.length)
+    const primaryRecordPromise = loadProviderRecord(primaryShow, signal)
+    const settledQueue = []
+    let notifySettlement = null
+    const pending = new Map(
+      compareProviders.map((providerName, index) => [
+        index,
+        loadSupplementalRecord(
+          primaryShow,
+          providerName,
+          providerLoader,
+          signal
+        ).then(
+          (diagnostic) => {
+            settledQueue.push({ diagnostic, index, provider: providerName })
+            notifySettlement?.()
+            notifySettlement = null
+          },
+          (error) => {
+            settledQueue.push({ error, index, provider: providerName })
+            notifySettlement?.()
+            notifySettlement = null
+          }
+        )
+      ])
+    )
+    const primaryRecord = await primaryRecordPromise
+    signal.throwIfAborted()
+
+    yield {
+      phase: 'primary',
+      provider: primaryProvider,
+      bundle: mergeProviderRecords(primaryRecord, []),
+      pendingProviders: [...compareProviders],
       complete: pending.size === 0
     }
+
+    while (pending.size > 0) {
+      if (settledQueue.length === 0) {
+        await new Promise((resolve) => {
+          notifySettlement = resolve
+        })
+      }
+      const settled = settledQueue.shift()
+      pending.delete(settled.index)
+      signal.throwIfAborted()
+
+      if (settled.error) {
+        throw settled.error
+      }
+
+      supplementalDiagnostics[settled.index] = settled.diagnostic
+
+      yield {
+        phase: 'supplemental',
+        provider: settled.provider,
+        diagnostic: settled.diagnostic,
+        bundle: mergeProviderRecords(
+          primaryRecord,
+          supplementalDiagnostics.filter(Boolean)
+        ),
+        pendingProviders: Array.from(
+          pending.keys(),
+          (index) => compareProviders[index]
+        ),
+        complete: pending.size === 0
+      }
+    }
+  } finally {
+    stopForwardingAbort()
+    streamController.abort()
   }
 }
 

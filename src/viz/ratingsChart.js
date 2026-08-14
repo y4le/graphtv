@@ -2054,6 +2054,11 @@ export function createChart(container, seasons, options = {}) {
     },
     destroy() {
       destroyed = true
+      stopFling()
+      if (suppressScrollSyncFrame) {
+        cancelAnimationFrame(suppressScrollSyncFrame)
+        suppressScrollSyncFrame = null
+      }
       cancelScheduledDetailLoad()
       cancelTrendHover()
       if (viewportAnnouncementTimer) {

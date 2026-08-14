@@ -6,6 +6,7 @@ vi.mock('../../src/config/clientSecrets.js', () => ({
 
 import { clearApiCache } from '../../src/data/apiCache.js'
 import {
+  getSeasons,
   getPopularShows,
   getTrendingShows
 } from '../../src/providers/tmdb/transport.js'
@@ -45,6 +46,37 @@ describe('tmdb collection transport', () => {
     expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe(
       'Bearer test-tmdb-token'
     )
+  })
+
+  it('caps concurrent season requests and preserves season order', async () => {
+    let active = 0
+    let maximumActive = 0
+    const releases = []
+    const fetchMock = vi.fn(async (url) => {
+      const seasonNumber = Number(String(url).match(/season\/(\d+)/u)?.[1])
+      active += 1
+      maximumActive = Math.max(maximumActive, active)
+      await new Promise((resolve) => releases.push(resolve))
+      active -= 1
+      return jsonResponse({
+        season_number: seasonNumber,
+        name: `Season ${seasonNumber}`,
+        episodes: []
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const seasonsPromise = getSeasons('123', 7)
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4))
+    releases.splice(0).forEach((release) => release())
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(7))
+    releases.splice(0).forEach((release) => release())
+
+    const seasons = await seasonsPromise
+    expect(maximumActive).toBe(4)
+    expect(seasons.map((season) => season.number)).toEqual([
+      1, 2, 3, 4, 5, 6, 7
+    ])
   })
 
   it('uses a vote-qualified discover query for the popular collection', async () => {

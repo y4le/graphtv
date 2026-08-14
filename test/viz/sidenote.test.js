@@ -96,6 +96,25 @@ describe('createSidenote', () => {
     expect(secondNavigate).toHaveBeenCalledOnce()
   })
 
+  it('removes its outside-click listener when destroyed', () => {
+    const root = document.createElement('section')
+    document.body.appendChild(root)
+    const sidenote = createSidenote({ root })
+
+    sidenote.destroy()
+    root.innerHTML = `
+      <div class="trend-info-control" data-hovered="true">
+        <button data-trend-info aria-expanded="true"></button>
+        <div></div>
+      </div>
+    `
+    document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    expect(
+      root.querySelector('[data-trend-info]').getAttribute('aria-expanded')
+    ).toBe('true')
+  })
+
   it('orders ratings by plotting preference and emphasizes the plotted source', () => {
     const root = document.createElement('section')
     const sidenote = createSidenote({ root })

@@ -8,7 +8,6 @@ import { formatCompactNumber } from '../lib/number.js'
 import { escapeHtml } from '../lib/html.js'
 
 let trendInfoSequence = 0
-const trendInfoDocuments = new WeakSet()
 
 function syncTrendInfo(control) {
   const button = control.querySelector('[data-trend-info]')
@@ -29,28 +28,21 @@ function dismissTrendInfo(control) {
   syncTrendInfo(control)
 }
 
-function ensureOutsideTrendInfoDismissal(ownerDocument) {
-  if (trendInfoDocuments.has(ownerDocument)) {
-    return
+function listenForOutsideTrendInfoDismissal(root) {
+  const ownerDocument = root.ownerDocument
+  const handleClick = (event) => {
+    root
+      .querySelectorAll('[data-trend-info][aria-expanded="true"]')
+      .forEach((button) => {
+        const control = button.closest('.trend-info-control')
+        if (!control.contains(event.target)) {
+          dismissTrendInfo(control)
+        }
+      })
   }
+  ownerDocument.addEventListener('click', handleClick, true)
 
-  trendInfoDocuments.add(ownerDocument)
-  ownerDocument.addEventListener(
-    'click',
-    (event) => {
-      ownerDocument
-        .querySelectorAll(
-          '.trend-info-control [data-trend-info][aria-expanded="true"]'
-        )
-        .forEach((button) => {
-          const control = button.closest('.trend-info-control')
-          if (!control.contains(event.target)) {
-            dismissTrendInfo(control)
-          }
-        })
-    },
-    true
-  )
+  return () => ownerDocument.removeEventListener('click', handleClick, true)
 }
 
 function formatRatingList(point, { loadingDetails = false, show = null } = {}) {
@@ -140,9 +132,9 @@ export function createSidenote({
   onSelectSeasonTrend,
   onSelectSeriesBreakpoint
 }) {
-  ensureOutsideTrendInfoDismissal(root.ownerDocument)
   const eventController = new root.ownerDocument.defaultView.AbortController()
   const eventOptions = { signal: eventController.signal }
+  const stopOutsideTrendInfoDismissal = listenForOutsideTrendInfoDismissal(root)
   const listen = (type, listener) => {
     root.addEventListener(type, listener, eventOptions)
   }
@@ -476,6 +468,7 @@ export function createSidenote({
     renderTrendSummary,
     renderRestingState,
     destroy() {
+      stopOutsideTrendInfoDismissal()
       eventController.abort()
       root.replaceChildren()
     }

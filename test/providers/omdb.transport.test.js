@@ -24,6 +24,38 @@ afterEach(async () => {
 })
 
 describe('OMDb transport', () => {
+  it('caps concurrent season requests', async () => {
+    let active = 0
+    let maximumActive = 0
+    const releases = []
+    const fetchMock = vi.fn(async (url) => {
+      const seasonNumber = new URL(url).searchParams.get('season')
+      active += 1
+      maximumActive = Math.max(maximumActive, active)
+      await new Promise((resolve) => releases.push(resolve))
+      active -= 1
+      return jsonResponse({
+        Title: 'Example',
+        Season: seasonNumber,
+        Episodes: [],
+        Response: 'True'
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const seasonsPromise = getSeasons('tt123', 7)
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4))
+    releases.splice(0).forEach((release) => release())
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(7))
+    releases.splice(0).forEach((release) => release())
+
+    const result = await seasonsPromise
+    expect(maximumActive).toBe(4)
+    expect(result.seasons.map((season) => season.number)).toEqual([
+      1, 2, 3, 4, 5, 6, 7
+    ])
+  })
+
   it('keeps successful seasons when another season request fails', async () => {
     vi.stubGlobal(
       'fetch',

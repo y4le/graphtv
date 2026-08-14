@@ -38,6 +38,7 @@ export function createOverlayController() {
 
   let active = null
   let previousFocus = null
+  let destroyed = false
 
   function close() {
     if (!active) {
@@ -56,6 +57,10 @@ export function createOverlayController() {
   }
 
   function open(config) {
+    if (destroyed) {
+      throw new Error('Cannot open a destroyed overlay controller.')
+    }
+
     previousFocus = document.activeElement
     active = config
     root.hidden = false
@@ -137,6 +142,18 @@ export function createOverlayController() {
     },
     getActiveId() {
       return active?.id ?? null
+    },
+    destroy() {
+      if (destroyed) {
+        return
+      }
+
+      destroyed = true
+      const { onClose } = active ?? {}
+      active = null
+      previousFocus = null
+      onClose?.()
+      root.remove()
     }
   }
 }
