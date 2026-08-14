@@ -87,9 +87,103 @@ describe('createChart', () => {
     expect(
       detailRoot.querySelector('.sidenote-content .sidenote-title')
     ).toBeNull()
+    expect(detailRoot.querySelector('[data-series-breakpoint]')).toBeNull()
     expect(container.querySelector('.chart-selection-status').textContent).toBe(
       ''
     )
+  })
+
+  it('shows a detected breakpoint overlay only while its detail selection is active', () => {
+    updateUiSettings({ fullShowTrendline: true })
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+
+    chart = createChart(container, createBreakpointSeasons(), { detailRoot })
+
+    expect(chart.getDebugState()).toMatchObject({
+      selectedTrendId: 'series',
+      breakpoint: { highConfidence: true, splitIndex: 16 }
+    })
+    expect(container.querySelector('.series-breakpoint-trend')).toBeNull()
+    expect(container.querySelector('.series-breakpoint-marker')).toBeNull()
+
+    chart.zoomBy(0.5)
+    expect(chart.getDebugState().viewport).not.toEqual({ start: 1, end: 32 })
+    const showBreakpoint = detailRoot.querySelector('[data-series-breakpoint]')
+    expect(showBreakpoint.textContent).toBe('Show detected breakpoint')
+    showBreakpoint.click()
+
+    expect(chart.getDebugState().selectedTrendId).toBe('series:breakpoint')
+    expect(chart.getDebugState().viewport).toEqual({ start: 1, end: 32 })
+    expect(container.querySelectorAll('.series-breakpoint-trend')).toHaveLength(
+      2
+    )
+    const breakpointTrend = container.querySelector('.series-breakpoint-trend')
+    const breakpointMarker = container.querySelector(
+      '.series-breakpoint-marker'
+    )
+    expect(breakpointTrend.getAttribute('stroke-width')).toBe('2.5')
+    expect(breakpointMarker.getAttribute('stroke-width')).toBe('1.5')
+    const chartLayers = Array.from(
+      container.querySelector('.ratings-chart').children
+    )
+    expect(
+      chartLayers.indexOf(container.querySelector('.series-breakpoint-layer'))
+    ).toBeGreaterThan(
+      chartLayers.indexOf(container.querySelector('.episode-mark-layer'))
+    )
+    expect(detailRoot.querySelector('[data-breakpoint-summary]')).not.toBeNull()
+    expect(detailRoot.textContent).toContain('Starting S03E01')
+    expect(detailRoot.textContent).toContain('High confidence')
+
+    detailRoot.querySelector('[data-breakpoint-episode]').click()
+    expect(chart.getDebugState()).toMatchObject({
+      selectedTrendId: null,
+      selectedPointId: 'breakpoint-episode-17'
+    })
+    expect(container.querySelector('.series-breakpoint-trend')).toBeNull()
+    expect(container.querySelector('.series-breakpoint-marker')).toBeNull()
+
+    chart.toggleSeriesTrend()
+    expect(chart.getDebugState().selectedTrendId).toBe('series')
+    expect(container.querySelector('.series-breakpoint-trend')).toBeNull()
+    expect(container.querySelector('.series-breakpoint-marker')).toBeNull()
+  })
+
+  it('lets the breakpoint shortcut select the best candidate below the automatic threshold', () => {
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+
+    chart = createChart(container, createSeasons(), { detailRoot })
+    expect(chart.getDebugState().breakpoint.highConfidence).toBe(false)
+
+    chart.toggleSeriesTrend()
+    expect(detailRoot.querySelector('[data-series-breakpoint]')).toBeNull()
+    chart.zoomBy(0.5)
+    expect(chart.toggleSeriesBreakpoint()).toBe(true)
+
+    expect(chart.getDebugState()).toMatchObject({
+      selectedTrendId: 'series:breakpoint',
+      viewport: { start: 1, end: 72 }
+    })
+    expect(detailRoot.textContent).toContain('Below threshold')
+    expect(container.querySelectorAll('.series-breakpoint-trend')).toHaveLength(
+      2
+    )
+
+    expect(chart.toggleSeriesBreakpoint()).toBe(true)
+    expect(chart.getDebugState().selectedTrendId).toBeNull()
+    expect(container.querySelector('.series-breakpoint-trend')).toBeNull()
   })
 
   it('falls back to and enriches the first rated episode when trendlines are unavailable', async () => {
@@ -1789,6 +1883,23 @@ function createTwoSeasons({ secondEpisodeCount = 3 } = {}) {
         ratings: [{ source: 'test', rating: 7 + episodeIndex / 10 }]
       })
     )
+  }))
+}
+
+function createBreakpointSeasons() {
+  return Array.from({ length: 4 }, (_, seasonIndex) => ({
+    number: seasonIndex + 1,
+    episodes: Array.from({ length: 8 }, (_, episodeIndex) => {
+      const index = seasonIndex * 8 + episodeIndex
+      const rating = (index < 16 ? 8.8 : 6.4) + [0, 0.1, -0.1, 0.05][index % 4]
+      return {
+        id: `breakpoint-episode-${index + 1}`,
+        title: `Breakpoint Episode ${index + 1}`,
+        season: seasonIndex + 1,
+        number: episodeIndex + 1,
+        ratings: [{ source: 'test', rating }]
+      }
+    })
   }))
 }
 

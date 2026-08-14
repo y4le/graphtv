@@ -7,7 +7,8 @@ import {
   createFullSeriesScales,
   createMainScales,
   createSparklineScales,
-  getMacroTrendline
+  getMacroTrendline,
+  getVisibleSeriesBreakpoint
 } from '../../src/viz/scales.js'
 
 describe('rating scale domains', () => {
@@ -150,6 +151,35 @@ describe('rating scale domains', () => {
     })
   })
 
+  it('builds a high-confidence breakpoint overlay without making it persistent', () => {
+    const model = buildChartModel(createBreakpointSeasons())
+
+    expect(model.seriesBreakpoint).toMatchObject({
+      id: 'series:breakpoint',
+      highConfidence: true,
+      breakpointX: 16.5,
+      breakpointPoint: { season: 3, number: 1 }
+    })
+    expect(model.trendSummaries.series.detectedBreakpoint.id).toBe(
+      'series:breakpoint'
+    )
+    expect(
+      getVisibleSeriesBreakpoint(model, { start: 10, end: 24 })
+    ).toMatchObject({
+      markerVisible: true,
+      segments: [
+        { id: 'series:breakpoint:before' },
+        { id: 'series:breakpoint:after' }
+      ]
+    })
+    expect(
+      getVisibleSeriesBreakpoint(model, { start: 1, end: 8 })
+    ).toMatchObject({
+      markerVisible: false,
+      segments: [{ id: 'series:breakpoint:before' }]
+    })
+  })
+
   it('keeps the adaptive y-axis stable across viewports', () => {
     const model = buildChartModel([
       {
@@ -286,4 +316,19 @@ function createEpisode(id, ratings) {
     episode: 1,
     ratings
   }
+}
+
+function createBreakpointSeasons() {
+  return Array.from({ length: 4 }, (_, seasonIndex) => ({
+    number: seasonIndex + 1,
+    episodes: Array.from({ length: 8 }, (_, episodeIndex) => {
+      const index = seasonIndex * 8 + episodeIndex
+      const rating = (index < 16 ? 8.8 : 6.4) + [0, 0.1, -0.1, 0.05][index % 4]
+      return {
+        ...createEpisode(`episode-${index + 1}`, [{ source: 'test', rating }]),
+        season: seasonIndex + 1,
+        number: episodeIndex + 1
+      }
+    })
+  }))
 }

@@ -1083,6 +1083,37 @@ button {
   display: inline-flex;
   gap: 0.4rem;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.trend-summary-breakpoint-action {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  color: var(--textSecondary);
+}
+
+.trend-summary-breakpoint-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--textPrimary);
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--lineStrong);
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+
+.trend-summary-breakpoint-button:hover,
+.trend-summary-breakpoint-button:focus-visible {
+  color: var(--spotColor);
+  text-decoration-color: currentColor;
+}
+
+.trend-summary-breakpoint-button:focus-visible {
+  outline: 2px solid var(--spotColor);
+  outline-offset: 2px;
 }
 
 .trend-info-control {
@@ -1306,6 +1337,86 @@ button {
   margin: 0.45rem 0 0;
 }
 
+.sidenote-breakpoint-card {
+  container: breakpoint-card / inline-size;
+}
+
+.breakpoint-summary-facts {
+  display: grid;
+  grid-template-columns: repeat(3, max-content);
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.breakpoint-summary-facts li {
+  min-width: 0;
+}
+
+.breakpoint-summary-episode {
+  display: inline;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  color: inherit;
+  background: none;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.breakpoint-summary-episode:hover,
+.breakpoint-summary-episode:focus-visible {
+  color: var(--spotColor);
+}
+
+@container breakpoint-card (max-width: 36rem) {
+  .breakpoint-summary-facts {
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: stretch;
+    gap: 0.25rem;
+  }
+}
+
+.breakpoint-regimes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 0.8rem;
+}
+
+.breakpoint-regime {
+  min-width: 0;
+}
+
+.breakpoint-regime h2,
+.breakpoint-regime p,
+.breakpoint-summary-evidence {
+  margin: 0;
+}
+
+.breakpoint-regime h2 {
+  color: var(--textSecondary);
+  font: inherit;
+  font-weight: 700;
+}
+
+.breakpoint-regime p + p {
+  margin-top: 0.15rem;
+}
+
+.breakpoint-summary-evidence {
+  margin-top: 0.8rem;
+  color: var(--textSecondary);
+}
+
+.series-breakpoint-layer {
+  pointer-events: none;
+}
+
 @media (pointer: coarse) {
   .chart-shell,
   .results-episode {
@@ -1328,6 +1439,10 @@ button {
 
   .trend-info-button {
     width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  .trend-summary-breakpoint-button {
     min-height: 2.75rem;
   }
 }

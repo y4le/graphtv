@@ -9,6 +9,7 @@ import {
   createSparklineScales,
   getMacroTrendline,
   getVisiblePoints,
+  getVisibleSeriesBreakpoint,
   getVisibleSeasonSpans,
   getVisibleSeasonTrendlines
 } from './scales.js'
@@ -18,6 +19,7 @@ import {
   renderRangeFrame,
   renderSeasonLabels,
   renderSourceSpreads,
+  renderSeriesBreakpoint,
   renderTrendlines
 } from './marks.js'
 import { createSidenote } from './sidenote.js'
@@ -136,6 +138,9 @@ export function createChart(container, seasons, options = {}) {
     },
     onSelectSeasonTrend(seasonNumber) {
       selectSeasonTrend(seasonNumber)
+    },
+    onSelectSeriesBreakpoint() {
+      selectSeriesBreakpoint()
     }
   })
 
@@ -213,6 +218,10 @@ export function createChart(container, seasons, options = {}) {
       return model.ratedPoints.filter(
         (point) => point.season === summary.seasonNumber
       )
+    }
+
+    if (summary?.kind === 'breakpoint') {
+      return model.primaryRatedPoints
     }
 
     return model.ratedPoints
@@ -315,6 +324,18 @@ export function createChart(container, seasons, options = {}) {
       }
     }
 
+    if (summary?.kind === 'breakpoint') {
+      return {
+        mode: 'breakpoint',
+        label: 'Series Breakpoint',
+        meta: `${scopePoints.length} rated ${scopePoints.length === 1 ? 'episode' : 'episodes'}`,
+        previousAvailable: scopePoints.length > 0,
+        nextAvailable: scopePoints.length > 0,
+        previousLabel: 'Last rated episode',
+        nextLabel: 'First rated episode'
+      }
+    }
+
     return {
       mode: summary?.kind === 'series' ? 'series' : 'browse',
       label: summary?.kind === 'series' ? 'Full Series' : 'Browse episodes',
@@ -327,6 +348,9 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function isTrendEnabled(id, settings = getUiSettings()) {
+    if (getTrendSummary(id)?.kind === 'breakpoint') {
+      return true
+    }
     return id === 'series'
       ? settings.fullShowTrendline
       : settings.seasonTrendlines
@@ -485,8 +509,9 @@ export function createChart(container, seasons, options = {}) {
       cancelScheduledDetailLoad()
       sidenote.renderRestingState({
         empty: model.ratedPoints.length === 0,
-        trendlinesAvailable: Object.keys(model.trendSummaries).some((id) =>
-          isTrendEnabled(id)
+        trendlinesAvailable: Object.values(model.trendSummaries).some(
+          (summary) =>
+            summary.kind !== 'breakpoint' && isTrendEnabled(summary.id)
         )
       })
       shell.style.removeProperty('--reading-pane-marker')
@@ -609,6 +634,30 @@ export function createChart(container, seasons, options = {}) {
     setSelectedTrend(id)
   }
 
+  function selectSeriesBreakpoint({ allowBelowThreshold = false } = {}) {
+    const summary = model.seriesBreakpoint
+    if (!summary || (!summary.highConfidence && !allowBelowThreshold)) {
+      return false
+    }
+    setFullSeriesViewport()
+    setSelectedTrend(summary.id)
+    announceViewport()
+    return true
+  }
+
+  function toggleSeriesBreakpoint() {
+    hasUserInteracted = true
+    const summary = model.seriesBreakpoint
+    if (!summary) {
+      return false
+    }
+    if (selectedTrendId === summary.id) {
+      setSelectedTrend(summary.id)
+      return true
+    }
+    return selectSeriesBreakpoint({ allowBelowThreshold: true })
+  }
+
   function announceSelection(selection) {
     if (selectionAnnouncementTimer) {
       clearTimeout(selectionAnnouncementTimer)
@@ -627,6 +676,14 @@ export function createChart(container, seasons, options = {}) {
       }
 
       const { summary } = selection
+
+      if (summary.kind === 'breakpoint') {
+        const confidence = summary.highConfidence
+          ? 'High confidence'
+          : 'Below automatic confidence threshold'
+        selectionStatus.textContent = `Series breakpoint selected before ${formatEpisodeCode(summary.breakpointPoint)}. ${confidence} rating drop of ${summary.drop.toFixed(1)} points.`
+        return
+      }
 
       const trend =
         summary.direction === 'up'
@@ -873,9 +930,13 @@ export function createChart(container, seasons, options = {}) {
 
   function fitSeries() {
     hasUserInteracted = true
-    viewport = clampViewport({ start: 1, end: model.xMax }, model)
+    setFullSeriesViewport()
     render()
     announceViewport()
+  }
+
+  function setFullSeriesViewport() {
+    viewport = clampViewport({ start: 1, end: model.xMax }, model)
   }
 
   function resetZoom() {
@@ -1231,6 +1292,15 @@ export function createChart(container, seasons, options = {}) {
       chartTheme,
       getPointInteractions()
     )
+    renderSeriesBreakpoint(
+      mainSvg,
+      selectedTrendId === model.seriesBreakpoint?.id
+        ? getVisibleSeriesBreakpoint(model, viewport)
+        : null,
+      mainScales,
+      { width: chartWidth, height: chartHeight },
+      chartTheme
+    )
 
     renderSparkline(
       chartTheme,
@@ -1365,6 +1435,15 @@ export function createChart(container, seasons, options = {}) {
       fullScales,
       chartTheme,
       getPointInteractions()
+    )
+    renderSeriesBreakpoint(
+      mainSvg,
+      selectedTrendId === model.seriesBreakpoint?.id
+        ? getVisibleSeriesBreakpoint(model, { start: 1, end: model.xMax })
+        : null,
+      fullScales,
+      { width: contentWidth, height: chartHeight },
+      chartTheme
     )
 
     renderSparkline(
@@ -1840,6 +1919,8 @@ export function createChart(container, seasons, options = {}) {
     zoomBy,
     toggleSeriesTrend,
     toggleSeasonTrend,
+    toggleSeriesBreakpoint,
+    selectSeriesBreakpoint,
     clearSelection() {
       hasUserInteracted = true
       if (!selectedPointId && !selectedTrendId) {
@@ -1864,6 +1945,14 @@ export function createChart(container, seasons, options = {}) {
           minimumCoverage: model.minimumPrimaryCoverage,
           coverage: model.ratingSourceCoverage
         },
+        breakpoint: model.seriesBreakpointCandidate
+          ? {
+              highConfidence: model.seriesBreakpointCandidate.highConfidence,
+              score: model.seriesBreakpointCandidate.score,
+              pValue: model.seriesBreakpointCandidate.pValue,
+              splitIndex: model.seriesBreakpointCandidate.splitIndex
+            }
+          : null,
         episodeDetails: {
           loaded: detailCache.size,
           errors: detailErrors,

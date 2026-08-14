@@ -1,6 +1,8 @@
 import { scaleLinear } from 'd3'
 
 import {
+  SERIES_BREAKPOINT_ID,
+  detectSeriesBreakpoint,
   getRatingSpread,
   isUsableRating,
   linearRegressionFromPoints,
@@ -21,6 +23,8 @@ export function buildChartModel(seasons) {
   const seasonTrendlines = []
   const trendSummaries = {}
   const comparableSeasonSummaries = []
+  let seriesBreakpointCandidate = null
+  let seriesBreakpoint = null
   let absoluteIndex = 1
 
   seasons.forEach((season, seasonIndex) => {
@@ -128,6 +132,23 @@ export function buildChartModel(seasons) {
       label: 'Full series'
     }
 
+    seriesBreakpointCandidate = detectSeriesBreakpoint(points)
+    if (seriesBreakpointCandidate) {
+      seriesBreakpoint = createSeriesBreakpointSummary(
+        seriesBreakpointCandidate,
+        points,
+        primaryRating.source
+      )
+      trendSummaries[SERIES_BREAKPOINT_ID] = seriesBreakpoint
+      if (seriesBreakpoint.highConfidence) {
+        trendSummaries.series.detectedBreakpoint = {
+          id: SERIES_BREAKPOINT_ID,
+          breakpointPoint: seriesBreakpoint.breakpointPoint,
+          score: seriesBreakpoint.score
+        }
+      }
+    }
+
     for (const summary of comparableSeasonSummaries) {
       summary.seriesMeanDifference = summary.mean - seriesSummary.mean
     }
@@ -143,9 +164,56 @@ export function buildChartModel(seasons) {
     seasonSpans,
     seasonTrendlines,
     trendSummaries,
+    seriesBreakpointCandidate,
+    seriesBreakpoint,
     macroRegression,
     xMax: Math.max(points.length, 1),
     totalSeasons: seasonSpans.length
+  }
+}
+
+function createSeriesBreakpointSummary(candidate, allPoints, source) {
+  const beforeEndX = candidate.beforePoints.at(-1).x
+  const afterStartX = candidate.afterPoints[0].x
+  const beforeTotal = allPoints.filter(
+    (point) => point.season !== 0 && point.x < afterStartX
+  ).length
+  const afterTotal = allPoints.filter(
+    (point) => point.season !== 0 && point.x >= afterStartX
+  ).length
+  const beforeSummary = summarizeTrendScope(candidate.beforePoints, {
+    totalEpisodes: beforeTotal,
+    source
+  })
+  const afterSummary = summarizeTrendScope(candidate.afterPoints, {
+    totalEpisodes: afterTotal,
+    source
+  })
+  const beforeRegression = linearRegressionFromPoints(
+    candidate.beforePoints.map((point) => ({ x: point.x, y: point.rating }))
+  )
+  const afterRegression = linearRegressionFromPoints(
+    candidate.afterPoints.map((point) => ({ x: point.x, y: point.rating }))
+  )
+
+  return {
+    ...candidate,
+    id: SERIES_BREAKPOINT_ID,
+    kind: 'breakpoint',
+    label: 'Series breakpoint',
+    breakpointPoint: candidate.afterPoints[0],
+    beforeSummary,
+    afterSummary,
+    beforeTrendline: {
+      startX: candidate.beforePoints[0].x,
+      endX: beforeEndX,
+      regression: beforeRegression
+    },
+    afterTrendline: {
+      startX: afterStartX,
+      endX: candidate.afterPoints.at(-1).x,
+      regression: afterRegression
+    }
   }
 }
 
@@ -334,6 +402,43 @@ export function getMacroTrendline(model, viewport) {
         y: projectRegression(model.macroRegression, endX)
       }
     ]
+  }
+}
+
+export function getVisibleSeriesBreakpoint(model, viewport) {
+  const breakpoint = model.seriesBreakpoint
+  if (!breakpoint) {
+    return null
+  }
+
+  return {
+    id: breakpoint.id,
+    breakpointX: breakpoint.breakpointX,
+    markerVisible:
+      breakpoint.breakpointX >= viewport.start &&
+      breakpoint.breakpointX <= viewport.end,
+    segments: [breakpoint.beforeTrendline, breakpoint.afterTrendline]
+      .map((trendline, index) => {
+        const startX = Math.max(viewport.start, trendline.startX)
+        const endX = Math.min(viewport.end, trendline.endX)
+        if (!trendline.regression || endX <= startX) {
+          return null
+        }
+        return {
+          id: `${breakpoint.id}:${index === 0 ? 'before' : 'after'}`,
+          points: [
+            {
+              x: startX,
+              y: projectRegression(trendline.regression, startX)
+            },
+            {
+              x: endX,
+              y: projectRegression(trendline.regression, endX)
+            }
+          ]
+        }
+      })
+      .filter(Boolean)
   }
 }
 

@@ -17,7 +17,11 @@ const ACTIVE_POINT_RADIUS_OFFSET = 1.5
 
 export function renderRangeFrame(svg, scales, dimensions, theme) {
   const [minRating, maxRating] = scales.yDomain
-  const axis = svg.selectAll('.range-frame').data([null]).join('g').attr('class', 'range-frame')
+  const axis = svg
+    .selectAll('.range-frame')
+    .data([null])
+    .join('g')
+    .attr('class', 'range-frame')
   const tickValues = buildTickValues(scales, minRating, maxRating)
 
   axis
@@ -44,7 +48,13 @@ export function renderRangeFrame(svg, scales, dimensions, theme) {
   ticks
     .select('text')
     .attr('x', dimensions.width - 8)
-    .attr('y', (tick) => clamp(scales.yScale(tick), Y_LABEL_INSET, dimensions.height - Y_LABEL_INSET))
+    .attr('y', (tick) =>
+      clamp(
+        scales.yScale(tick),
+        Y_LABEL_INSET,
+        dimensions.height - Y_LABEL_INSET
+      )
+    )
     .attr('fill', theme.textSecondary)
     .attr('text-anchor', 'end')
     .attr('dominant-baseline', 'middle')
@@ -267,6 +277,50 @@ export function renderTrendlines(
     .attr('d', (trendline) => generator(trendline.points))
 }
 
+export function renderSeriesBreakpoint(
+  svg,
+  breakpoint,
+  scales,
+  dimensions,
+  theme
+) {
+  const layer = svg
+    .selectAll('.series-breakpoint-layer')
+    .data([null])
+    .join('g')
+    .attr('class', 'series-breakpoint-layer')
+    .attr('aria-hidden', 'true')
+    .raise()
+  const generator = line()
+    .x((point) => scales.xScale(point.x))
+    .y((point) => scales.yScale(point.y))
+
+  layer
+    .selectAll('.series-breakpoint-trend')
+    .data(breakpoint?.segments ?? [], (segment) => segment.id)
+    .join('path')
+    .attr('class', 'series-breakpoint-trend')
+    .attr('fill', 'none')
+    .attr('stroke', theme.spotColor)
+    .attr('stroke-width', 2.5)
+    .attr('stroke-linecap', 'round')
+    .attr('d', (segment) => generator(segment.points))
+
+  layer
+    .selectAll('.series-breakpoint-marker')
+    .data(breakpoint?.markerVisible ? [breakpoint] : [])
+    .join('line')
+    .attr('class', 'series-breakpoint-marker')
+    .attr('x1', (value) => scales.xScale(value.breakpointX))
+    .attr('x2', (value) => scales.xScale(value.breakpointX))
+    .attr('y1', 0)
+    .attr('y2', dimensions.height)
+    .attr('stroke', theme.spotColor)
+    .attr('stroke-width', 1.5)
+    .attr('stroke-dasharray', '3 4')
+    .attr('opacity', 0.75)
+}
+
 export function resolveTrendHit([x, y], segments, scales, tolerance) {
   const dataX = scales.xScale.invert(x)
 
@@ -281,8 +335,7 @@ export function resolveTrendHit([x, y], segments, scales, tolerance) {
         distance: Math.abs(
           y -
             scales.yScale(
-              segment.regression.slope * dataX +
-                segment.regression.intercept
+              segment.regression.slope * dataX + segment.regression.intercept
             )
         )
       }))
@@ -307,16 +360,24 @@ export function renderCrosshair(
   theme,
   showSourceSpread = false
 ) {
-  const crosshairLayer = svg.selectAll('.crosshair-layer').data([null]).join('g').attr('class', 'crosshair-layer')
-  const spread = showSourceSpread
-    ? createSourceSpreadMark(point, scales)
-    : null
+  const crosshairLayer = svg
+    .selectAll('.crosshair-layer')
+    .data([null])
+    .join('g')
+    .attr('class', 'crosshair-layer')
+  const spread = showSourceSpread ? createSourceSpreadMark(point, scales) : null
   const x = point ? scales.xScale(point.x) : 0
 
   const lines = point
     ? spread
       ? [
-          { key: 'vertical-before', x1: x, x2: x, y1: 0, y2: Math.min(spread.y1, spread.y2) },
+          {
+            key: 'vertical-before',
+            x1: x,
+            x2: x,
+            y1: 0,
+            y2: Math.min(spread.y1, spread.y2)
+          },
           {
             key: 'vertical-after',
             x1: x,
@@ -369,9 +430,7 @@ export function renderSourceSpreads(
     .data(spreads, (spread) => spread.id)
     .join('line')
     .attr('class', (spread) =>
-      spread.id === activePointId
-        ? 'source-spread is-active'
-        : 'source-spread'
+      spread.id === activePointId ? 'source-spread is-active' : 'source-spread'
     )
     .attr('x1', (spread) => spread.x)
     .attr('x2', (spread) => spread.x)
@@ -409,8 +468,12 @@ export function renderSourceSpreads(
     .attr('stroke-width', 1.25)
 
   const clippedEnds = spreads.flatMap((spread) => [
-    ...(spread.clippedMin ? [{ id: `${spread.id}:min`, x: spread.x, y: dimensions.height }] : []),
-    ...(spread.clippedMax ? [{ id: `${spread.id}:max`, x: spread.x, y: 0 }] : [])
+    ...(spread.clippedMin
+      ? [{ id: `${spread.id}:min`, x: spread.x, y: dimensions.height }]
+      : []),
+    ...(spread.clippedMax
+      ? [{ id: `${spread.id}:max`, x: spread.x, y: 0 }]
+      : [])
   ])
 
   spreadLayer
@@ -500,7 +563,8 @@ export function renderPoints(svg, points, scales, theme, interactions) {
     .join('g')
     .attr('class', 'episode-mark-layer')
   const plottedPoints = points.filter((point) => isUsableRating(point.rating))
-  const pointColor = (point) => theme.seasonColor(point.seasonIndex, interactions.totalSeasons)
+  const pointColor = (point) =>
+    theme.seasonColor(point.seasonIndex, interactions.totalSeasons)
   const pointRadius = scalePointRadiusForDensity(
     DEFAULT_POINT_RADIUS,
     plottedPoints.length,
@@ -543,7 +607,9 @@ export function renderPoints(svg, points, scales, theme, interactions) {
         ? FALLBACK_POINT_FILL_OPACITY
         : 1
     )
-    .attr('stroke', (point) => (point.isFallbackRating ? pointColor(point) : 'none'))
+    .attr('stroke', (point) =>
+      point.isFallbackRating ? pointColor(point) : 'none'
+    )
     .attr('stroke-width', (point) => (point.isFallbackRating ? 1.25 : 0))
     .attr('stroke-opacity', 1)
     .attr('data-rating-source', (point) => point.ratingSource)
@@ -555,7 +621,10 @@ export function renderPoints(svg, points, scales, theme, interactions) {
 
 function bindPointInteractions(points, interactions) {
   points
-    .on('mouseenter', (_, point) => interactions.hoverEnabled && interactions.onHover(point))
+    .on(
+      'mouseenter',
+      (_, point) => interactions.hoverEnabled && interactions.onHover(point)
+    )
     .on('mouseleave', () => interactions.hoverEnabled && interactions.onLeave())
     .on('click', (event, point) => {
       event.stopPropagation()
@@ -577,7 +646,10 @@ function buildTickValues(scales, minRating, maxRating) {
     .filter((tick) => tick > minRating && tick < maxRating)
     .filter((tick) => {
       const y = scales.yScale(tick)
-      return Math.abs(y - scales.yScale(minRating)) > 20 && Math.abs(y - scales.yScale(maxRating)) > 20
+      return (
+        Math.abs(y - scales.yScale(minRating)) > 20 &&
+        Math.abs(y - scales.yScale(maxRating)) > 20
+      )
     })
 
   return [minRating, ...domainTicks, maxRating]

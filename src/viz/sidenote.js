@@ -136,7 +136,8 @@ export function createSidenote({
   onInteract,
   onNavigate,
   onSelectPoint,
-  onSelectSeasonTrend
+  onSelectSeasonTrend,
+  onSelectSeriesBreakpoint
 }) {
   ensureOutsideTrendInfoDismissal(root.ownerDocument)
   const eventController = new root.ownerDocument.defaultView.AbortController()
@@ -253,15 +254,15 @@ export function createSidenote({
       return
     }
 
+    if (summary.kind === 'breakpoint') {
+      renderBreakpointSummary(summary, { show })
+      return
+    }
+
     const fallbackCopy = summary.excludedFallback
       ? `${summary.excludedFallback} ${summary.excludedFallback === 1 ? 'episode uses' : 'episodes use'} other sources and ${summary.excludedFallback === 1 ? 'is' : 'are'} excluded`
       : null
-    const trendCopy =
-      summary.direction === 'up'
-        ? `Trending up ${formatSignedDelta(summary.delta)}`
-        : summary.direction === 'down'
-          ? `Trending down ${formatSignedDelta(summary.delta)}`
-          : `No clear trend${Number.isFinite(summary.delta) ? ` ${formatSignedDelta(summary.delta)}` : ''}`
+    const trendCopy = formatTrendCopy(summary)
     const provenanceNotes = [
       fallbackCopy,
       !summary.trendCriteria.enoughRatedEpisodes
@@ -282,6 +283,14 @@ export function createSidenote({
       summary.kind === 'series'
         ? '<span class="trend-summary-context"> · within seasons</span>'
         : ''
+    const breakpointAction = summary.detectedBreakpoint
+      ? `
+          <span class="trend-summary-breakpoint-action">
+            <span aria-hidden="true">·</span>
+            <button type="button" class="trend-summary-breakpoint-button" data-series-breakpoint>Show detected breakpoint</button>
+          </span>
+        `
+      : ''
 
     setMarkup(`
       <div class="sidenote-card sidenote-trend-card">
@@ -299,6 +308,7 @@ export function createSidenote({
                 <button type="button" class="trend-info-button" data-trend-info aria-label="Explain trend statistics" aria-expanded="false" aria-controls="${trendInfoId}" aria-describedby="${trendInfoId}">ⓘ</button>
                 ${renderTrendInfo(summary, trendInfoId)}
               </div>
+              ${breakpointAction}
             </dd>
           </div>
         </dl>
@@ -308,6 +318,37 @@ export function createSidenote({
           ${renderRanking('Bottom Rated', summary.bottom)}
         </div>
         <p class="trend-summary-provenance">${provenance}</p>
+      </div>
+    `)
+  }
+
+  function renderBreakpointSummary(summary, { show = null } = {}) {
+    const breakpointLabel = formatEpisodeLabel(summary.breakpointPoint)
+    const sourceCopy = formatRatingSource(summary.beforeSummary.source, {
+      show
+    })
+    const confidenceCopy =
+      summary.confidence === 'high'
+        ? `High confidence ${Math.round(summary.score)}/100`
+        : `Below threshold ${Math.round(summary.score)}/100`
+    const changeCopy =
+      summary.drop >= 0
+        ? `Ratings dropped ${summary.drop.toFixed(1)} points`
+        : `Ratings rose ${Math.abs(summary.drop).toFixed(1)} points`
+
+    setMarkup(`
+      <div class="sidenote-card sidenote-trend-card sidenote-breakpoint-card" data-breakpoint-summary>
+        <ul class="breakpoint-summary-facts" aria-label="Breakpoint summary">
+          <li>Starting <button type="button" class="breakpoint-summary-episode" data-breakpoint-episode data-trend-point-id="${escapeHtml(summary.breakpointPoint.id)}" aria-label="Select ${escapeHtml(breakpointLabel)}, the first episode after the breakpoint">${escapeHtml(breakpointLabel)}</button></li>
+          <li>${escapeHtml(changeCopy)}</li>
+          <li>${escapeHtml(confidenceCopy)}</li>
+        </ul>
+        <div class="breakpoint-regimes" aria-label="Ratings before and after the detected breakpoint">
+          ${renderBreakpointRegime('Before', summary.beforeSummary, summary.beforeMedian)}
+          ${renderBreakpointRegime('After', summary.afterSummary, summary.afterMedian)}
+        </div>
+        <p class="breakpoint-summary-evidence">${Math.round(summary.separation * 100)}% of before episodes rate higher than after episodes · ${Math.round(summary.sustain * 100)}% of the later episodes sustain the drop · ${formatBreakpointPValue(summary.pValue)}</p>
+        <p class="trend-summary-provenance">${summary.beforeSummary.n + summary.afterSummary.n} rated · ${sourceCopy}</p>
       </div>
     `)
   }
@@ -336,6 +377,13 @@ export function createSidenote({
     if (seasonTrendButton) {
       onInteract?.()
       onSelectSeasonTrend?.(Number(seasonTrendButton.dataset.trendSeasonNumber))
+      return
+    }
+
+    const breakpointButton = event.target.closest?.('[data-series-breakpoint]')
+    if (breakpointButton) {
+      onInteract?.()
+      onSelectSeriesBreakpoint?.()
       return
     }
 
@@ -431,6 +479,36 @@ export function createSidenote({
       root.replaceChildren()
     }
   }
+}
+
+function renderBreakpointRegime(label, summary, medianRating) {
+  return `
+    <section class="breakpoint-regime">
+      <h2>${escapeHtml(label)}</h2>
+      <p><strong>${medianRating.toFixed(1)}</strong> median · ${escapeHtml(formatTrendCopy(summary))}</p>
+      <p class="trend-summary-context">${summary.n} rated ${summary.n === 1 ? 'episode' : 'episodes'}</p>
+    </section>
+  `
+}
+
+function formatTrendCopy(summary) {
+  return summary.direction === 'up'
+    ? `Trending up ${formatSignedDelta(summary.delta)}`
+    : summary.direction === 'down'
+      ? `Trending down ${formatSignedDelta(summary.delta)}`
+      : `No clear trend${Number.isFinite(summary.delta) ? ` ${formatSignedDelta(summary.delta)}` : ''}`
+}
+
+function formatEpisodeLabel(point) {
+  const episodeNumber = point.episode ?? point.number
+  return `S${String(point.season).padStart(2, '0')}E${String(episodeNumber).padStart(2, '0')}`
+}
+
+function formatBreakpointPValue(value) {
+  if (value < 0.01) {
+    return 'permutation p < 0.01'
+  }
+  return `permutation p = ${value.toFixed(2)}`
 }
 
 function updateNavigatorButton(button, available, label) {

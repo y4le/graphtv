@@ -470,6 +470,79 @@ describe('createSidenote', () => {
       'Meaningful change: 0.098 points, need 0.1 points'
     )
   })
+
+  it('offers and renders a selected high-confidence series breakpoint', () => {
+    const root = document.createElement('section')
+    const onSelectSeriesBreakpoint = vi.fn()
+    const onSelectPoint = vi.fn()
+    const sidenote = createSidenote({
+      root,
+      onSelectPoint,
+      onSelectSeriesBreakpoint
+    })
+
+    sidenote.renderTrendSummary({
+      label: 'Full series',
+      kind: 'series',
+      n: 32,
+      totalEpisodes: 32,
+      excludedFallback: 0,
+      source: 'test',
+      mean: 7.6,
+      direction: 'unclear',
+      delta: -0.5,
+      detectedBreakpoint: { id: 'series:breakpoint' },
+      trendCriteria: createTrendCriteria(),
+      top: [],
+      bottom: []
+    })
+
+    expect(root.textContent).toContain('No clear trend −0.5')
+    const breakpointButton = root.querySelector('[data-series-breakpoint]')
+    expect(breakpointButton.textContent).toBe('Show detected breakpoint')
+    breakpointButton.click()
+    expect(onSelectSeriesBreakpoint).toHaveBeenCalledOnce()
+
+    sidenote.renderTrendSummary({
+      kind: 'breakpoint',
+      breakpointPoint: { id: 'breakpoint-start', season: 3, number: 1 },
+      drop: 2.4,
+      confidence: 'high',
+      score: 95,
+      separation: 0.96,
+      sustain: 0.94,
+      pValue: 0.003,
+      beforeMedian: 8.8,
+      afterMedian: 6.4,
+      beforeSummary: {
+        source: 'test',
+        n: 16,
+        direction: 'unclear',
+        delta: -0.1
+      },
+      afterSummary: {
+        source: 'test',
+        n: 16,
+        direction: 'down',
+        delta: -0.6
+      }
+    })
+
+    expect(root.querySelector('[data-breakpoint-summary]')).not.toBeNull()
+    expect(root.textContent).toContain('Starting S03E01')
+    expect(root.textContent).toContain('Ratings dropped 2.4 points')
+    expect(root.textContent).toContain('High confidence 95/100')
+    expect(root.querySelectorAll('.breakpoint-summary-facts li')).toHaveLength(
+      3
+    )
+    expect(root.querySelector('.breakpoint-summary-metrics')).toBeNull()
+    expect(root.textContent).toContain('8.8 median · No clear trend −0.1')
+    expect(root.textContent).toContain('6.4 median · Trending down −0.6')
+    expect(root.textContent).toContain('permutation p < 0.01')
+
+    root.querySelector('[data-breakpoint-episode]').click()
+    expect(onSelectPoint).toHaveBeenCalledWith('breakpoint-start')
+  })
 })
 
 function createTrendCriteria(overrides = {}) {
