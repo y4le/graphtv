@@ -212,7 +212,9 @@ describe('createSidenote', () => {
       ]
     })
 
-    expect(root.querySelector('.sidenote-title').textContent).toBe('Season 2')
+    expect(root.querySelector('.sidenote-header')).toBeNull()
+    expect(root.querySelector('.sidenote-title')).toBeNull()
+    expect(root.querySelector('.sidenote-kicker')).toBeNull()
     expect(root.textContent).toContain('Mean')
     expect(root.textContent).toContain('8.2')
     expect(root.textContent).toContain('Trending up +0.6')

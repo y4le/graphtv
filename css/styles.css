@@ -946,8 +946,7 @@ button {
   margin: 0;
 }
 
-.sidenote-caption,
-.sidenote-kicker {
+.sidenote-caption {
   margin: 0;
 }
 
@@ -956,14 +955,6 @@ button {
   flex-wrap: wrap;
   gap: 0.3rem 0.75rem;
   align-items: baseline;
-}
-
-.sidenote-kicker {
-  color: var(--textSecondary);
-  font-family: var(--font-sans);
-  font-size: var(--type-size-meta);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .sidenote-header {

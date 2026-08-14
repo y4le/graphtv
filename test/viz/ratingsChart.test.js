@@ -81,7 +81,12 @@ describe('createChart', () => {
     expect(detailRoot.querySelector('.sidenote-nav-label').textContent).toBe(
       'Full Series'
     )
-    expect(detailRoot.textContent).toContain('Full series')
+    expect(
+      detailRoot.querySelector('.sidenote-content .sidenote-header')
+    ).toBeNull()
+    expect(
+      detailRoot.querySelector('.sidenote-content .sidenote-title')
+    ).toBeNull()
     expect(container.querySelector('.chart-selection-status').textContent).toBe(
       ''
     )

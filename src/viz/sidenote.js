@@ -240,12 +240,6 @@ export function createSidenote({
 
     setMarkup(`
       <div class="sidenote-card sidenote-trend-card">
-        <div class="sidenote-header">
-          <p class="sidenote-caption">
-            <span class="sidenote-title">${escapeHtml(summary.label)}</span>
-            <span class="sidenote-kicker">${summary.totalEpisodes} ${summary.totalEpisodes === 1 ? 'episode' : 'episodes'}</span>
-          </p>
-        </div>
         <dl class="trend-summary-metrics">
           <div class="trend-summary-metric">
             <dt>Mean</dt>
