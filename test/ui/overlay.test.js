@@ -51,8 +51,31 @@ describe('view options overlay', () => {
     const offButton = row.querySelector(
       '[data-view-toggle="showSourceSpread"][data-view-toggle-value="false"]'
     )
+    const infoButton = row.querySelector('[data-view-option-info]')
+    const tooltip = row.querySelector('[role="tooltip"]')
 
     expect(row.textContent).toContain('Rating source spread')
+    expect(infoButton.getAttribute('aria-describedby')).toBe(tooltip.id)
+    expect(tooltip.textContent).toContain(
+      'a vertical mark shows the range between their scores'
+    )
+    expect(tooltip.hidden).toBe(true)
+
+    infoButton.click()
+    expect(infoButton.getAttribute('aria-expanded')).toBe('true')
+    expect(tooltip.hidden).toBe(false)
+    infoButton.click()
+    expect(infoButton.getAttribute('aria-expanded')).toBe('false')
+    expect(tooltip.hidden).toBe(true)
+
+    infoButton.focus()
+    expect(tooltip.hidden).toBe(false)
+    infoButton.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+    )
+    expect(tooltip.hidden).toBe(true)
+    expect(overlayController.getActiveId()).toBe('view-options')
+
     expect(getUiSettings().showSourceSpread).toBe(true)
     expect(offButton.getAttribute('aria-pressed')).toBe('false')
 
@@ -63,6 +86,45 @@ describe('view options overlay', () => {
     row.focus()
     row.dispatchEvent(new KeyboardEvent('keydown', { key: 'r', bubbles: true }))
     expect(getUiSettings().showSourceSpread).toBe(true)
+  })
+
+  it('offers a persisted episode-density choice', () => {
+    const overlayController = createOverlayController()
+    openViewOptionsOverlay(overlayController)
+
+    const row = document.querySelector('[data-option="episode-density"]')
+    const values = Array.from(row.querySelectorAll('.view-value'))
+    const denseButton = row.querySelector(
+      '[data-view-episode-density="dense"]'
+    )
+
+    expect(values.map((value) => value.textContent)).toEqual([
+      'Roomy',
+      'Balanced',
+      'Dense',
+      'Full series'
+    ])
+    expect(
+      row.querySelector('[data-view-episode-density="balanced"]')
+        .getAttribute('aria-pressed')
+    ).toBe('true')
+
+    denseButton.click()
+    expect(getUiSettings().episodeDensity).toBe('dense')
+    expect(denseButton.getAttribute('aria-pressed')).toBe('true')
+    expect(
+      JSON.parse(window.localStorage.getItem('graphtv-ui-settings'))
+        .episodeDensity
+    ).toBe('dense')
+
+    row.focus()
+    row.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true })
+    )
+    expect(getUiSettings().episodeDensity).toBe('balanced')
+
+    row.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', bubbles: true }))
+    expect(getUiSettings().episodeDensity).toBe('dense')
   })
 
   it('supports spatial value editing and focused direct accelerators', () => {
@@ -131,7 +193,7 @@ describe('view options overlay', () => {
     const keycaps = Array.from(document.querySelectorAll('.view-option-hint'))
 
     expect(keycaps.map((keycap) => keycap.tagName)).toEqual(
-      Array(6).fill('KBD')
+      Array(7).fill('KBD')
     )
     expect(keycaps.every((keycap) => keycap.classList.contains('keycap'))).toBe(
       true
@@ -139,6 +201,7 @@ describe('view options overlay', () => {
     expect(keycaps.map((keycap) => keycap.textContent)).toEqual([
       't',
       'c',
+      'd',
       's',
       'f',
       'r',

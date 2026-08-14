@@ -1,4 +1,5 @@
 import {
+  EPISODE_DENSITIES,
   PALETTES,
   THEMES,
   getUiSettings,
@@ -12,6 +13,7 @@ import { resetAllAppData } from '../data/appData.js'
 
 const VIEW_OPTION_SHORTCUTS = {
   c: 'palette',
+  d: 'episode-density',
   f: 'full-show-trendline',
   r: 'source-spread',
   s: 'season-trendlines',
@@ -545,6 +547,10 @@ export function openViewOptionsOverlay(overlayController) {
       content.querySelector('.view-option-row')?.focus()
     },
     onKeyDown(event, { content }) {
+      if (event.target.closest?.('[data-view-option-info]')) {
+        return
+      }
+
       const rows = Array.from(content.querySelectorAll('.view-option-row'))
       const focusedRow = document.activeElement?.closest?.('.view-option-row')
       const currentIndex = rows.indexOf(focusedRow)
@@ -617,6 +623,13 @@ function renderViewOptionsContent() {
         </span>
         <kbd class="view-option-hint keycap">c</kbd>
       </div>
+      <div class="view-option-row" data-option="episode-density" tabindex="0">
+        <span class="view-option-label">Episode density</span>
+        <span class="view-option-values">
+          ${EPISODE_DENSITIES.map((density) => renderValueButton('episodeDensity', density, settings.episodeDensity === density)).join('')}
+        </span>
+        <kbd class="view-option-hint keycap">d</kbd>
+      </div>
       <div class="view-option-row" data-option="season-trendlines" tabindex="0">
         <span class="view-option-label">Season trendlines</span>
         <span class="view-option-values">
@@ -632,7 +645,10 @@ function renderViewOptionsContent() {
         <kbd class="view-option-hint keycap">f</kbd>
       </div>
       <div class="view-option-row" data-option="source-spread" tabindex="0">
-        <span class="view-option-label">Rating source spread</span>
+        ${renderViewOptionLabel(
+          'Rating source spread',
+          'When an episode has ratings from multiple sources, such as IMDb and TMDB, a vertical mark shows the range between their scores. Turn this off to show only the score used for the episode point.'
+        )}
         <span class="view-option-values">
           ${renderToggleButtons('showSourceSpread', settings.showSourceSpread)}
         </span>
@@ -650,6 +666,8 @@ function renderViewOptionsContent() {
 }
 
 function bindViewOptions(content) {
+  bindViewOptionInfo(content)
+
   content.querySelectorAll('[data-view-theme]').forEach((button) => {
     button.addEventListener('click', (event) => {
       event.stopPropagation()
@@ -662,6 +680,16 @@ function bindViewOptions(content) {
     button.addEventListener('click', (event) => {
       event.stopPropagation()
       updateUiSettings({ palette: button.dataset.viewPalette })
+      syncViewOptions(content)
+    })
+  })
+
+  content.querySelectorAll('[data-view-episode-density]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.stopPropagation()
+      updateUiSettings({
+        episodeDensity: button.dataset.viewEpisodeDensity
+      })
       syncViewOptions(content)
     })
   })
@@ -691,6 +719,12 @@ function syncViewOptions(content) {
       String(button.dataset.viewPalette === settings.palette)
     )
   })
+  content.querySelectorAll('[data-view-episode-density]').forEach((button) => {
+    button.setAttribute(
+      'aria-pressed',
+      String(button.dataset.viewEpisodeDensity === settings.episodeDensity)
+    )
+  })
   content.querySelectorAll('[data-view-toggle]').forEach((button) => {
     const key = button.dataset.viewToggle
     const value = button.dataset.viewToggleValue === 'true'
@@ -705,12 +739,114 @@ function renderValueButton(kind, value, isActive) {
   const dataAttribute =
     kind === 'theme'
       ? `data-view-theme="${value}"`
-      : `data-view-palette="${value}"`
-  const label =
-    value === 'monotone'
-      ? 'Mono'
-      : value.charAt(0).toUpperCase() + value.slice(1)
+      : kind === 'palette'
+        ? `data-view-palette="${value}"`
+        : `data-view-episode-density="${value}"`
+  const label = formatViewValueLabel(value)
   return `<button type="button" class="view-value" ${dataAttribute} aria-pressed="${String(isActive)}">${label}</button>`
+}
+
+function formatViewValueLabel(value) {
+  if (value === 'monotone') {
+    return 'Mono'
+  }
+  if (value === 'all') {
+    return 'Full series'
+  }
+  return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
+function renderViewOptionLabel(label, tooltip = null) {
+  if (!tooltip) {
+    return `<span class="view-option-label">${label}</span>`
+  }
+
+  const tooltipId = 'view-option-source-spread-info'
+  return `
+    <span class="view-option-label">
+      <span>${label}</span>
+      <span class="view-option-info-control">
+        <button type="button" class="view-option-info-button" data-view-option-info aria-label="Explain ${label.toLowerCase()}" aria-expanded="false" aria-controls="${tooltipId}" aria-describedby="${tooltipId}">ⓘ</button>
+        <span class="view-option-info-tooltip" id="${tooltipId}" role="tooltip" hidden>${tooltip}</span>
+      </span>
+    </span>
+  `
+}
+
+function bindViewOptionInfo(content) {
+  const controls = Array.from(
+    content.querySelectorAll('.view-option-info-control')
+  )
+
+  function sync(control) {
+    const expanded =
+      control.dataset.dismissed !== 'true' &&
+      ['hovered', 'focused', 'pinned'].some(
+        (state) => control.dataset[state] === 'true'
+      )
+    const button = control.querySelector('[data-view-option-info]')
+    button.setAttribute('aria-expanded', String(expanded))
+    control.querySelector('[role="tooltip"]').hidden = !expanded
+  }
+
+  function dismiss(control) {
+    control.dataset.hovered = 'false'
+    control.dataset.focused = 'false'
+    control.dataset.pinned = 'false'
+    control.dataset.dismissed = 'true'
+    sync(control)
+  }
+
+  controls.forEach((control) => {
+    const button = control.querySelector('[data-view-option-info]')
+
+    control.addEventListener('mouseenter', () => {
+      control.dataset.hovered = 'true'
+      control.dataset.dismissed = 'false'
+      sync(control)
+    })
+    control.addEventListener('mouseleave', () => {
+      control.dataset.hovered = 'false'
+      sync(control)
+    })
+    button.addEventListener('focus', () => {
+      control.dataset.focused = 'true'
+      control.dataset.dismissed = 'false'
+      sync(control)
+    })
+    button.addEventListener('blur', () => {
+      control.dataset.focused = 'false'
+      sync(control)
+    })
+    button.addEventListener('click', (event) => {
+      event.stopPropagation()
+      const pinned = control.dataset.pinned === 'true'
+      control.dataset.pinned = String(!pinned)
+      control.dataset.dismissed = String(pinned)
+      sync(control)
+    })
+    button.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') {
+        return
+      }
+
+      event.preventDefault()
+      event.stopPropagation()
+      dismiss(control)
+    })
+  })
+
+  content.addEventListener(
+    'click',
+    (event) => {
+      controls.forEach((control) => {
+        if (!control.contains(event.target)) {
+          dismiss(control)
+        }
+      })
+    },
+    true
+  )
 }
 
 function renderToggleButtons(settingKey, isEnabled) {
@@ -740,6 +876,17 @@ function activateViewOption(option) {
     return
   }
 
+  if (option === 'episode-density') {
+    updateUiSettings({
+      episodeDensity: stepValue(
+        EPISODE_DENSITIES,
+        getUiSettings().episodeDensity,
+        1
+      )
+    })
+    return
+  }
+
   const settingKey = VIEW_OPTION_SETTING_KEYS[option]
   if (settingKey) {
     toggleSetting(settingKey)
@@ -757,6 +904,17 @@ function setViewOptionDirection(option, direction) {
   if (option === 'palette') {
     updateUiSettings({
       palette: stepValue(PALETTES, settings.palette, direction)
+    })
+    return
+  }
+
+  if (option === 'episode-density') {
+    updateUiSettings({
+      episodeDensity: stepValue(
+        EPISODE_DENSITIES,
+        settings.episodeDensity,
+        direction
+      )
     })
     return
   }
