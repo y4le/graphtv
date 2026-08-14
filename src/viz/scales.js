@@ -14,6 +14,8 @@ import {
 const MIN_RATING = 0
 const MAX_RATING = 10
 const X_EDGE_INSET = 6
+const DEFAULT_VIEWPORT_SNAP_EPISODES = 3
+const DEFAULT_VIEWPORT_MIN_SPACING_RATIO = 0.85
 const VIEWPORT_DENSITY_CONFIG = {
   roomy: {
     desktop: { targetSpacing: 30, minimum: 12, maximum: 40 },
@@ -326,11 +328,46 @@ export function createDefaultViewport(
     deviceConfig.minimum,
     deviceConfig.maximum
   )
+  const defaultEnd = Math.min(model.xMax, episodeCount)
+  const snappedEnd = snapDefaultViewportEnd(
+    model,
+    defaultEnd,
+    availableWidth,
+    deviceConfig.targetSpacing
+  )
 
   return {
     start: 1,
-    end: Math.min(model.xMax, episodeCount)
+    end: snappedEnd
   }
+}
+
+function snapDefaultViewportEnd(
+  model,
+  defaultEnd,
+  availableWidth,
+  targetSpacing
+) {
+  const canSnapTo = (end) =>
+    end > defaultEnd &&
+    end - defaultEnd <= DEFAULT_VIEWPORT_SNAP_EPISODES &&
+    availableWidth / end >=
+      targetSpacing * DEFAULT_VIEWPORT_MIN_SPACING_RATIO
+
+  if (canSnapTo(model.xMax)) {
+    return model.xMax
+  }
+
+  const nearbySeasonEnd = (model.seasonSpans ?? [])
+    .map((season) => season.end)
+    .filter(
+      (end) =>
+        canSnapTo(end) &&
+        model.xMax - end > DEFAULT_VIEWPORT_SNAP_EPISODES
+    )
+    .sort((left, right) => left - right)[0]
+
+  return nearbySeasonEnd ?? defaultEnd
 }
 
 export function clampViewport(viewport, model) {

@@ -126,7 +126,7 @@ The panel shows the available options as a short list. Each option displays its 
 - **Direct keys:** An accelerator toggles its option and focuses the corresponding row, enabling quick modal sequences such as `v`, `y`, `v`.
 - **Key repeat:** Direct toggles ignore repeated keydown events so holding a key cannot toggle twice.
 - **Immediate feedback:** Changes apply instantly as the user toggles. No "apply" step.
-- **Episode density:** `Roomy`, `Balanced`, and `Dense` set progressively larger default episode windows; `Full series` fits every episode. Reset Zoom returns to the selected density.
+- **Episode density:** `Roomy`, `Balanced`, and `Dense` set progressively larger default episode windows; `Full series` fits every episode. A default window may expand by up to three episodes to finish a nearby season or avoid leaving a tiny remainder. Reset Zoom returns to the selected density; manual zoom remains exact.
 - **Inline explanations:** Options with less obvious visual effects include an info tooltip beside their label.
 - Changes persist to `localStorage`.
 

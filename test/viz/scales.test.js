@@ -341,6 +341,50 @@ describe('viewport clamping', () => {
     })
   })
 
+  it('absorbs a small trailing remainder when spacing remains comfortable', () => {
+    expect(
+      createDefaultViewport({ xMax: 62 }, 1200, false, 'balanced')
+    ).toEqual({ start: 1, end: 62 })
+    expect(
+      createDefaultViewport({ xMax: 64 }, 1200, false, 'balanced')
+    ).toEqual({ start: 1, end: 60 })
+    expect(
+      createDefaultViewport({ xMax: 15 }, 240, false, 'roomy')
+    ).toEqual({ start: 1, end: 12 })
+  })
+
+  it('extends a nearby default edge through the end of a season', () => {
+    const model = {
+      xMax: 100,
+      seasonSpans: [
+        { start: 1, end: 31 },
+        { start: 32, end: 62 },
+        { start: 63, end: 100 }
+      ]
+    }
+
+    expect(createDefaultViewport(model, 1200, false, 'balanced')).toEqual({
+      start: 1,
+      end: 62
+    })
+
+    expect(
+      createDefaultViewport(
+        {
+          xMax: 64,
+          seasonSpans: [
+            { start: 1, end: 31 },
+            { start: 32, end: 62 },
+            { start: 63, end: 64 }
+          ]
+        },
+        1200,
+        false,
+        'balanced'
+      )
+    ).toEqual({ start: 1, end: 60 })
+  })
+
   it('preserves fractional movement while keeping the viewport in bounds', () => {
     const model = { xMax: 72 }
 
