@@ -73,6 +73,9 @@ describe('view options overlay', () => {
     const themeRow = document.querySelector('[data-option="theme"]')
     const paletteRow = document.querySelector('[data-option="palette"]')
     const yAxisRow = document.querySelector('[data-option="absolute-y-axis"]')
+    const yAxisValues = Array.from(yAxisRow.querySelectorAll('.view-value'))
+
+    expect(yAxisValues.map((value) => value.textContent)).toEqual(['Off', 'On'])
 
     themeRow.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })
@@ -85,6 +88,20 @@ describe('view options overlay', () => {
     )
     expect(getUiSettings().palette).toBe('subtle')
 
+    yAxisRow.focus()
+    yAxisRow.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })
+    )
+    expect(getUiSettings().absoluteYAxis).toBe(true)
+    expect(yAxisValues[1].getAttribute('aria-pressed')).toBe('true')
+
+    yAxisRow.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'h', bubbles: true })
+    )
+    expect(getUiSettings().absoluteYAxis).toBe(false)
+    expect(yAxisValues[0].getAttribute('aria-pressed')).toBe('true')
+
+    paletteRow.focus()
     paletteRow.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'y', bubbles: true })
     )

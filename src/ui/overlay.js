@@ -715,8 +715,8 @@ function renderValueButton(kind, value, isActive) {
 
 function renderToggleButtons(settingKey, isEnabled) {
   return [
-    renderToggleButton(settingKey, true, isEnabled),
-    renderToggleButton(settingKey, false, !isEnabled)
+    renderToggleButton(settingKey, false, !isEnabled),
+    renderToggleButton(settingKey, true, isEnabled)
   ].join('')
 }
 
