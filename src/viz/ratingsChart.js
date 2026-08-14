@@ -35,6 +35,7 @@ const TREND_HOVER_DELAY_MS = 100
 const MAX_DETAIL_ERRORS = 25
 const TOUCH_DRAG_START_TOLERANCE_PX = 9
 const MIN_VIEWPORT_SPAN = 4
+const KEYBOARD_VIEWPORT_EDGE_RATIO = 0.1
 const VIEWPORT_ANNOUNCEMENT_DELAY_MS = 120
 const SELECTION_ANNOUNCEMENT_DELAY_MS = 120
 const SUPPRESS_CLICK_DURATION_MS = 350
@@ -592,6 +593,8 @@ export function createChart(container, seasons, options = {}) {
 
     if (usesScrollableBody()) {
       syncScrollableViewportToPoint(point, source === 'keyboard')
+    } else if (source === 'keyboard') {
+      followKeyboardSelection(point)
     } else if (point.x < viewport.start || point.x > viewport.end) {
       const width = viewport.end - viewport.start + 1
       const halfWidth = Math.floor(width / 2)
@@ -605,6 +608,32 @@ export function createChart(container, seasons, options = {}) {
     }
 
     render()
+  }
+
+  function followKeyboardSelection(point) {
+    const span = viewport.end - viewport.start
+    const edgeInset = span * KEYBOARD_VIEWPORT_EDGE_RATIO
+    const leftFollowEdge = viewport.start + edgeInset
+    const rightFollowEdge = viewport.end - edgeInset
+    let offset = 0
+
+    if (point.x < leftFollowEdge) {
+      offset = point.x - leftFollowEdge
+    } else if (point.x > rightFollowEdge) {
+      offset = point.x - rightFollowEdge
+    }
+
+    if (offset === 0) {
+      return
+    }
+
+    viewport = clampViewport(
+      {
+        start: viewport.start + offset,
+        end: viewport.end + offset
+      },
+      model
+    )
   }
 
   function setSelectedTrend(id) {

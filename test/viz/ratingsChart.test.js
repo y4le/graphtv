@@ -313,6 +313,46 @@ describe('createChart', () => {
     expect(chart.getDebugState().selectedPointId).toBe('episode-1')
   })
 
+  it('pans keyboard navigation once the selection enters the outer 10% of the viewport', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    const initialViewport = chart.getDebugState().viewport
+    const span = initialViewport.end - initialViewport.start
+    const rightFollowEdge = initialViewport.end - span * 0.1
+    const lastEpisodeBeforeFollow = Math.floor(rightFollowEdge)
+
+    chart.moveEpisode(1)
+    chart.moveEpisode(lastEpisodeBeforeFollow - 1)
+
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId: `episode-${lastEpisodeBeforeFollow}`,
+      viewport: initialViewport
+    })
+
+    chart.moveEpisode(1)
+
+    const followedViewport = chart.getDebugState().viewport
+    expect(followedViewport.start).toBeGreaterThan(initialViewport.start)
+    expect(followedViewport.end - followedViewport.start).toBeCloseTo(span)
+    expect(
+      (lastEpisodeBeforeFollow + 1 - followedViewport.start) / span
+    ).toBeCloseTo(0.9)
+
+    chart.moveEpisode(1)
+
+    const draggedViewport = chart.getDebugState().viewport
+    expect(draggedViewport.start - followedViewport.start).toBeCloseTo(1)
+    expect(
+      (lastEpisodeBeforeFollow + 2 - draggedViewport.start) / span
+    ).toBeCloseTo(0.9)
+  })
+
   it('wraps selected season trendlines through buttons and season shortcuts without entering the series trend', () => {
     const container = document.createElement('div')
     const detailRoot = document.createElement('section')
