@@ -19,6 +19,7 @@ export function buildChartModel(seasons) {
   const episodes = seasons.flatMap((season) => season.episodes)
   const primaryRating = selectPrimaryRatingSource(episodes)
   const points = []
+  const seasonSpans = []
   const seasonTrendlines = []
   const trendSummaries = {}
   const comparableSeasonSummaries = []
@@ -28,6 +29,7 @@ export function buildChartModel(seasons) {
 
   seasons.forEach((season, seasonIndex) => {
     const seasonPoints = []
+    const start = absoluteIndex
 
     season.episodes.forEach((episode) => {
       const resolvedRating = resolveEpisodeRating(
@@ -46,6 +48,17 @@ export function buildChartModel(seasons) {
       seasonPoints.push(point)
       absoluteIndex += 1
     })
+
+    if (seasonPoints.length > 0) {
+      const end = absoluteIndex - 1
+      seasonSpans.push({
+        seasonNumber: season.number,
+        seasonIndex,
+        start,
+        end,
+        midpoint: start + (end - start) / 2
+      })
+    }
 
     const ratedSeasonPoints = seasonPoints.filter(
       (point) => isUsableRating(point.rating) && !point.isFallbackRating
@@ -149,6 +162,7 @@ export function buildChartModel(seasons) {
     primaryRatingSource: primaryRating.source,
     ratingSourceCoverage: primaryRating.coverage,
     minimumPrimaryCoverage: primaryRating.minimumCoverage,
+    seasonSpans,
     seasonTrendlines,
     trendSummaries,
     seriesBreakpointCandidate,

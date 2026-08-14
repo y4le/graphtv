@@ -12,6 +12,42 @@ import {
 } from '../../src/viz/scales.js'
 
 describe('rating scale domains', () => {
+  it('tracks nonempty season spans for the bottom season axis', () => {
+    const model = buildChartModel([
+      {
+        number: 1,
+        episodes: [
+          createEpisode('one', [{ source: 'test', rating: 7 }]),
+          createEpisode('two', [{ source: 'test', rating: 7.1 }])
+        ]
+      },
+      { number: 2, episodes: [] },
+      {
+        number: 3,
+        episodes: [
+          createEpisode('three', [{ source: 'test', rating: 7.2 }])
+        ]
+      }
+    ])
+
+    expect(model.seasonSpans).toEqual([
+      {
+        seasonNumber: 1,
+        seasonIndex: 0,
+        start: 1,
+        end: 2,
+        midpoint: 1.5
+      },
+      {
+        seasonNumber: 3,
+        seasonIndex: 2,
+        start: 3,
+        end: 3,
+        midpoint: 3
+      }
+    ])
+  })
+
   it('excludes missing and zero ratings from primary selection and the y-axis domain', () => {
     const model = createModel()
     const scales = createMainScales(
