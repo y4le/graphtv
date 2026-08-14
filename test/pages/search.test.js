@@ -122,6 +122,9 @@ describe('renderSearchPage', () => {
     const landingContent = container.querySelector('.search-landing-content')
 
     expect(masthead.parentElement).toBe(shell)
+    expect(shell.querySelector('h1').textContent).toBe(
+      'Explore TV episode ratings'
+    )
     expect(landingContent.parentElement).toBe(shell)
     expect(landingContent.contains(masthead)).toBe(false)
     expect(landingContent.querySelector('.search-document')).not.toBeNull()

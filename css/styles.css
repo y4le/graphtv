@@ -3,7 +3,7 @@
   --canvas: #fdfcf8;
   --canvasSubtle: #f5f3ee;
   --textPrimary: #1a1a1a;
-  --textSecondary: #737373;
+  --textSecondary: #6f6f6f;
   --textMuted: #9a948a;
   --lineSoft: rgba(26, 26, 26, 0.12);
   --lineStrong: rgba(26, 26, 26, 0.24);
@@ -45,10 +45,10 @@
   --lineStrong: #403e39;
   --trendMacro: #56534d;
   --trendMicro: #777269;
-  --spotColor: #c1432e;
-  --spotColorMuted: #c1432e;
+  --spotColor: #d9644d;
+  --spotColorMuted: #d9644d;
   --seasonAccentMuted: #b38780;
-  --publisherAccent: #c1432e;
+  --publisherAccent: #d9644d;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -63,10 +63,10 @@
     --lineStrong: #403e39;
     --trendMacro: #56534d;
     --trendMicro: #777269;
-    --spotColor: #c1432e;
-    --spotColorMuted: #c1432e;
+    --spotColor: #d9644d;
+    --spotColorMuted: #d9644d;
     --seasonAccentMuted: #b38780;
-    --publisherAccent: #c1432e;
+    --publisherAccent: #d9644d;
   }
 }
 
@@ -822,7 +822,7 @@ button {
 }
 
 .rating-badge-votes {
-  color: var(--textMuted);
+  color: var(--textSecondary);
   white-space: nowrap;
 }
 

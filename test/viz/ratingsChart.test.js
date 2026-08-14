@@ -1679,7 +1679,146 @@ describe('createChart', () => {
     )
   })
 
-  it('responds continuously once a slow touch drag crosses the intent threshold', () => {
+  it('responds continuously and announces a completed slow touch drag', () => {
+    vi.useFakeTimers()
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query) => ({
+        matches: query === '(max-width: 767px)',
+        media: query,
+        addEventListener() {},
+        removeEventListener() {}
+      }))
+    )
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    const body = container.querySelector('.chart-body-shell')
+    Object.defineProperty(body, 'clientWidth', {
+      configurable: true,
+      value: 544
+    })
+    const initialViewport = chart.getDebugState().viewport
+    const performanceNow = vi
+      .spyOn(performance, 'now')
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(1000)
+      .mockReturnValue(1001)
+
+    dispatchTouchPointer(body, 'pointerdown', { pointerId: 1, clientX: 100 })
+    dispatchTouchPointer(body, 'pointermove', { pointerId: 1, clientX: 90 })
+
+    const nextViewport = chart.getDebugState().viewport
+    expect(nextViewport.start).toBeGreaterThan(initialViewport.start)
+    expect(nextViewport.start).toBeLessThan(initialViewport.start + 1)
+
+    dispatchTouchPointer(body, 'pointerup', { pointerId: 1, clientX: 90 })
+    vi.advanceTimersByTime(120)
+    expect(container.querySelector('.chart-viewport-status').textContent).toBe(
+      'Episodes 2–18 of 72'
+    )
+    performanceNow.mockRestore()
+  })
+
+  it('announces the final viewport after touch-fling inertia settles', () => {
+    vi.useFakeTimers()
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query) => ({
+        matches: query === '(max-width: 767px)',
+        media: query,
+        addEventListener() {},
+        removeEventListener() {}
+      }))
+    )
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    const body = container.querySelector('.chart-body-shell')
+    Object.defineProperty(body, 'clientWidth', {
+      configurable: true,
+      value: 544
+    })
+    const performanceNow = vi
+      .spyOn(performance, 'now')
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(20)
+      .mockReturnValue(21)
+
+    dispatchTouchPointer(body, 'pointerdown', { pointerId: 1, clientX: 300 })
+    dispatchTouchPointer(body, 'pointermove', { pointerId: 1, clientX: 100 })
+    dispatchTouchPointer(body, 'pointerup', { pointerId: 1, clientX: 100 })
+    vi.advanceTimersByTime(5000)
+
+    expect(chart.getDebugState().viewport.start).toBeCloseTo(55)
+    expect(chart.getDebugState().viewport.end).toBe(72)
+    expect(container.querySelector('.chart-viewport-status').textContent).toBe(
+      'Episodes 55–72 of 72'
+    )
+    performanceNow.mockRestore()
+  })
+
+  it('announces the arrested viewport when a tap stops touch-fling inertia', () => {
+    vi.useFakeTimers()
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query) => ({
+        matches: query === '(max-width: 767px)',
+        media: query,
+        addEventListener() {},
+        removeEventListener() {}
+      }))
+    )
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    const body = container.querySelector('.chart-body-shell')
+    Object.defineProperty(body, 'clientWidth', {
+      configurable: true,
+      value: 544
+    })
+    const performanceNow = vi
+      .spyOn(performance, 'now')
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(20)
+      .mockReturnValue(21)
+
+    dispatchTouchPointer(body, 'pointerdown', { pointerId: 1, clientX: 300 })
+    dispatchTouchPointer(body, 'pointermove', { pointerId: 1, clientX: 100 })
+    dispatchTouchPointer(body, 'pointerup', { pointerId: 1, clientX: 100 })
+    vi.advanceTimersByTime(32)
+
+    dispatchTouchPointer(body, 'pointerdown', { pointerId: 2, clientX: 100 })
+    dispatchTouchPointer(body, 'pointerup', { pointerId: 2, clientX: 100 })
+    const arrestedViewport = { ...chart.getDebugState().viewport }
+    vi.advanceTimersByTime(1000)
+
+    expect(chart.getDebugState().viewport).toEqual(arrestedViewport)
+    const start = Math.ceil(arrestedViewport.start - 1e-9)
+    const end = Math.floor(arrestedViewport.end + 1e-9)
+    expect(container.querySelector('.chart-viewport-status').textContent).toBe(
+      `Episodes ${start}–${end} of 72`
+    )
+    performanceNow.mockRestore()
+  })
+
+  it('announces a touch pinch after both pointers are released', () => {
+    vi.useFakeTimers()
     vi.stubGlobal(
       'matchMedia',
       vi.fn((query) => ({
@@ -1705,11 +1844,63 @@ describe('createChart', () => {
     const initialViewport = chart.getDebugState().viewport
 
     dispatchTouchPointer(body, 'pointerdown', { pointerId: 1, clientX: 100 })
-    dispatchTouchPointer(body, 'pointermove', { pointerId: 1, clientX: 90 })
+    dispatchTouchPointer(body, 'pointerdown', { pointerId: 2, clientX: 200 })
+    dispatchTouchPointer(body, 'pointermove', { pointerId: 2, clientX: 300 })
+    dispatchTouchPointer(body, 'pointerup', { pointerId: 2, clientX: 300 })
+    dispatchTouchPointer(body, 'pointerup', { pointerId: 1, clientX: 100 })
+    vi.advanceTimersByTime(120)
 
-    const nextViewport = chart.getDebugState().viewport
-    expect(nextViewport.start).toBeGreaterThan(initialViewport.start)
-    expect(nextViewport.start).toBeLessThan(initialViewport.start + 1)
+    const pinchedViewport = chart.getDebugState().viewport
+    expect(pinchedViewport.end - pinchedViewport.start).toBeLessThan(
+      initialViewport.end - initialViewport.start
+    )
+    expect(
+      container.querySelector('.chart-viewport-status').textContent
+    ).toMatch(/^Episodes \d+–\d+ of 72$/u)
+  })
+
+  it('suppresses the trailing click after a pan against a clamped edge', () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query) => ({
+        matches:
+          query === '(max-width: 767px)' || query === '(pointer: coarse)',
+        media: query,
+        addEventListener() {},
+        removeEventListener() {}
+      }))
+    )
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    chart.moveEpisode(1)
+    const selectedPointId = chart.getDebugState().selectedPointId
+    const initialViewport = chart.getDebugState().viewport
+    const body = container.querySelector('.chart-body-shell')
+    Object.defineProperty(body, 'clientWidth', {
+      configurable: true,
+      value: 544
+    })
+    const performanceNow = vi
+      .spyOn(performance, 'now')
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(1000)
+      .mockReturnValueOnce(1001)
+      .mockReturnValue(1002)
+
+    dispatchTouchPointer(body, 'pointerdown', { pointerId: 1, clientX: 100 })
+    dispatchTouchPointer(body, 'pointermove', { pointerId: 1, clientX: 110 })
+    dispatchTouchPointer(body, 'pointerup', { pointerId: 1, clientX: 110 })
+    body.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    expect(chart.getDebugState().viewport).toEqual(initialViewport)
+    expect(chart.getDebugState().selectedPointId).toBe(selectedPointId)
+    performanceNow.mockRestore()
   })
 
   it('suppresses a pan click without swallowing the next deliberate tap', () => {

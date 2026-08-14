@@ -153,14 +153,17 @@ describe('theme defaults', () => {
 })
 
 describe('theme accents', () => {
-  it.each(['light', 'dark'])(
+  it.each([
+    ['light', '#c1432e'],
+    ['dark', '#d9644d']
+  ])(
     'uses the single house accent in the %s theme',
-    (theme) => {
+    (theme, expectedAccent) => {
       updateUiSettings({ theme, palette: 'alternating' })
       const chartTheme = getChartTheme()
 
-      expect(chartTheme.spotColor).toBe('#c1432e')
-      expect(chartTheme.spotColorMuted).toBe('#c1432e')
+      expect(chartTheme.spotColor).toBe(expectedAccent)
+      expect(chartTheme.spotColorMuted).toBe(expectedAccent)
       expect(Object.values(chartTheme).join(' ')).not.toContain('var(--')
       expect(document.documentElement.dataset.theme).toBe(theme)
     }

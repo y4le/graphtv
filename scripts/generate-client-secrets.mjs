@@ -35,6 +35,10 @@ function buildSecrets(fileEnv) {
 }
 
 function getSecretValue(envKeys, fileEnv) {
+  if (process.env.GRAPHTV_DISABLE_CLIENT_SECRETS === '1') {
+    return ''
+  }
+
   for (const key of envKeys) {
     const value = process.env[key] ?? fileEnv[key]
     if (typeof value === 'string' && value.length > 0) {

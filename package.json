@@ -18,8 +18,10 @@
     "pretest": "npm run prepare:client-secrets",
     "test": "vitest run",
     "test:watch": "vitest",
+    "pretest:e2e": "GRAPHTV_DISABLE_CLIENT_SECRETS=1 npm run build",
+    "test:e2e": "playwright test",
     "prelint": "npm run prepare:client-secrets",
-    "lint": "eslint src test scripts eslint.config.js vite.config.js",
+    "lint": "eslint src test e2e scripts eslint.config.js vite.config.js playwright.config.js",
     "format:check": "prettier --check .",
     "format": "prettier --write .",
     "audit": "npm audit --audit-level=high",
@@ -37,6 +39,8 @@
     "d3": "^7.9.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.62.1",
     "eslint": "^9.39.5",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^26.1.0",

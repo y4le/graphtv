@@ -65,6 +65,7 @@ export function renderSearchPage(container) {
   container.innerHTML = `
     <main class="document-shell document-shell-search">
       ${renderSearchMasthead()}
+      <h1 class="visually-hidden">Explore TV episode ratings</h1>
       <div class="search-landing-content">
         <section class="search-document ${query ? '' : 'search-document-empty'}">
           <form class="search-form" role="search" aria-label="Search shows">

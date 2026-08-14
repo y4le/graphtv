@@ -36,6 +36,7 @@ const TOUCH_DRAG_START_TOLERANCE_PX = 9
 const MIN_VIEWPORT_SPAN = 4
 const VIEWPORT_FOLLOW_EDGE_RATIO = 0.1
 const VIEWPORT_ANNOUNCEMENT_DELAY_MS = 120
+const VIEWPORT_BOUNDARY_EPSILON = 1e-9
 const SELECTION_ANNOUNCEMENT_DELAY_MS = 120
 const SUPPRESS_CLICK_DURATION_MS = 350
 const WHEEL_DELTA_LINE = 1
@@ -1455,6 +1456,7 @@ export function createChart(container, seasons, options = {}) {
       velocity *= FLING_FRICTION
       if (Math.abs(velocity) < FLING_MIN_VELOCITY / pixelsPerEpisode) {
         flingFrame = null
+        announceViewport()
         return
       }
       const prev = viewport
@@ -1467,6 +1469,7 @@ export function createChart(container, seasons, options = {}) {
       )
       if (viewport.start === prev.start && viewport.end === prev.end) {
         flingFrame = null
+        announceViewport()
         return
       }
       render()
@@ -1496,7 +1499,8 @@ export function createChart(container, seasons, options = {}) {
         startViewport: { ...viewport },
         prevX: event.clientX,
         prevTime: performance.now(),
-        velocity: 0
+        velocity: 0,
+        viewportChanged: stoppedFling
       }
       return
     }
@@ -1511,7 +1515,8 @@ export function createChart(container, seasons, options = {}) {
         type: 'pinch',
         pointers: gesture.pointers,
         initialSpan: Math.max(Math.abs(xs[1] - xs[0]), 1),
-        startViewport: { ...viewport }
+        startViewport: { ...viewport },
+        viewportChanged: gesture.viewportChanged
       }
     }
   })
@@ -1537,6 +1542,7 @@ export function createChart(container, seasons, options = {}) {
       const startCenter = gesture.startViewport.start + (startWidth - 1) / 2
       const newWidth = Math.max(2, Math.round(startWidth * scale))
 
+      const previousViewport = viewport
       viewport = clampViewport(
         {
           start: startCenter - (newWidth - 1) / 2,
@@ -1544,6 +1550,9 @@ export function createChart(container, seasons, options = {}) {
         },
         model
       )
+      gesture.viewportChanged ||=
+        viewport.start !== previousViewport.start ||
+        viewport.end !== previousViewport.end
       render()
       return
     }
@@ -1576,6 +1585,7 @@ export function createChart(container, seasons, options = {}) {
     const pixelsPerEpisode = chartWidth / viewportWidth
     const deltaEpisodes = -deltaX / pixelsPerEpisode
 
+    const previousViewport = viewport
     viewport = clampViewport(
       {
         start: gesture.startViewport.start + deltaEpisodes,
@@ -1583,6 +1593,9 @@ export function createChart(container, seasons, options = {}) {
       },
       model
     )
+    gesture.viewportChanged ||=
+      viewport.start !== previousViewport.start ||
+      viewport.end !== previousViewport.end
     render()
   })
 
@@ -1600,13 +1613,18 @@ export function createChart(container, seasons, options = {}) {
     gesture.pointers.delete(event.pointerId)
 
     if (gesture.pointers.size === 0) {
-      if (gesture.type !== 'pending') {
+      const { viewportChanged } = gesture
+      const wasDrag = gesture.type !== 'pending'
+      if (wasDrag || viewportChanged) {
         suppressClickUntil = performance.now() + SUPPRESS_CLICK_DURATION_MS
       }
       gesture = null
 
-      if (wasPan && Math.abs(velocity) > 0.15) {
+      const shouldFling = wasPan && Math.abs(velocity) > 0.15
+      if (shouldFling) {
         startFling(velocity)
+      } else if (viewportChanged) {
+        announceViewport()
       }
       return
     }
@@ -1620,7 +1638,8 @@ export function createChart(container, seasons, options = {}) {
         startViewport: { ...viewport },
         prevX: x,
         prevTime: performance.now(),
-        velocity: 0
+        velocity: 0,
+        viewportChanged: gesture.viewportChanged
       }
       suppressClickUntil = performance.now() + SUPPRESS_CLICK_DURATION_MS
     }
@@ -1764,8 +1783,14 @@ function formatViewportAnnouncement(viewport, episodeCount) {
     return `Whole series, ${episodeCount} ${episodeCount === 1 ? 'episode' : 'episodes'}`
   }
 
-  const start = Math.max(1, Math.ceil(viewport.start))
-  const end = Math.min(episodeCount, Math.floor(viewport.end))
+  const start = Math.max(
+    1,
+    Math.ceil(viewport.start - VIEWPORT_BOUNDARY_EPSILON)
+  )
+  const end = Math.min(
+    episodeCount,
+    Math.floor(viewport.end + VIEWPORT_BOUNDARY_EPSILON)
+  )
   return `Episodes ${start}–${end} of ${episodeCount}`
 }
 

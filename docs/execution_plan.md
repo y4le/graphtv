@@ -21,6 +21,7 @@ Updated August 14, 2026. The redesign plan is complete; this document records th
 - `src/viz/`: chart model, marks, viewport behavior, themes, and sidenotes
 - `src/lib/`: small environment-independent helpers
 - `test/`: unit, integration, DOM, CSS-contract, and build-configuration coverage
+- `e2e/`: mocked browser journeys and automated accessibility coverage
 
 ## Deliberate constraints
 
@@ -36,10 +37,11 @@ Run before merging:
 
 ```bash
 npm run verify
+npm run test:e2e
 npm run audit
 ```
 
-`verify` covers linting, unit/integration and DOM tests, formatting, the production build, and bundle budgets. The audit remains separate because the advisory service is network-backed.
+`verify` covers linting, unit/integration and DOM tests, formatting, the production build, and bundle budgets. Browser tests cover the search-to-results journey, keyboard/modal behavior, mobile touch interaction, and an automated accessibility scan. The audit remains separate because the advisory service is network-backed.
 
 For chart-model performance measurements:
 

@@ -36,11 +36,17 @@ used by CI:
 
 ```bash
 npm run verify
+npm run test:e2e
 ```
 
 `npm run audit` performs the network-backed full dependency audit used by CI.
 It is separate from `verify` so local validation and production deployment do
 not become unavailable when the advisory service is unreachable.
+
+`test:e2e` builds the app and runs the mocked TVmaze search-to-results journey,
+keyboard/modal checks, mobile touch interaction, and an automated accessibility
+scan in Chromium. Install the local browser once with
+`npx playwright install chromium`; CI installs Chromium automatically.
 
 The production asset budget defaults to 90,000 gzip bytes total and 75,000
 gzip bytes for the entry JavaScript chunk. Set `MAX_TOTAL_GZIP_BYTES` or
