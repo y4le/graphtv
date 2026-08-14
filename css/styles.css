@@ -1440,8 +1440,13 @@ button {
   }
 
   .trend-info-button {
-    width: 2.75rem;
-    min-height: 2.75rem;
+    position: relative;
+  }
+
+  .trend-info-button::before {
+    position: absolute;
+    inset: -0.7rem;
+    content: '';
   }
 
   .trend-summary-breakpoint-button {
