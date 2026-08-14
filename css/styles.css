@@ -1110,10 +1110,10 @@ button {
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--textPrimary);
+  color: var(--spotColor);
   font: inherit;
   text-decoration: underline;
-  text-decoration-color: var(--lineStrong);
+  text-decoration-color: currentColor;
   text-underline-offset: 0.15em;
   cursor: pointer;
 }
