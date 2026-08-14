@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   detectSeriesBreakpoint,
   getRatingSpread,
+  isUsableProviderRating,
   linearRegression,
   linearRegressionFromPoints,
   resolveEpisodeRating,
@@ -13,6 +14,21 @@ import {
 } from '../../src/data/stats.js'
 
 describe('data/stats', () => {
+  it('requires at least five TMDB votes for a usable rating', () => {
+    expect(
+      isUsableProviderRating({ source: 'tmdb', rating: 1, votes: 2 })
+    ).toBe(false)
+    expect(
+      isUsableProviderRating({ source: 'tmdb', rating: 8, votes: 4 })
+    ).toBe(false)
+    expect(
+      isUsableProviderRating({ source: 'tmdb', rating: 8, votes: 5 })
+    ).toBe(true)
+    expect(
+      isUsableProviderRating({ source: 'tvmaze', rating: 8, votes: null })
+    ).toBe(true)
+  })
+
   it('computes a standard linear regression', () => {
     expect(linearRegression([7, 8, 9])).toEqual({
       slope: 1,
@@ -291,7 +307,7 @@ describe('data/stats', () => {
   it('selects IMDb when it covers at least 60% of rateable episodes', () => {
     const episodes = Array.from({ length: 5 }, (_, index) => ({
       ratings: [
-        { source: 'tmdb', rating: 8 + index / 10 },
+        { source: 'tmdb', rating: 8 + index / 10, votes: 5 },
         ...(index < 3 ? [{ source: 'omdb', rating: 8.5 + index / 10 }] : [])
       ]
     }))
@@ -318,7 +334,7 @@ describe('data/stats', () => {
     const episodes = [
       { ratings: [{ source: 'omdb', rating: 8.1 }] },
       { ratings: [{ source: 'omdb', rating: 8.2 }] },
-      { ratings: [{ source: 'tmdb', rating: 8.3 }] },
+      { ratings: [{ source: 'tmdb', rating: 8.3, votes: 5 }] },
       { ratings: [{ source: 'omdb', rating: null }] },
       { ratings: [] }
     ]
@@ -355,7 +371,7 @@ describe('data/stats', () => {
         confidence: 'moderate'
       }
     }
-    const tmdbRating = { source: 'tmdb', rating: 8.2 }
+    const tmdbRating = { source: 'tmdb', rating: 8.2, votes: 5 }
 
     expect(
       selectPrimaryRatingSource([{ ratings: [weakOmdbRating, tmdbRating] }])
@@ -368,7 +384,7 @@ describe('data/stats', () => {
     expect(
       getRatingSpread([
         { source: 'tvmaze', rating: 8.1 },
-        { source: 'tmdb', rating: 8.4 },
+        { source: 'tmdb', rating: 8.4, votes: 5 },
         { source: 'omdb', rating: 8.7 }
       ])
     ).toEqual({

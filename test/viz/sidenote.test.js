@@ -152,6 +152,24 @@ describe('createSidenote', () => {
     ])
   })
 
+  it('does not present a TMDB rating below the vote minimum as usable', () => {
+    const root = document.createElement('section')
+    const sidenote = createSidenote({ root })
+
+    sidenote.renderPoint({
+      title: 'Low-vote episode',
+      season: 4,
+      episode: 4,
+      rating: null,
+      ratingSource: null,
+      ratings: [{ source: 'tmdb', rating: 1, votes: 2 }]
+    })
+
+    expect(root.querySelector('.sidenote-ratings').textContent).toBe(
+      'TMDB n/a (2 votes)'
+    )
+  })
+
   it('shows a vote-count placeholder while IMDb details load', () => {
     const root = document.createElement('section')
     const sidenote = createSidenote({ root })

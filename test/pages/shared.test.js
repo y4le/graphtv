@@ -29,6 +29,13 @@ describe('formatRatingBadge', () => {
     expect(root.querySelector('.rating-badge-votes').textContent).toBe('')
   })
 
+  it('renders a TMDB rating below the vote minimum as unavailable', () => {
+    const root = renderBadge({ source: 'tmdb', rating: 1, votes: 2 })
+
+    expect(root.querySelector('.rating-badge-value').textContent).toBe('n/a')
+    expect(root.querySelector('.rating-badge-votes').textContent).toBe('')
+  })
+
   it('labels IMDb ratings and condenses large vote counts', () => {
     const millions = renderBadge({
       source: 'omdb',

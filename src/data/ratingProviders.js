@@ -2,6 +2,7 @@ const DEFAULT_RATING_PROVIDER = Object.freeze({
   label: null,
   order: Number.MAX_SAFE_INTEGER,
   showInRatings: true,
+  minimumVotes: 0,
   links: null
 })
 
@@ -83,6 +84,7 @@ export const RATING_PROVIDER_REGISTRY = Object.freeze(
       label: 'TMDB',
       order: 2,
       showInRatings: true,
+      minimumVotes: 5,
       links: TMDB_LINKS
     }
   ].map(Object.freeze)
@@ -112,6 +114,10 @@ export function getRatingProvider(source) {
 
 export function getRatingSourceLabel(source) {
   return getRatingProvider(source).label
+}
+
+export function getRatingMinimumVotes(source) {
+  return getRatingProvider(source).minimumVotes ?? 0
 }
 
 export function getRatingSourceUrl(

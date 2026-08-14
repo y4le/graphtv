@@ -12,6 +12,25 @@ import {
 } from '../../src/viz/scales.js'
 
 describe('rating scale domains', () => {
+  it('excludes TMDB episode ratings below five votes', () => {
+    const model = buildChartModel([
+      {
+        number: 4,
+        episodes: [
+          createEpisode('low-vote', [
+            { source: 'tmdb', rating: 1, votes: 2 }
+          ]),
+          createEpisode('eligible', [
+            { source: 'tmdb', rating: 8, votes: 5 }
+          ])
+        ]
+      }
+    ])
+
+    expect(model.points.map((point) => point.rating)).toEqual([null, 8])
+    expect(model.ratedPoints.map((point) => point.id)).toEqual(['eligible'])
+  })
+
   it('tracks nonempty season spans for the bottom season axis', () => {
     const model = buildChartModel([
       {
@@ -422,7 +441,11 @@ function createEpisode(id, ratings) {
     title: id,
     season: 1,
     episode: 1,
-    ratings
+    ratings: ratings.map((rating) =>
+      rating.source === 'tmdb' && rating.votes === undefined
+        ? { ...rating, votes: 5 }
+        : rating
+    )
   }
 }
 

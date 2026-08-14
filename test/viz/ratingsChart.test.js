@@ -778,7 +778,11 @@ describe('createChart', () => {
     })
     document.body.appendChild(container)
     const seasons = createSeasons()
-    seasons[0].episodes[0].ratings.push({ source: 'tmdb', rating: 1 })
+    seasons[0].episodes[0].ratings.push({
+      source: 'tmdb',
+      rating: 1,
+      votes: 5
+    })
 
     chart = createChart(container, seasons)
 
@@ -1910,7 +1914,11 @@ function createRatedEpisode(id, ratings) {
     title: id,
     season: 1,
     episode: Number.NaN,
-    ratings
+    ratings: ratings.map((rating) =>
+      rating.source === 'tmdb' && rating.votes === undefined
+        ? { ...rating, votes: 5 }
+        : rating
+    )
   }
 }
 

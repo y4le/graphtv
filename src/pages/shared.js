@@ -1,4 +1,4 @@
-import { isUsableRating } from '../data/stats.js'
+import { isUsableProviderRating } from '../data/stats.js'
 import {
   getRatingSourceLabel,
   getRatingSourceUrl
@@ -32,7 +32,7 @@ export function formatRatingBadge(rating, { show = null } = {}) {
     ? `<a class="rating-badge-source rating-source-link" href="${escapeHtml(sourceUrl)}">${label}</a>`
     : `<span class="rating-badge-source">${label}</span>`
 
-  if (!isUsableRating(rating.rating)) {
+  if (!isUsableProviderRating(rating)) {
     return renderRatingBadgeColumns(source, 'n/a', '')
   }
 

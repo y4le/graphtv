@@ -3,7 +3,10 @@ import {
   getRatingSourceUrl,
   orderVisibleRatings
 } from '../data/ratingProviders.js'
-import { isTrustedRating, isUsableRating } from '../data/stats.js'
+import {
+  isTrustedRating,
+  isUsableProviderRating
+} from '../data/stats.js'
 import { formatCompactNumber } from '../lib/number.js'
 
 let trendInfoSequence = 0
@@ -67,7 +70,7 @@ function formatRatingList(point, { loadingDetails = false, show = null } = {}) {
         episode: point,
         className: 'sidenote-rating-source'
       })
-      const value = isUsableRating(rating.rating)
+      const value = isUsableProviderRating(rating)
         ? `${
             isPrimary
               ? `<span class="sidenote-rating-primary-value">${rating.rating.toFixed(1)}</span>`

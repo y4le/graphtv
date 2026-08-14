@@ -1,5 +1,6 @@
 import {
   RATING_SOURCE_PRIORITY,
+  getRatingMinimumVotes,
   getRatingSourceLabel
 } from './ratingProviders.js'
 
@@ -657,7 +658,14 @@ export function isTrustedRating(rating) {
 }
 
 export function isUsableProviderRating(rating) {
-  return isTrustedRating(rating) && isUsableRating(rating?.rating)
+  const minimumVotes = getRatingMinimumVotes(rating?.source)
+
+  return (
+    isTrustedRating(rating) &&
+    isUsableRating(rating?.rating) &&
+    (minimumVotes === 0 ||
+      (Number.isFinite(rating?.votes) && rating.votes >= minimumVotes))
+  )
 }
 
 export function selectPrimaryRatingSource(
