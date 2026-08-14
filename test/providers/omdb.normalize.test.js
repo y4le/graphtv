@@ -60,7 +60,6 @@ describe('omdb normalization', () => {
               source: 'omdb',
               rating: 8.7,
               votes: 6512,
-              ratingStatus: 'rated',
               votesStatus: 'loaded'
             }
           ],
@@ -79,7 +78,6 @@ describe('omdb normalization', () => {
               source: 'omdb',
               rating: 8.5,
               votes: 6101,
-              ratingStatus: 'rated',
               votesStatus: 'loaded'
             }
           ],
@@ -98,7 +96,6 @@ describe('omdb normalization', () => {
               source: 'omdb',
               rating: 8.8,
               votes: 6031,
-              ratingStatus: 'rated',
               votesStatus: 'loaded'
             }
           ],
@@ -136,7 +133,6 @@ describe('omdb normalization', () => {
         source: 'omdb',
         rating: null,
         votes: null,
-        ratingStatus: 'unrated',
         votesStatus: 'unavailable'
       }
     ])

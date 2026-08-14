@@ -20,9 +20,44 @@ beforeEach(() => {
 
 afterEach(() => {
   document.body.replaceChildren()
+  document.body.removeAttribute('style')
 })
 
 describe('view options overlay', () => {
+  it('makes the background inert and locks scrolling until close', () => {
+    document.body.innerHTML = `
+      <main id="app"><button type="button">Open</button></main>
+    `
+    document.body.style.overflow = 'clip'
+    const app = document.querySelector('#app')
+    const origin = app.querySelector('button')
+    origin.focus()
+    const overlayController = createOverlayController()
+
+    overlayController.open({ id: 'test', title: 'Test', content: 'content' })
+
+    expect(app.hasAttribute('inert')).toBe(true)
+    expect(document.body.style.overflow).toBe('hidden')
+
+    overlayController.close()
+
+    expect(app.hasAttribute('inert')).toBe(false)
+    expect(document.body.style.overflow).toBe('clip')
+    expect(document.activeElement).toBe(origin)
+  })
+
+  it('preserves a pre-existing inert background when destroyed', () => {
+    document.body.innerHTML = '<main id="app" inert></main>'
+    const app = document.querySelector('#app')
+    const overlayController = createOverlayController()
+    overlayController.open({ id: 'test', title: 'Test', content: 'content' })
+
+    overlayController.destroy()
+
+    expect(app.hasAttribute('inert')).toBe(true)
+    expect(document.body.style.overflow).toBe('')
+  })
+
   it('destroys its root and runs active overlay cleanup once', () => {
     const overlayController = createOverlayController()
     const onClose = vi.fn()

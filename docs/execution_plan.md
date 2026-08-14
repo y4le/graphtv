@@ -1,185 +1,50 @@
-# GraphTV Execution Plan
+# GraphTV Architecture Status
 
-Updated March 12, 2026. This plan now contains only the remaining redesign work.
+Updated August 14, 2026. The redesign plan is complete; this document records the implemented architecture and the checks that protect it.
 
-## Already complete
+## Product architecture
 
-These items are implemented and are no longer open work:
+- Vite builds a static, client-side application with D3 used only for visualization primitives.
+- Provider transports normalize TVmaze, TMDB, and OMDb responses into one schema. Cross-provider alignment is conservative and provenance-aware.
+- Results load as a stream: the primary provider renders first and configured supplemental providers update the same chart model as they settle.
+- Provider work is bounded, abortable, cached, and cancelled when its stream ends or its caller aborts.
+- One responsive SVG chart uses a shared viewport model on desktop and mobile. The sparkline, chart navigation, pointer gestures, and keyboard commands all update that model; the abandoned separate scrolling renderer was removed.
+- Theme state is owned by `src/viz/theme.js`. CSS owns token resolution while chart code reads computed colors only when SVG attributes require literal values.
+- One document-level keyboard controller routes normal, insert, and overlay modes. Overlay behavior, focus trapping, and focus restoration are centralized.
 
-- bundled Vite app scaffold with linting, tests, and bundle-size reporting
-- provider/data layer rewrite
-- Tufte-inspired search page
-- tokenized light/dark theme system and season palettes
-- results-page two-column composition
-- sparkline + viewport-based chart architecture
-- range-frame Y-axis, integrated bottom season axis, and macro/micro trendlines
-- desktop sidenote and mobile inline detail replacing tooltip-first behavior
+## Repository boundaries
 
-## Remaining work
+- `src/data/`: normalized models, merging, alignment, caches, and provider orchestration
+- `src/providers/`: provider-specific transport and normalization
+- `src/pages/`: search/results page composition and page lifecycle
+- `src/ui/`: reusable overlays, carousels, keyboard routing, and supporting UI
+- `src/viz/`: chart model, marks, viewport behavior, themes, and sidenotes
+- `src/lib/`: small environment-independent helpers
+- `test/`: unit, integration, DOM, CSS-contract, and build-configuration coverage
 
-The redesign is not complete yet. The remaining gaps are:
+## Deliberate constraints
 
-- full keyboard system from `docs/keyboard.md`
-- view options panel as an overlay instead of always-visible masthead controls
-- help overlay and keyboard-operable debug overlay behavior
-- overlay focus trapping, restoration, and close behavior
-- mobile sticky-axis plus real horizontally scrollable chart-body fallback
-- removal of the chart background fill so the chart fully sits on the page canvas
-- reduced-motion handling for chart/overlay transitions
-- focus indicators and keyboard polish across results and chart interactions
-- opportunistic debug improvements for viewport/selection/theme state
-- cleanup of dead CSS and old presentation leftovers
+- Production has no test database or mock-data runtime path. Fixtures live under `test/` only.
+- GitHub Pages is a static deployment. TMDB and OMDb credentials configured for a build are recoverable by browser users; encoding prevents accidental source-control disclosure, not extraction. A server-side proxy is required if those credentials ever need to be secret.
+- TVmaze remains the keyless baseline, so the application works without build credentials.
+- Source maps are not published in production builds.
+- Malformed or ambiguous provider data is omitted instead of guessed into a chart.
 
-## Commit slices
+## Validation
 
-Use focused commits. The remaining work should land roughly in these slices:
+Run before merging:
 
-1. keyboard infrastructure and mode system
-2. results/search keyboard navigation and chart keyboard routing
-3. help overlay, view options overlay, and overlay focus trapping
-4. mobile chart-body scrolling and sticky-axis fallback
-5. visual polish, reduced motion, debug improvements, and cleanup
+```bash
+npm run verify
+npm run audit
+```
 
-If one slice grows too large, split it.
+`verify` covers linting, unit/integration and DOM tests, formatting, the production build, and bundle budgets. The audit remains separate because the advisory service is network-backed.
 
-## Phase 1: Keyboard Infrastructure
+For chart-model performance measurements:
 
-**Goal:** build the shared keyboard system and mode model from `docs/keyboard.md`.
+```bash
+npm run bench:chart-model
+```
 
-### Tasks
-
-- Add a centralized `keydown` listener
-- Implement mode detection:
-  - normal
-  - insert
-  - overlay
-- Implement native-control suppression so page-level single-letter shortcuts do not fire while focus is inside:
-  - links
-  - buttons
-  - selects
-  - summaries
-  - editable fields
-  - trapped overlays
-- Implement data-driven chord handling for `gg`
-- Ensure unhandled keys fall through to browser defaults
-
-### Exit criteria
-
-- one keyboard dispatch path exists for the app
-- `gg` chord handling works without delaying non-chord keys
-- native interactive controls do not get hijacked by page-level shortcuts
-
-## Phase 2: Search And Results Keyboard Navigation
-
-**Goal:** implement keyboard navigation on real page surfaces.
-
-### Tasks
-
-- Search page:
-  - `j`/`k` and `ArrowUp`/`ArrowDown` move through results
-  - `l`/`Enter` opens the active result
-  - `gg`/`G` and `Home`/`End` jump to first/last result
-  - navigation clamps at the list ends
-- Results page:
-  - normal-mode navigation routes directly to chart state
-  - `h`/`l` or `ArrowLeft`/`ArrowRight` move by episode
-  - `j`/`k` or `ArrowUp`/`ArrowDown` move by season
-  - `gg`/`G` and `Home`/`End` jump to the first/last episode
-  - viewport auto-follows keyboard navigation
-- Global commands:
-  - `/` focuses search
-  - `q` returns to search from results
-  - `D` toggles debug
-  - `?` and `F1` open help
-
-### Exit criteria
-
-- mouse-equivalent navigation exists on both pages
-- results-page keyboard navigation works without tabbing into the chart
-- viewport follows keyboard movement predictably
-
-## Phase 3: Overlay System
-
-**Goal:** implement the remaining overlay-based UI instead of inline controls.
-
-### Tasks
-
-- Replace always-visible masthead theme/palette controls with a view options overlay
-- Build the help overlay
-- Update debug presentation so it behaves as an overlay in keyboard mode
-- For all overlays:
-  - trap focus
-  - restore focus on close
-  - close on `Escape`, `q`, toggle key, or outside click
-  - support `j`/`k` and arrow-key internal navigation where applicable
-- View options overlay:
-  - theme toggle
-  - palette cycling/selection
-  - direct click support
-  - instant persistence to `localStorage`
-
-### Exit criteria
-
-- help, view options, and debug all behave like coherent overlays
-- overlays are fully keyboard operable
-- inline masthead controls are gone
-
-## Phase 4: Mobile Chart Fallback
-
-**Goal:** finish the mobile chart behavior described in the redesign.
-
-### Tasks
-
-- Implement a real horizontally scrollable chart-body fallback on mobile
-- Keep the Y-axis visually sticky and aligned with the body
-- Sync body scrolling with viewport state and sparkline state
-- Avoid circular update loops between:
-  - body scroll
-  - viewport updates
-  - sparkline brush updates
-- Add any subtle overflow affordance needed to show there is more chart off-screen
-
-### Exit criteria
-
-- mobile chart-body scrolling actually works
-- Y-axis remains aligned and fixed
-- sparkline and body scroll stay in sync
-
-## Phase 5: Visual And Interaction Polish
-
-**Goal:** finish the remaining redesign and cleanup items.
-
-### Tasks
-
-- Remove the chart background fill so the chart truly floats on the page canvas
-- Add reduced-motion handling for chart/overlay transitions
-- Improve focus indicators in both themes
-- Improve debug mode opportunistically with:
-  - current theme/palette
-  - viewport extent
-  - selected episode
-  - mismatch summaries
-- Remove dead CSS and stale presentation classes left from pre-redesign structure
-- Verify naming and module boundaries still match the redesign architecture
-
-### Exit criteria
-
-- no obvious visual remnants of the old presentation remain
-- motion respects `prefers-reduced-motion`
-- focus state is visible and intentional in both themes
-- debug mode helps inspect the new chart state
-
-## Validation Checklist
-
-Before considering the redesign done:
-
-1. `npm run verify` passes
-2. the independent `npm run audit` security check passes
-3. the bundle stays below the enforced 90,000-byte total and 75,000-byte
-   entry-JavaScript gzip budgets
-4. every interactive element is keyboard navigable with both vim and conventional keys
-5. help, view options, and debug overlays all open, navigate, and close by keyboard
-6. mobile chart-body scrolling and sticky-axis fallback work coherently
-7. the chart sits on the page canvas without a boxed background
-8. reduced-motion behavior is respected
-9. the codebase is cleaner after the polish pass, not just more featureful
+The benchmark compares a full breakpoint analysis with the common supplemental-provider update where primary rating inputs are unchanged.

@@ -448,9 +448,3 @@ export function createCacheStore(options = {}) {
     }
   }
 }
-
-export const CACHE_STORE_LIMITS = Object.freeze({
-  maxEntries: DEFAULT_MAX_ENTRIES,
-  maxBytes: DEFAULT_MAX_BYTES,
-  maxSearchEntries: DEFAULT_MAX_SEARCH_ENTRIES
-})

@@ -53,7 +53,6 @@ function createEpisode() {
         source: 'omdb',
         rating: null,
         votes: null,
-        ratingStatus: 'unrated',
         votesStatus: 'unknown',
         provenance: { confidence: 'strong' }
       }

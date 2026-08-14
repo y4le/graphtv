@@ -76,7 +76,6 @@ export function normalizeOmdbSeason(season) {
         episode: Number(episode.Episode),
         date: parseOmdbReleased(episode.Released),
         ratings: createRatings('omdb', episode.imdbRating, episode.imdbVotes, {
-          ratingStatus: episode.imdbRating === 'N/A' ? 'unrated' : 'rated',
           votesStatus:
             episode.imdbVotes === 'N/A'
               ? 'unavailable'

@@ -2,7 +2,16 @@ import { EventEmitter } from 'node:events'
 
 import { describe, expect, it, vi } from 'vitest'
 
-import { restoreTailnetPath, restoreTailnetRequestUrl } from '../vite.config.js'
+import viteConfig, {
+  restoreTailnetPath,
+  restoreTailnetRequestUrl
+} from '../vite.config.js'
+
+describe('production build', () => {
+  it('does not publish source maps with production assets', () => {
+    expect(viteConfig.build.sourcemap).toBe(false)
+  })
+})
 
 describe('restoreTailnetRequestUrl', () => {
   it('restores the public base after a path-scoped proxy strips it', () => {

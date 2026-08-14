@@ -41,7 +41,7 @@ export default defineConfig({
   plugins: tailnetPath ? [restoreTailnetPath(tailnetPath)] : [],
   build: {
     target: 'es2022',
-    sourcemap: true
+    sourcemap: false
   },
   test: {
     environment: 'jsdom',

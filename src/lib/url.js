@@ -8,12 +8,6 @@ export function buildUrl(params) {
   return url.toString()
 }
 
-export function navigateWithParams(updater) {
-  const params = getUrlParams()
-  updater(params)
-  window.location.href = buildUrl(params)
-}
-
 export function preserveDebugParams(targetParams) {
   const currentParams = getUrlParams()
 

@@ -1,91 +1,36 @@
-# GraphTV Remaining Redesign Spec
+# GraphTV Redesign Record
 
-This document now contains only the redesign items that are still incomplete. Completed foundation work has been removed.
+Updated August 14, 2026. This is a record of the redesign decisions now represented in the application, not a backlog.
 
-## Completed
+## Implemented experience
 
-These redesign goals are already implemented:
+- Tufte-inspired search and results pages with light, dark, and system themes
+- season palettes and configurable episode density
+- a two-column desktop composition with responsive mobile layout
+- one viewport-driven ratings chart with integrated season axis, range-frame Y-axis, full-show and season trendlines, source-spread marks, and breakpoint analysis
+- a sparkline minimap that stays synchronized with chart navigation
+- desktop sidenotes and mobile inline episode detail
+- centralized keyboard navigation documented in [keyboard.md](keyboard.md)
+- help, credits, debug, and view-options dialogs with focus trapping, restoration, outside-click closing, and reduced-motion behavior
+- explicit focus styles in both themes
 
-- Tufte-inspired search page and results-page visual language
-- light and dark themes
-- season palettes: monotone, alternating, rainbow, zigzag, maximin
-- system-font typography
-- desktop two-column results composition
-- sparkline minimap + viewport-based main chart
-- range-frame Y-axis
-- integrated bottom season axis with responsive labels
-- macro and micro trendlines
-- desktop sidenote and mobile inline detail replacing floating tooltips
+## Decisions that superseded the original plan
 
-## Remaining redesign work
+The early redesign proposed a second mobile renderer with a sticky Y-axis and a horizontally scrolling chart body. That path was never reachable in the finished UI and duplicated viewport, selection, and synchronization logic. It has been removed. Mobile now uses the same bounded viewport model as desktop, with touch/pointer panning and the sparkline as the overview control.
 
-## 1. Keyboard Navigation
+The original draft used `v` for view options. The shipped keyboard system uses `o`, matching the visible “Options (o)” controls and [keyboard reference](keyboard.md).
 
-Keyboard behavior is specified in [docs/keyboard.md](/Users/yale/dev/graphtv/docs/keyboard.md). The remaining redesign requirement is to implement that spec fully.
+Theme and palette values are CSS-owned. JavaScript owns persisted settings and state transitions; it reads resolved CSS colors only for SVG attributes that cannot reliably consume CSS custom-property expressions.
 
-Required outcomes:
+## Design invariants
 
-- results-page normal-mode navigation targets chart state directly
-- vim and conventional keybindings both work
-- page-level shortcuts suspend while focus is inside native interactive controls
-- `gg` chord handling works without delaying non-chord keys
-- search results are keyboard navigable with clamped list boundaries
-- viewport auto-follows keyboard navigation on the chart
+1. The primary-provider result becomes useful before supplemental providers finish.
+2. A chart update preserves selection and viewport when the underlying episode identity remains valid.
+3. Wrong cross-provider data is worse than missing data.
+4. Keyboard, pointer, and touch input operate on the same chart state.
+5. Overlays isolate background interaction and restore the user’s prior focus.
+6. Motion is optional; meaning never depends on animation.
+7. Mobile and desktop share model and rendering code unless a measured constraint proves they cannot.
+8. Debug surfaces expose diagnostics without becoming part of the primary product surface.
 
-## 2. View Options Overlay
-
-Theme and palette controls should no longer live as always-visible masthead controls. The remaining design is an overlay opened by `v`.
-
-Required outcomes:
-
-- compact view options overlay
-- theme, palette, and episode-density selection inside the overlay
-- direct click support
-- keyboard navigation inside the overlay
-- instant application and persistence to `localStorage`
-
-## 3. Help And Debug Overlay Behavior
-
-The help overlay and debug surface still need to match the overlay model.
-
-Required outcomes:
-
-- `?` and `F1` open a context-sensitive help overlay
-- debug is keyboard-operable and behaves coherently with the overlay system
-- overlays trap focus
-- overlays restore focus on close
-- overlays close on `Escape`, `q`, toggle key, or outside click
-
-## 4. Mobile Sticky-Axis Fallback
-
-The mobile chart still needs the true sticky-axis plus horizontally scrollable body fallback described in the original redesign.
-
-Required outcomes:
-
-- fixed Y-axis container
-- separate horizontally scrollable chart body
-- body scrolling synced with viewport state
-- body scrolling synced with sparkline state
-- no circular update loops
-- subtle overflow cue if needed
-
-## 5. Final Visual Polish
-
-The remaining visual details are small but real.
-
-Required outcomes:
-
-- remove the chart background fill so the chart sits directly on the page canvas
-- add reduced-motion handling for chart and overlay transitions
-- ensure focus indicators are clear and intentional in both themes
-- remove dead CSS and leftover pre-redesign presentation code
-
-## Definition of done
-
-The redesign is complete when:
-
-1. [docs/keyboard.md](/Users/yale/dev/graphtv/docs/keyboard.md) is implemented in substance, not partially
-2. theme, palette, and episode-density controls live in the view options overlay instead of the masthead
-3. help/debug/view overlays all trap focus and close consistently
-4. mobile sticky-axis scrolling fallback is real, not nominal
-5. the chart no longer paints a boxed background behind itself
+For module ownership, operational constraints, and verification commands, see [execution_plan.md](execution_plan.md).

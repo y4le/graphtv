@@ -38,7 +38,32 @@ export function createOverlayController() {
 
   let active = null
   let previousFocus = null
+  let backgroundState = null
   let destroyed = false
+
+  function lockBackground() {
+    const app = document.querySelector('#app')
+    backgroundState = {
+      app,
+      appWasInert: app?.hasAttribute('inert') ?? false,
+      bodyOverflow: document.body.style.overflow
+    }
+    app?.setAttribute('inert', '')
+    document.body.style.overflow = 'hidden'
+  }
+
+  function unlockBackground() {
+    if (!backgroundState) {
+      return
+    }
+
+    const { app, appWasInert, bodyOverflow } = backgroundState
+    backgroundState = null
+    if (app?.isConnected && !appWasInert) {
+      app.removeAttribute('inert')
+    }
+    document.body.style.overflow = bodyOverflow
+  }
 
   function close() {
     if (!active) {
@@ -46,13 +71,23 @@ export function createOverlayController() {
     }
 
     const { onClose } = active
+    const focusTarget = previousFocus
     root.innerHTML = ''
     root.hidden = true
     active = null
-    onClose?.()
+    previousFocus = null
+    unlockBackground()
 
-    if (previousFocus instanceof HTMLElement) {
-      previousFocus.focus({ preventScroll: true })
+    try {
+      onClose?.()
+    } finally {
+      if (
+        !active &&
+        focusTarget instanceof HTMLElement &&
+        focusTarget.isConnected
+      ) {
+        focusTarget.focus({ preventScroll: true })
+      }
     }
   }
 
@@ -60,9 +95,13 @@ export function createOverlayController() {
     if (destroyed) {
       throw new Error('Cannot open a destroyed overlay controller.')
     }
+    if (active) {
+      close()
+    }
 
     previousFocus = document.activeElement
     active = config
+    lockBackground()
     root.hidden = false
     root.innerHTML = `
       <div class="overlay-backdrop" data-overlay-backdrop>
@@ -152,8 +191,9 @@ export function createOverlayController() {
       const { onClose } = active ?? {}
       active = null
       previousFocus = null
-      onClose?.()
+      unlockBackground()
       root.remove()
+      onClose?.()
     }
   }
 }

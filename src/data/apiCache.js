@@ -359,7 +359,3 @@ export function requestJson(descriptor, requestFactory, options) {
 export function clearApiCache() {
   return defaultCache.clear()
 }
-
-export function getApiCacheDebugState() {
-  return defaultCache.getDebugState()
-}
