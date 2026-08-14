@@ -12,7 +12,6 @@ import {
   renderLoading,
   renderPublisherBrand
 } from './shared.js'
-import { requestSearchFocusOnNextPage } from './search.js'
 import { orderVisibleRatings } from '../data/ratingProviders.js'
 
 export function renderResultsMasthead({ interactive = false } = {}) {
@@ -119,11 +118,9 @@ export async function renderResultsPage(container, showRef, options = {}) {
       whenSettled,
       focusInitial() {},
       focusSearch() {
-        requestSearchFocusOnNextPage()
         window.location.href = buildBackHref()
       },
       goBack() {
-        requestSearchFocusOnNextPage()
         window.location.href = buildBackHref()
       },
       getDebugSections() {
@@ -182,11 +179,9 @@ export async function renderResultsPage(container, showRef, options = {}) {
       chart: null,
       focusInitial() {},
       focusSearch() {
-        requestSearchFocusOnNextPage()
         window.location.href = buildBackHref()
       },
       goBack() {
-        requestSearchFocusOnNextPage()
         window.location.href = buildBackHref()
       },
       getDebugSections() {

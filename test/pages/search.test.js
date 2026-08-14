@@ -25,8 +25,7 @@ import {
 import { searchShows } from '../../src/data/provider.js'
 import {
   renderSearchMasthead,
-  renderSearchPage,
-  requestSearchFocusOnNextPage
+  renderSearchPage
 } from '../../src/pages/search.js'
 import {
   PLACEHOLDER_FADE_MS,
@@ -37,7 +36,6 @@ let originalPath
 
 beforeEach(() => {
   originalPath = `${window.location.pathname}${window.location.search}${window.location.hash}`
-  window.sessionStorage.clear()
   vi.mocked(searchShows).mockReset()
   vi.mocked(searchShows).mockResolvedValue([])
   vi.mocked(canLoadSearchCollections).mockReset()
@@ -63,7 +61,6 @@ afterEach(() => {
   vi.useRealTimers()
   vi.restoreAllMocks()
   window.history.replaceState({}, '', originalPath)
-  window.sessionStorage.clear()
   document.body.replaceChildren()
 })
 
@@ -228,41 +225,30 @@ describe('renderSearchPage', () => {
     expect(signal.aborted).toBe(true)
   })
 
-  it('leaves the empty landing search unfocused so its placeholder can rotate', () => {
+  it('focuses the empty landing search without stopping its placeholder rotation', () => {
     vi.useFakeTimers()
     const { input, page } = renderPage()
+    const initialPlaceholder = input.placeholder
 
     expect(input.hasAttribute('autofocus')).toBe(false)
     page.focusInitial()
-    expect(document.activeElement).toBe(document.body)
+    expect(document.activeElement).toBe(input)
+
+    vi.advanceTimersByTime(PLACEHOLDER_ROTATION_MS + PLACEHOLDER_FADE_MS)
+    expect(input.placeholder).not.toBe(initialPlaceholder)
 
     page.destroy()
   })
 
-  it('leaves focus alone when the page opens with a query', () => {
+  it('focuses the search when the page opens with a query', () => {
     vi.spyOn(HTMLFormElement.prototype, 'requestSubmit').mockImplementation(
       () => {}
     )
-    const { input, page } = renderPage('/?q=fringe')
-
-    expect(input.hasAttribute('autofocus')).toBe(false)
-    page.focusInitial()
-    expect(document.activeElement).toBe(document.body)
-
-    page.destroy()
-  })
-
-  it('restores focus when returning from a show page', () => {
-    vi.spyOn(HTMLFormElement.prototype, 'requestSubmit').mockImplementation(
-      () => {}
-    )
-    requestSearchFocusOnNextPage()
     const { input, page } = renderPage('/?q=fringe')
 
     expect(input.hasAttribute('autofocus')).toBe(false)
     page.focusInitial()
     expect(document.activeElement).toBe(input)
-    expect(window.sessionStorage.getItem('graphtv-focus-search')).toBeNull()
 
     page.destroy()
   })

@@ -22,8 +22,6 @@ import {
   renderPublisherBrand
 } from './shared.js'
 
-const SEARCH_FOCUS_KEY = 'graphtv-focus-search'
-
 export function renderSearchMasthead() {
   return `
     <header class="masthead">
@@ -327,10 +325,7 @@ export function renderSearchPage(container) {
     kind: 'search',
     debugEnabled,
     focusInitial() {
-      if (window.sessionStorage.getItem(SEARCH_FOCUS_KEY) === '1') {
-        window.sessionStorage.removeItem(SEARCH_FOCUS_KEY)
-        input.focus({ preventScroll: true })
-      }
+      input.focus({ preventScroll: true })
     },
     focusSearch() {
       input.focus({ preventScroll: true })
@@ -381,10 +376,6 @@ export function renderSearchPage(container) {
       placeholderRotation.destroy()
     }
   }
-}
-
-export function requestSearchFocusOnNextPage() {
-  window.sessionStorage.setItem(SEARCH_FOCUS_KEY, '1')
 }
 
 function renderResultsList(root, results, selectedIndex) {
