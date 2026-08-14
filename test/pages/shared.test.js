@@ -44,10 +44,23 @@ describe('formatRatingBadge', () => {
     expect(millions.textContent).toBe('IMDb8.71.1m votes')
     expect(thousands.textContent).toBe('TMDB8.18.3k votes')
   })
+
+  it('links the provider label when the series has a native source id', () => {
+    const root = renderBadge(
+      { source: 'tmdb', rating: 8.1, votes: 8300 },
+      { externalIds: { tmdb: 1438 } }
+    )
+    const source = root.querySelector('.rating-badge-source')
+
+    expect(source.tagName).toBe('A')
+    expect(source.getAttribute('href')).toBe(
+      'https://www.themoviedb.org/tv/1438'
+    )
+  })
 })
 
-function renderBadge(rating) {
+function renderBadge(rating, show = null) {
   const root = document.createElement('li')
-  root.innerHTML = formatRatingBadge(rating)
+  root.innerHTML = formatRatingBadge(rating, { show })
   return root
 }

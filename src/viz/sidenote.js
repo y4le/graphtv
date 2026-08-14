@@ -1,5 +1,6 @@
 import {
   getRatingSourceLabel,
+  getRatingSourceUrl,
   orderVisibleRatings
 } from '../data/ratingProviders.js'
 import { isTrustedRating, isUsableRating } from '../data/stats.js'
@@ -51,7 +52,7 @@ function ensureOutsideTrendInfoDismissal(ownerDocument) {
   )
 }
 
-function formatRatingList(point, { loadingDetails = false } = {}) {
+function formatRatingList(point, { loadingDetails = false, show = null } = {}) {
   return orderVisibleRatings(point.ratings.filter(isTrustedRating))
     .map((rating, index) => {
       const isPrimary = rating.source === point.ratingSource
@@ -61,7 +62,11 @@ function formatRatingList(point, { loadingDetails = false } = {}) {
           : loadingDetails && rating.source === 'omdb'
             ? ` (${renderVotesLoading()})`
             : ''
-      const label = getEpisodeRatingSourceLabel(rating.source)
+      const source = formatRatingSource(rating.source, {
+        show,
+        episode: point,
+        className: 'sidenote-rating-source'
+      })
       const value = isUsableRating(rating.rating)
         ? `${
             isPrimary
@@ -69,7 +74,7 @@ function formatRatingList(point, { loadingDetails = false } = {}) {
               : rating.rating.toFixed(1)
           }${votes}`
         : `n/a${votes}`
-      const content = `${escapeHtml(label)} ${value}`
+      const content = `${source} ${value}`
       const entry = isPrimary
         ? `<strong class="sidenote-rating-primary">${content}</strong>`
         : `<span>${content}</span>`
@@ -89,6 +94,41 @@ function renderVotesLoading() {
 
 function getEpisodeRatingSourceLabel(source) {
   return getRatingSourceLabel(source)
+}
+
+function formatRatingSource(
+  source,
+  { show = null, episode = null, className = null } = {}
+) {
+  const label = escapeHtml(getEpisodeRatingSourceLabel(source))
+  const sourceUrl = getRatingSourceUrl(source, { show, episode })
+
+  if (!sourceUrl) {
+    return label
+  }
+
+  const classes = ['rating-source-link', className].filter(Boolean).join(' ')
+  return `<a class="${classes}" href="${escapeHtml(sourceUrl)}">${label}</a>`
+}
+
+function formatPlottingContext({ source, spreadSources = [] }, show) {
+  const sourceCopy = formatRatingSource(source, { show })
+  const spreadCopy = spreadSources.map((spreadSource) =>
+    formatRatingSource(spreadSource, { show })
+  )
+
+  return `Plotting ${sourceCopy}${spreadCopy.length ? ` · source spread shows ${formatList(spreadCopy)}` : ''}`
+}
+
+function formatList(values) {
+  if (values.length < 2) {
+    return values[0] ?? ''
+  }
+  if (values.length === 2) {
+    return values.join(' and ')
+  }
+
+  return `${values.slice(0, -1).join(', ')}, and ${values.at(-1)}`
 }
 
 export function createSidenote({
@@ -183,7 +223,7 @@ export function createSidenote({
     )
   }
 
-  function renderPoint(point, { loadingDetails = false } = {}) {
+  function renderPoint(point, { loadingDetails = false, show = null } = {}) {
     const markup = point
       ? `
           <div class="sidenote-card">
@@ -193,7 +233,7 @@ export function createSidenote({
                 <span class="sidenote-meta">${escapeHtml(point.date ?? 'Unknown air date')}</span>
               </p>
             </div>
-            <p class="sidenote-ratings">${formatRatingList(point, { loadingDetails })}</p>
+            <p class="sidenote-ratings">${formatRatingList(point, { loadingDetails, show })}</p>
             ${
               point.plot
                 ? `<p class="sidenote-body">${escapeHtml(point.plot)}</p>`
@@ -206,7 +246,7 @@ export function createSidenote({
     setMarkup(markup)
   }
 
-  function renderTrendSummary(summary) {
+  function renderTrendSummary(summary, { show = null } = {}) {
     if (!summary) {
       renderRestingState()
       return
@@ -227,16 +267,15 @@ export function createSidenote({
         ? 'too few rated episodes for a trend'
         : null
     ].filter(Boolean)
-    const sourceCopy =
-      summary.kind === 'series' && summary.plottingStatus
-        ? summary.plottingStatus
-        : getRatingSourceLabel(summary.source)
+    const sourceCopy = summary.plottingContext
+      ? formatPlottingContext(summary.plottingContext, show)
+      : formatRatingSource(summary.source, { show })
     const ratedCopy = `${summary.n} of ${summary.totalEpisodes} rated`
     const notesCopy = escapeHtml(provenanceNotes.join('; '))
     const provenance =
-      summary.kind === 'series' && summary.plottingStatus
-        ? `${escapeHtml(sourceCopy)} · ${ratedCopy}${notesCopy ? `, ${notesCopy}` : ''}`
-        : `${ratedCopy} · ${escapeHtml(sourceCopy)}${notesCopy ? ` — ${notesCopy}` : ''}`
+      summary.kind === 'series' && summary.plottingContext
+        ? `${sourceCopy} · ${ratedCopy}${notesCopy ? `, ${notesCopy}` : ''}`
+        : `${ratedCopy} · ${sourceCopy}${notesCopy ? ` — ${notesCopy}` : ''}`
 
     setMarkup(`
       <div class="sidenote-card sidenote-trend-card">

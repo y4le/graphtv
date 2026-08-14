@@ -165,7 +165,10 @@ describe('renderResultsPage', () => {
 
     resolveSupplemental()
     await page.whenSettled
-    expect(chart.updateSeasons).toHaveBeenCalledWith(supplementalBundle.seasons)
+    expect(chart.updateSeasons).toHaveBeenCalledWith(
+      supplementalBundle.seasons,
+      { show: supplementalBundle.show }
+    )
     const ratingRows = Array.from(
       container.querySelectorAll('.show-metrics .rating-badge')
     )
@@ -179,6 +182,15 @@ describe('renderResultsPage', () => {
         (row) => row.querySelector('.rating-badge-votes').textContent
       )
     ).toEqual(['1.1m votes', '', '8.3k votes'])
+    expect(
+      ratingRows.map((row) =>
+        row.querySelector('.rating-badge-source').getAttribute('href')
+      )
+    ).toEqual([
+      'https://www.imdb.com/title/tt123/',
+      'https://www.tvmaze.com/shows/1',
+      'https://www.themoviedb.org/tv/1438'
+    ])
     expect(container.querySelector('.results-progress').hidden).toBe(true)
     expect(
       container.querySelector('.results-data').getAttribute('aria-busy')
@@ -241,7 +253,11 @@ function createBundle({ supplemental = false } = {}) {
       totalSeasons: 1,
       genres: ['Comedy'],
       ratings,
-      externalIds: { imdb: 'tt123' }
+      externalIds: {
+        imdb: 'tt123',
+        tvmaze: 1,
+        ...(supplemental ? { tmdb: 1438 } : {})
+      }
     },
     seasons: [
       {

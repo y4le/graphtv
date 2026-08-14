@@ -1,5 +1,8 @@
 import { isUsableRating } from '../data/stats.js'
-import { getRatingSourceLabel } from '../data/ratingProviders.js'
+import {
+  getRatingSourceLabel,
+  getRatingSourceUrl
+} from '../data/ratingProviders.js'
 import { formatCompactNumber } from '../lib/number.js'
 
 export function renderLoading(message = 'Loading...', { announce = true } = {}) {
@@ -22,8 +25,12 @@ export function renderError(message) {
   return `<p class="state-copy error-state">${message}</p>`
 }
 
-export function formatRatingBadge(rating) {
-  const source = escapeHtml(getRatingSourceLabel(rating.source))
+export function formatRatingBadge(rating, { show = null } = {}) {
+  const label = escapeHtml(getRatingSourceLabel(rating.source))
+  const sourceUrl = getRatingSourceUrl(rating.source, { show })
+  const source = sourceUrl
+    ? `<a class="rating-badge-source rating-source-link" href="${escapeHtml(sourceUrl)}">${label}</a>`
+    : `<span class="rating-badge-source">${label}</span>`
 
   if (!isUsableRating(rating.rating)) {
     return renderRatingBadgeColumns(source, 'n/a', '')
@@ -38,7 +45,7 @@ export function formatRatingBadge(rating) {
 }
 
 function renderRatingBadgeColumns(source, rating, votes) {
-  return `<span class="rating-badge-source">${source}</span><span class="rating-badge-value">${rating}</span><span class="rating-badge-votes">${votes}</span>`
+  return `${source}<span class="rating-badge-value">${rating}</span><span class="rating-badge-votes">${votes}</span>`
 }
 
 function escapeHtml(value) {

@@ -23,7 +23,6 @@ import {
 import { createSidenote } from './sidenote.js'
 import { createSparkline } from './sparkline.js'
 import { getChartTheme, getUiSettings, updateUiSettings } from './theme.js'
-import { getRatingSourceLabel } from '../data/stats.js'
 
 const MOBILE_QUERY = '(max-width: 767px)'
 const MOBILE_LANDSCAPE_QUERY = '(max-width: 767px) and (orientation: landscape)'
@@ -88,6 +87,7 @@ export function createChart(container, seasons, options = {}) {
   const coarsePointerQuery = window.matchMedia(COARSE_POINTER_QUERY)
 
   let model = buildChartModel(seasons)
+  let show = options.show ?? null
   let viewport = null
   let selectedPointId = null
   let hoverPointId = null
@@ -452,7 +452,9 @@ export function createChart(container, seasons, options = {}) {
         loadingDetailPointIds.delete(point.id)
         if (!destroyed && getActivePoint()?.id === point.id) {
           const currentPoint = getPointById(point.id)
-          sidenote.renderPoint(detailCache.get(point.id) ?? currentPoint)
+          sidenote.renderPoint(detailCache.get(point.id) ?? currentPoint, {
+            show
+          })
         }
       }
     }, DETAIL_LOAD_DELAY_MS)
@@ -492,7 +494,8 @@ export function createChart(container, seasons, options = {}) {
       scheduleDetailLoad(point)
     }
     sidenote.renderPoint(detailCache.get(point.id) ?? point, {
-      loadingDetails: loadingDetailPointIds.has(point.id)
+      loadingDetails: loadingDetailPointIds.has(point.id),
+      show
     })
   }
 
@@ -514,9 +517,10 @@ export function createChart(container, seasons, options = {}) {
         activeTrend.kind === 'series'
           ? {
               ...activeTrend,
-              plottingStatus: formatPlottingStatus(model, getUiSettings())
+              plottingContext: getPlottingContext(model, getUiSettings())
             }
-          : activeTrend
+          : activeTrend,
+        { show }
       )
       return
     }
@@ -980,9 +984,13 @@ export function createChart(container, seasons, options = {}) {
     return true
   }
 
-  function updateSeasons(nextSeasons) {
+  function updateSeasons(nextSeasons, context = {}) {
     if (destroyed) {
       return
+    }
+
+    if (Object.hasOwn(context, 'show')) {
+      show = context.show
     }
 
     const previousPoint = getPointById(selectedPointId)
@@ -1940,29 +1948,17 @@ function renderSourceStatus(root, model, defaultViewport) {
   root.textContent = 'Drag the overview window to pan; resize it to zoom.'
 }
 
-function formatPlottingStatus(model, settings) {
+function getPlottingContext(model, settings) {
   if (!model.primaryRatingSource) {
     return null
   }
 
   const otherSources = model.ratingSourceCoverage
     .filter((entry) => entry.source !== model.primaryRatingSource)
-    .map((entry) => getRatingSourceLabel(entry.source))
-  const spreadText =
-    settings.showSourceSpread && otherSources.length > 0
-      ? ` · source spread shows ${formatList(otherSources)}`
-      : ''
+    .map((entry) => entry.source)
 
-  return `Plotting ${getRatingSourceLabel(model.primaryRatingSource)}${spreadText}`
-}
-
-function formatList(values) {
-  if (values.length < 2) {
-    return values[0] ?? ''
+  return {
+    source: model.primaryRatingSource,
+    spreadSources: settings.showSourceSpread ? otherSources : []
   }
-  if (values.length === 2) {
-    return values.join(' and ')
-  }
-
-  return `${values.slice(0, -1).join(', ')}, and ${values.at(-1)}`
 }

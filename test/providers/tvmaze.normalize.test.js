@@ -38,7 +38,7 @@ describe('tvmaze normalization', () => {
       totalSeasons: 1,
       genres: ['Crime', 'Drama'],
       ratings: [{ source: 'tvmaze', rating: 8.9, votes: null }],
-      externalIds: { imdb: 'tt0306414' }
+      externalIds: { imdb: 'tt0306414', tvdb: 79126, tvmaze: 179 }
     })
   })
 

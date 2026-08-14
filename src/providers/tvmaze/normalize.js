@@ -28,7 +28,9 @@ export function normalizeTvmazeShow(show) {
     genres: show.genres ?? [],
     ratings: createRatings('tvmaze', show.rating?.average),
     externalIds: {
-      imdb: show.externals?.imdb ?? undefined
+      imdb: show.externals?.imdb ?? undefined,
+      tvdb: show.externals?.thetvdb ?? undefined,
+      tvmaze: show.id
     }
   })
 }

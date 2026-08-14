@@ -54,7 +54,8 @@ export function normalizeTmdbCollection(
 export function normalizeTmdbExternalIds(data) {
   return {
     imdb: data.imdb_id ?? undefined,
-    tmdb: data.id
+    tmdb: data.id,
+    tvdb: data.tvdb_id ?? undefined
   }
 }
 
@@ -68,7 +69,10 @@ export function normalizeTmdbShow(show, externalIds = {}) {
     totalSeasons: show.number_of_seasons ?? 0,
     genres: (show.genres ?? []).map((genre) => genre.name),
     ratings: createRatings('tmdb', show.vote_average, show.vote_count),
-    externalIds
+    externalIds: {
+      ...externalIds,
+      tmdb: show.id
+    }
   })
 }
 

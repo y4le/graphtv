@@ -85,7 +85,7 @@ describe('tmdb normalization', () => {
       totalSeasons: 1,
       genres: ['Crime', 'Drama'],
       ratings: [{ source: 'tmdb', rating: 8.6, votes: 2000 }],
-      externalIds: { imdb: 'tt0306414', tmdb: 1438 }
+      externalIds: { imdb: 'tt0306414', tmdb: 1438, tvdb: 79126 }
     })
   })
 

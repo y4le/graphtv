@@ -88,7 +88,8 @@ export async function renderResultsPage(container, showRef, options = {}) {
       latestBundle.seasons,
       {
         detailRoot: container.querySelector('.results-episode'),
-        loadEpisodeDetails: episodeDetailLoader
+        loadEpisodeDetails: episodeDetailLoader,
+        show: latestBundle.show
       }
     )
     updateProgress(container, primarySnapshot.value)
@@ -102,7 +103,7 @@ export async function renderResultsPage(container, showRef, options = {}) {
 
         latestBundle = snapshot.bundle
         updateResultsContent(container, latestBundle)
-        chart.updateSeasons(latestBundle.seasons)
+        chart.updateSeasons(latestBundle.seasons, { show: latestBundle.show })
         updateProgress(container, snapshot)
       }
     ).catch((error) => {
@@ -246,7 +247,7 @@ function updateShowContext(container, show, alignmentIssues) {
           ${orderVisibleRatings(show.ratings)
             .map(
               (rating) =>
-                `<li class="rating-badge">${formatRatingBadge(rating)}</li>`
+                `<li class="rating-badge">${formatRatingBadge(rating, { show })}</li>`
             )
             .join('')}
         </ul>

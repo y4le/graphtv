@@ -792,6 +792,22 @@ button {
   white-space: nowrap;
 }
 
+.rating-source-link {
+  text-decoration-color: var(--textMuted);
+  text-underline-offset: 0.16em;
+}
+
+.rating-source-link:hover,
+.rating-source-link:focus-visible {
+  color: var(--spotColor);
+  text-decoration-color: currentColor;
+}
+
+.rating-source-link:focus-visible {
+  outline: 2px solid var(--spotColor);
+  outline-offset: 2px;
+}
+
 .show-plot {
   margin-top: 0.85rem;
   font-family: var(--font-editorial-serif);

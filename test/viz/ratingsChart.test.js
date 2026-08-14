@@ -1403,6 +1403,67 @@ describe('createChart', () => {
     expect(detailRoot.childNodes).toHaveLength(0)
   })
 
+  it('refreshes episode source links when supplemental provider context arrives', () => {
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+    const initialEpisode = {
+      id: 'episode-1',
+      title: 'Pilot',
+      season: 1,
+      episode: 1,
+      ratings: [{ source: 'tvmaze', rating: 8 }],
+      sourceIds: { tvmaze: '1001' }
+    }
+
+    chart = createChart(
+      container,
+      [{ number: 1, episodes: [initialEpisode] }],
+      {
+        detailRoot,
+        show: { externalIds: { tvmaze: 179 } }
+      }
+    )
+
+    expect(
+      detailRoot.querySelector('.sidenote-rating-source').getAttribute('href')
+    ).toBe('https://www.tvmaze.com/episodes/1001')
+
+    chart.updateSeasons(
+      [
+        {
+          number: 1,
+          episodes: [
+            {
+              ...initialEpisode,
+              ratings: [
+                ...initialEpisode.ratings,
+                { source: 'tmdb', rating: 8.2 }
+              ],
+              sourceIds: { ...initialEpisode.sourceIds, tmdb: '66452' }
+            }
+          ]
+        }
+      ],
+      {
+        show: { externalIds: { tvmaze: 179, tmdb: 1438 } }
+      }
+    )
+
+    expect(
+      Array.from(detailRoot.querySelectorAll('.sidenote-rating-source')).map(
+        (source) => source.getAttribute('href')
+      )
+    ).toEqual([
+      'https://www.tvmaze.com/episodes/1001',
+      'https://www.themoviedb.org/tv/1438/season/1/episode/1'
+    ])
+  })
+
   it('updates provider ratings in place while preserving the selected episode', () => {
     const container = document.createElement('div')
     const detailRoot = document.createElement('section')

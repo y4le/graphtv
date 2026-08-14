@@ -100,20 +100,28 @@ describe('createSidenote', () => {
     const root = document.createElement('section')
     const sidenote = createSidenote({ root })
 
-    sidenote.renderPoint({
-      title: 'A Great Episode',
-      season: 1,
-      episode: 2,
-      date: '2026-08-11',
-      plot: 'An episode synopsis.',
-      rating: 8.2,
-      ratingSource: 'omdb',
-      ratings: [
-        { source: 'tmdb', rating: 7.8, votes: 47 },
-        { source: 'omdb', rating: 8.2, votes: 4000 },
-        { source: 'tvmaze', rating: 7.5, votes: null }
-      ]
-    })
+    sidenote.renderPoint(
+      {
+        title: 'A Great Episode',
+        season: 1,
+        episode: 2,
+        date: '2026-08-11',
+        plot: 'An episode synopsis.',
+        rating: 8.2,
+        ratingSource: 'omdb',
+        ratings: [
+          { source: 'tmdb', rating: 7.8, votes: 47 },
+          { source: 'omdb', rating: 8.2, votes: 4000 },
+          { source: 'tvmaze', rating: 7.5, votes: null }
+        ],
+        sourceIds: {
+          omdb: 'tt0739785',
+          tvmaze: '1002',
+          tmdb: '66453'
+        }
+      },
+      { show: { externalIds: { tmdb: 1438 } } }
+    )
 
     const ratings = root.querySelector('.sidenote-ratings')
     expect(ratings.textContent).toBe(
@@ -133,6 +141,15 @@ describe('createSidenote', () => {
         (item) => item.textContent
       )
     ).toEqual(['A Great Episode', '2026-08-11'])
+    expect(
+      Array.from(ratings.querySelectorAll('.sidenote-rating-source')).map(
+        (source) => source.getAttribute('href')
+      )
+    ).toEqual([
+      'https://www.imdb.com/title/tt0739785/',
+      'https://www.tvmaze.com/episodes/1002',
+      'https://www.themoviedb.org/tv/1438/season/1/episode/2'
+    ])
   })
 
   it('shows a vote-count placeholder while IMDb details load', () => {
@@ -309,25 +326,44 @@ describe('createSidenote', () => {
     const root = document.createElement('section')
     const sidenote = createSidenote({ root })
 
-    sidenote.renderTrendSummary({
-      label: 'Full series',
-      kind: 'series',
-      n: 13,
-      totalEpisodes: 19,
-      excludedFallback: 6,
-      source: 'omdb',
-      plottingStatus: 'Plotting IMDb · source spread shows TVmaze and TMDB',
-      mean: 8.2,
-      direction: 'up',
-      delta: 0.4,
-      trendCriteria: createTrendCriteria(),
-      top: [],
-      bottom: []
-    })
+    sidenote.renderTrendSummary(
+      {
+        label: 'Full series',
+        kind: 'series',
+        n: 13,
+        totalEpisodes: 19,
+        excludedFallback: 6,
+        source: 'omdb',
+        plottingContext: {
+          source: 'omdb',
+          spreadSources: ['tvmaze', 'tmdb']
+        },
+        mean: 8.2,
+        direction: 'up',
+        delta: 0.4,
+        trendCriteria: createTrendCriteria(),
+        top: [],
+        bottom: []
+      },
+      {
+        show: {
+          externalIds: { imdb: 'tt0306414', tvmaze: 179, tmdb: 1438 }
+        }
+      }
+    )
 
     expect(root.querySelector('.trend-summary-provenance').textContent).toBe(
       'Plotting IMDb · source spread shows TVmaze and TMDB · 13 of 19 rated, 6 episodes use other sources and are excluded'
     )
+    expect(
+      Array.from(
+        root.querySelectorAll('.trend-summary-provenance .rating-source-link')
+      ).map((source) => source.getAttribute('href'))
+    ).toEqual([
+      'https://www.imdb.com/title/tt0306414/',
+      'https://www.tvmaze.com/shows/179',
+      'https://www.themoviedb.org/tv/1438'
+    ])
   })
 
   it('reports the measured delta when the trend direction is unclear', () => {
