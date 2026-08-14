@@ -32,6 +32,7 @@ describe('data/provider', () => {
 
   it('throws on invalid refs', () => {
     expect(() => parseShowRef('not-valid')).toThrow('Invalid show reference')
+    expect(() => parseShowRef('tmdb:')).toThrow('Invalid show reference')
   })
 
   it('returns friendly provider labels', () => {

@@ -74,7 +74,7 @@ describe('renderResultsMasthead', () => {
     )
   })
 
-  it('links back to a blank search page without preserving any query parameters', () => {
+  it('links back to search while preserving provider and debug context', () => {
     window.history.replaceState(
       {},
       '',
@@ -86,7 +86,10 @@ describe('renderResultsMasthead', () => {
     const target = new URL(container.querySelector('.back-link').href)
 
     expect(target.pathname).toBe('/graphtv/')
-    expect(target.search).toBe('')
+    expect(target.searchParams.get('api')).toBe('omdb')
+    expect(target.searchParams.get('debug')).toBe('1')
+    expect(target.searchParams.has('show')).toBe(false)
+    expect(target.searchParams.has('q')).toBe(false)
     expect(target.hash).toBe('')
   })
 })
@@ -163,6 +166,13 @@ describe('renderResultsPage', () => {
       providers: ['tvmaze'],
       show: primaryBundle.show
     })
+
+    document.body.append(container)
+    page.focusInitial()
+    expect(document.activeElement).toBe(
+      container.querySelector('.results-title')
+    )
+    container.remove()
     expect(container.querySelector('.results-progress').textContent).toBe(
       'Loading additional ratings…'
     )
@@ -242,6 +252,23 @@ describe('renderResultsPage', () => {
       providers: ['tvmaze'],
       show: createBundle().show
     })
+  })
+
+  it('renders provider failures as text rather than active markup', async () => {
+    const bundleStream = async function* () {
+      throw new Error('<img data-provider-injection src=x>')
+    }
+    const container = document.createElement('div')
+
+    await renderResultsPage(container, 'tvmaze:1', {
+      bundleStream,
+      compareProviders: []
+    })
+
+    expect(container.querySelector('[data-provider-injection]')).toBeNull()
+    expect(container.querySelector('.error-state').textContent).toBe(
+      '<img data-provider-injection src=x>'
+    )
   })
 })
 

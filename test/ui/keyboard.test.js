@@ -60,7 +60,7 @@ describe('createKeyboardController', () => {
     expect(page.goBack).toHaveBeenCalledTimes(2)
   })
 
-  it('keeps help and search shortcuts available from native controls', () => {
+  it('keeps global shortcuts available from native controls', () => {
     document.body.innerHTML = '<button type="button">Focused action</button>'
     const overlayController = {
       open: vi.fn(),
@@ -70,7 +70,9 @@ describe('createKeyboardController', () => {
     }
     const page = {
       kind: 'search',
-      focusSearch: vi.fn()
+      debugEnabled: true,
+      focusSearch: vi.fn(),
+      getDebugSections: vi.fn(() => [])
     }
     keyboardController = createKeyboardController({ page, overlayController })
     document.querySelector('button').focus()
@@ -82,6 +84,16 @@ describe('createKeyboardController', () => {
 
     pressKey('/')
     expect(page.focusSearch).toHaveBeenCalledOnce()
+
+    pressKey('o')
+    expect(overlayController.open).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'view-options' })
+    )
+
+    pressKey('D')
+    expect(overlayController.open).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'debug' })
+    )
   })
 
   it('routes result navigation keys while a result link has focus', () => {

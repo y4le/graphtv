@@ -160,6 +160,13 @@ describe('view options overlay', () => {
 
     expect(
       Array.from(
+        themeRow.querySelectorAll('.view-value'),
+        (value) => value.textContent
+      )
+    ).toEqual(['System', 'Light', 'Dark'])
+
+    expect(
+      Array.from(
         paletteRow.querySelectorAll('.view-value'),
         (value) => value.textContent
       )
@@ -170,6 +177,28 @@ describe('view options overlay', () => {
       new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })
     )
     expect(getUiSettings().theme).toBe('dark')
+
+    themeRow.focus()
+    themeRow.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 't', bubbles: true })
+    )
+    expect(getUiSettings().themeSource).toBe('system')
+
+    themeRow.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true })
+    )
+    expect(getUiSettings()).toMatchObject({
+      theme: 'dark',
+      themeSource: 'user'
+    })
+
+    themeRow.querySelector('[data-view-theme="system"]').click()
+    expect(getUiSettings().themeSource).toBe('system')
+    expect(
+      themeRow
+        .querySelector('[data-view-theme="system"]')
+        .getAttribute('aria-pressed')
+    ).toBe('true')
 
     paletteRow.focus()
     paletteRow.dispatchEvent(
@@ -206,6 +235,23 @@ describe('view options overlay', () => {
       new KeyboardEvent('keydown', { key: 'y', bubbles: true, ctrlKey: true })
     )
     expect(getUiSettings().absoluteYAxis).toBe(true)
+  })
+
+  it('lets legacy stored themes opt back into the system preference', () => {
+    window.localStorage.setItem(
+      'graphtv-ui-settings',
+      JSON.stringify({ theme: 'dark', palette: 'monotone' })
+    )
+    expect(initializeTheme().themeSource).toBe('user')
+    const overlayController = createOverlayController()
+    openViewOptionsOverlay(overlayController)
+
+    document.querySelector('[data-view-theme="system"]').click()
+
+    expect(initializeTheme().themeSource).toBe('system')
+    expect(
+      JSON.parse(window.localStorage.getItem('graphtv-ui-settings')).themeSource
+    ).toBe('system')
   })
 
   it('renders each shortcut hint as a shared keycap', () => {
@@ -349,7 +395,7 @@ describe('keyboard help overlay', () => {
       kind: 'results',
       debugEnabled: true,
       getCreditsContext: () => ({
-        providers: ['tvmaze', 'omdb', 'tmdb', 'tvmaze', 'testdb'],
+        providers: ['tvmaze', 'omdb', 'tmdb', 'tvmaze', 'unknown'],
         show: {
           title: 'Example & Friends',
           externalIds: { imdb: 'tt1234567', tmdb: 1438, tvmaze: 1 }

@@ -109,8 +109,11 @@ export function createApiRequestCache({
   now = () => Date.now()
 } = {}) {
   const inFlight = new Map()
+  const liveRequests = new Set()
+  const pendingWrites = new Set()
   const recentFailures = new Map()
   const stats = { hits: 0, misses: 0, writes: 0, deduplicated: 0 }
+  let clearPromise = null
 
   async function read(key) {
     const timestamp = now()
@@ -141,6 +144,7 @@ export function createApiRequestCache({
 
     request.promise = (async () => {
       const cached = await read(key)
+      controller.signal.throwIfAborted()
       if (cached !== undefined) {
         return { value: cached, cacheHit: true }
       }
@@ -173,7 +177,7 @@ export function createApiRequestCache({
           const ttlMs = normalizeTtl(policy.ttlMs ?? descriptor.ttlMs)
           const bytes = serializedBytes(value)
           if (bytes <= MAX_ENTRY_BYTES) {
-            await store.put({
+            const writePromise = store.put({
               key,
               provider: descriptor.provider,
               kind: descriptor.kind,
@@ -185,6 +189,13 @@ export function createApiRequestCache({
               bytes,
               value
             })
+            pendingWrites.add(writePromise)
+            try {
+              await writePromise
+            } finally {
+              pendingWrites.delete(writePromise)
+            }
+            controller.signal.throwIfAborted()
             stats.writes += 1
           }
         }
@@ -211,11 +222,13 @@ export function createApiRequestCache({
       }
     })().finally(() => {
       request.settled = true
+      liveRequests.delete(request)
       if (inFlight.get(key) === request) {
         inFlight.delete(key)
       }
     })
 
+    liveRequests.add(request)
     inFlight.set(key, request)
     return request
   }
@@ -273,6 +286,9 @@ export function createApiRequestCache({
   }
 
   async function requestJson(descriptor, requestFactory, options = {}) {
+    while (clearPromise) {
+      await clearPromise
+    }
     if (options.signal?.aborted) {
       throw abortError()
     }
@@ -295,8 +311,33 @@ export function createApiRequestCache({
   return {
     requestJson,
     async clear() {
-      recentFailures.clear()
-      await store.clear()
+      if (clearPromise) {
+        return clearPromise
+      }
+
+      const operation = (async () => {
+        recentFailures.clear()
+        // Request factories must not recursively call requestJson: clear waits for
+        // every live request before admitting new work through the gate above.
+        const activeRequests = [...liveRequests]
+        for (const request of activeRequests) {
+          request.abandoned = true
+          request.controller.abort()
+        }
+        inFlight.clear()
+        await Promise.allSettled(activeRequests.map(({ promise }) => promise))
+        await Promise.allSettled([...pendingWrites])
+        await store.clear()
+      })()
+      clearPromise = operation
+
+      try {
+        await operation
+      } finally {
+        if (clearPromise === operation) {
+          clearPromise = null
+        }
+      }
     },
     async getDebugState() {
       return {

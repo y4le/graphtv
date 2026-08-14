@@ -28,7 +28,7 @@ Some vim bindings use multi-key sequences (e.g., `gg`). The implementation shoul
 | ----------------------- | --- | ------------ | ------------------------------------ |
 | Open/close help         | `?` | `F1`         | Shows context-sensitive bindings     |
 | Focus search            | `/` | —            | Enters insert mode                   |
-| Open/close view options | `v` | —            | Theme, palette settings              |
+| Open/close view options | `o` | —            | Theme, palette settings              |
 | Toggle debug panel      | `D` | —            | Shift+D to avoid accidental triggers |
 | Return to search        | `q` | —            | From results page                    |
 
@@ -96,7 +96,7 @@ The vim spatial metaphor: episodes within a season are characters within a line 
 
 ### View options panel (overlay mode)
 
-Opened by `v` in normal mode. A compact panel for changing theme, palette, default episode density, trendline, rating-spread, and y-axis settings.
+Opened by `o` in normal mode. A compact panel for changing theme, palette, default episode density, trendline, rating-spread, and y-axis settings.
 
 The panel shows the available options as a short list. Each option displays its current value and its shortcut key as a visual hint.
 
@@ -107,13 +107,13 @@ The panel shows the available options as a short list. Each option displays its 
 | Move between options        | `j`/`k`               | `ArrowUp`/`ArrowDown`    |                                                            |
 | Change focused value        | `h`/`l`               | `ArrowLeft`/`ArrowRight` | Left selects Off/previous; right selects On/next           |
 | Toggle/cycle focused option | `Enter`               | `Enter` or `Space`       | Theme, palette, and density cycle; boolean settings toggle |
-| Close panel                 | `v`, `q`, or `Escape` | `Escape`                 |                                                            |
+| Close panel                 | `o`, `q`, or `Escape` | `Escape`                 |                                                            |
 
 #### Direct accelerators
 
 | Key | Action                          |
 | --- | ------------------------------- |
-| `t` | Toggle theme                    |
+| `t` | Cycle System/Light/Dark theme   |
 | `c` | Cycle color palette             |
 | `d` | Cycle default episode density   |
 | `s` | Toggle season trendlines        |
@@ -125,7 +125,7 @@ The panel shows the available options as a short list. Each option displays its 
 
 - **Click:** Clicking a specific value (e.g., "dark" or "rainbow") selects it directly.
 - **Spatial editing:** Navigate to a row, then use left/right to set its value or Enter/Space to toggle or cycle it.
-- **Direct keys:** An accelerator toggles its option and focuses the corresponding row, enabling quick modal sequences such as `v`, `y`, `v`.
+- **Direct keys:** An accelerator toggles its option and focuses the corresponding row, enabling quick modal sequences such as `o`, `y`, `o`.
 - **Key repeat:** Direct toggles ignore repeated keydown events so holding a key cannot toggle twice.
 - **Immediate feedback:** Changes apply instantly as the user toggles. No "apply" step.
 - **Episode density:** `Roomy`, `Balanced`, and `Dense` set progressively larger default episode windows; `Full series` fits every episode. A default window expands through the full series whenever point spacing remains comfortable, or by up to three episodes to finish a nearby season. Reset Zoom returns to the selected density; manual zoom remains exact.
@@ -209,7 +209,7 @@ Only `g` is a chord starter. All other keys execute immediately with zero delay.
 ```
 Normal ──[/ pressed]──→ Insert (search input focused)
 Normal ──[? pressed]──→ Overlay (help)
-Normal ──[v pressed]──→ Overlay (view options)
+Normal ──[o pressed]──→ Overlay (view options)
 Normal ──[D pressed]──→ Overlay (debug)
 Insert ──[Escape]──→ Normal (input blurred)
 Insert ──[non-empty Enter]──→ Normal (search submitted, results appear)

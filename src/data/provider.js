@@ -5,7 +5,6 @@ import { createErrorDiagnostic } from './errorDiagnostics.js'
 
 const PROVIDER_LOADERS = {
   omdb: () => import('../providers/omdb/transport.js'),
-  testdb: () => import('../providers/testdb/index.js'),
   tmdb: () => import('../providers/tmdb/transport.js'),
   tvmaze: () => import('../providers/tvmaze/transport.js')
 }
@@ -15,10 +14,6 @@ const PROVIDER_META = {
   omdb: {
     label: 'OMDb',
     requiresSecret: CLIENT_SECRET_KEYS.omdb
-  },
-  testdb: {
-    label: 'Fixture DB',
-    alwaysAvailable: true
   },
   tmdb: {
     label: 'TMDB',
@@ -33,13 +28,14 @@ const PROVIDER_META = {
 export function parseShowRef(showRef) {
   const [provider, ...idParts] = showRef.split(':')
 
-  if (!provider || idParts.length === 0) {
+  const id = idParts.join(':')
+  if (!provider || !id) {
     throw new Error(`Invalid show reference: ${showRef}`)
   }
 
   return {
     provider,
-    id: idParts.join(':')
+    id
   }
 }
 
@@ -79,10 +75,7 @@ export function getProviderCatalog() {
 
 export function getComparisonProviders(primaryProvider) {
   return Object.keys(PROVIDER_LOADERS).filter(
-    (provider) =>
-      provider !== primaryProvider &&
-      provider !== 'testdb' &&
-      isProviderConfigured(provider)
+    (provider) => provider !== primaryProvider && isProviderConfigured(provider)
   )
 }
 

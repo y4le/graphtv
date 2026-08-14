@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import {
   formatRatingBadge,
+  renderEmpty,
+  renderError,
   renderLoading,
   renderPublisherBrand
 } from '../../src/pages/shared.js'
@@ -24,6 +26,17 @@ describe('renderLoading', () => {
       'role="status"'
     )
   })
+
+  it.each([renderLoading, renderEmpty, renderError])(
+    'escapes untrusted state copy at the shared rendering boundary',
+    (renderState) => {
+      const root = document.createElement('div')
+      root.innerHTML = renderState('<img src=x onerror="alert(1)"> & friends')
+
+      expect(root.querySelector('img')).toBeNull()
+      expect(root.textContent).toBe('<img src=x onerror="alert(1)"> & friends')
+    }
+  )
 })
 
 describe('formatRatingBadge', () => {

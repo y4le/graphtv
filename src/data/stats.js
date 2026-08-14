@@ -40,7 +40,8 @@ export function linearRegressionFromPoints(values) {
     (point) =>
       typeof point?.x === 'number' &&
       Number.isFinite(point.x) &&
-      typeof point?.y === 'number'
+      typeof point?.y === 'number' &&
+      Number.isFinite(point.y)
   )
 
   if (points.length === 0) {
@@ -109,7 +110,8 @@ export function trendlineFromPoints(values) {
     (point) =>
       typeof point?.x === 'number' &&
       Number.isFinite(point.x) &&
-      typeof point?.y === 'number'
+      typeof point?.y === 'number' &&
+      Number.isFinite(point.y)
   )
   const regression = linearRegressionFromPoints(points)
 

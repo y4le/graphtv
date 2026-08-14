@@ -99,7 +99,7 @@ export function createKeyboardController({ page, overlayController }) {
   }
 
   function keyWorksFromInteractiveControl(key) {
-    return ['/', '?', 'F1', 'Escape', 'q'].includes(key)
+    return ['/', '?', 'F1', 'Escape', 'q', 'o', 'D'].includes(key)
   }
 
   function isChartHalfViewportShortcut(event) {

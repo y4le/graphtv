@@ -6,7 +6,10 @@ import {
   createApiCacheKey,
   createApiRequestCache
 } from '../../src/data/apiCache.js'
-import { createMemoryCacheBackend } from '../../src/data/cacheStore.js'
+import {
+  createCacheStore,
+  createMemoryCacheBackend
+} from '../../src/data/cacheStore.js'
 
 function jsonResponse(value) {
   return new Response(JSON.stringify(value), {
@@ -288,6 +291,167 @@ describe('API request cache', () => {
     await vi.waitFor(async () =>
       expect((await cache.getDebugState()).inFlight).toBe(0)
     )
+  })
+
+  it('prevents requests that were in flight during clear from repopulating the cache', async () => {
+    const store = createMemoryCacheBackend()
+    let finishWrite
+    const delayedStore = {
+      ...store,
+      put: vi.fn(
+        (entry) =>
+          new Promise((resolve) => {
+            finishWrite = async () => {
+              await store.put(entry)
+              resolve()
+            }
+          })
+      )
+    }
+    const cache = createApiRequestCache({ store: delayedStore })
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ stale: true }))
+    vi.stubGlobal('fetch', fetchMock)
+    const request = cache.requestJson(descriptor, () => ({
+      url: 'https://example.test/show/2790'
+    }))
+    await vi.waitFor(() => expect(delayedStore.put).toHaveBeenCalledOnce())
+
+    const clearing = cache.clear()
+    await finishWrite()
+    await clearing
+
+    await expect(request).rejects.toMatchObject({ name: 'AbortError' })
+    expect(await store.get(createApiCacheKey(descriptor))).toBeNull()
+  })
+
+  it('clears persistent read-throughs that were already in flight', async () => {
+    const key = createApiCacheKey(descriptor)
+    const entry = {
+      key,
+      provider: descriptor.provider,
+      kind: descriptor.kind,
+      storeVersion: 1,
+      payloadVersion: 1,
+      createdAt: 1,
+      expiresAt: DAY_MS + 1,
+      lastAccess: 1,
+      bytes: 10,
+      value: { stale: true }
+    }
+    let resolvePersistentRead
+    const persistent = {
+      get: vi
+        .fn()
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              resolvePersistentRead = resolve
+            })
+        )
+        .mockResolvedValue(null),
+      put: vi.fn().mockResolvedValue(),
+      prune: vi.fn().mockResolvedValue(),
+      touch: vi.fn().mockResolvedValue(),
+      clear: vi.fn().mockResolvedValue()
+    }
+    const memory = createMemoryCacheBackend()
+    const store = createCacheStore({ memory, persistent })
+    const cache = createApiRequestCache({ store, now: () => 1 })
+    const staleRequest = cache.requestJson(descriptor, () => ({
+      url: 'https://example.test/should-not-load'
+    }))
+    await vi.waitFor(() => expect(persistent.get).toHaveBeenCalledOnce())
+
+    const clearing = cache.clear()
+    const requestAfterClear = cache.requestJson(descriptor, () => ({
+      url: 'https://example.test/fresh'
+    }))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse({ fresh: true }))
+    )
+    resolvePersistentRead(entry)
+
+    await clearing
+    await expect(staleRequest).rejects.toMatchObject({ name: 'AbortError' })
+    await expect(requestAfterClear).resolves.toEqual({ fresh: true })
+    expect(await memory.get(key)).toMatchObject({ value: { fresh: true } })
+    expect(persistent.clear).toHaveBeenCalledOnce()
+  })
+
+  it('awaits abandoned requests before clearing their read-through writes', async () => {
+    const key = createApiCacheKey(descriptor)
+    const entry = {
+      key,
+      provider: descriptor.provider,
+      kind: descriptor.kind,
+      storeVersion: 1,
+      payloadVersion: 1,
+      createdAt: 1,
+      expiresAt: DAY_MS + 1,
+      lastAccess: 1,
+      bytes: 10,
+      value: { stale: true }
+    }
+    const memory = createMemoryCacheBackend()
+    let finishRead
+    const store = {
+      get: vi.fn(
+        () =>
+          new Promise((resolve) => {
+            finishRead = async () => {
+              await memory.put(entry)
+              resolve(entry)
+            }
+          })
+      ),
+      touch: vi.fn().mockResolvedValue(),
+      delete: vi.fn().mockResolvedValue(),
+      clear: vi.fn(() => memory.clear()),
+      stats: vi.fn().mockResolvedValue({ entries: 0, bytes: 0 })
+    }
+    const cache = createApiRequestCache({ store, now: () => 1 })
+    const controller = new AbortController()
+    const abandoned = cache.requestJson(
+      descriptor,
+      () => ({ url: 'https://example.test/should-not-load' }),
+      { signal: controller.signal }
+    )
+    await vi.waitFor(() => expect(store.get).toHaveBeenCalledOnce())
+
+    controller.abort()
+    await expect(abandoned).rejects.toMatchObject({ name: 'AbortError' })
+    const clearing = cache.clear()
+    let clearSettled = false
+    void clearing.then(() => {
+      clearSettled = true
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(clearSettled).toBe(false)
+
+    await finishRead()
+    await clearing
+
+    expect(await memory.get(key)).toBeNull()
+    expect(store.clear).toHaveBeenCalledOnce()
+  })
+
+  it('lets a request started after clear populate the empty cache', async () => {
+    const cache = createCache()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ version: 1 }))
+      .mockResolvedValueOnce(jsonResponse({ version: 2 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const requestFactory = () => ({ url: 'https://example.test/show/2790' })
+
+    await cache.requestJson(descriptor, requestFactory)
+    await cache.clear()
+
+    await expect(
+      cache.requestJson(descriptor, requestFactory)
+    ).resolves.toEqual({ version: 2 })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it('does not cache payloads larger than the per-entry safety limit', async () => {

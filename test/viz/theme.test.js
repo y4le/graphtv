@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   APP_FONT_STACK,
   EPISODE_DENSITIES,
   PALETTES,
   getChartTheme,
+  getUiSettings,
   initializeTheme,
   seasonColor,
   updateUiSettings
@@ -15,12 +16,54 @@ beforeEach(() => {
   initializeTheme()
 })
 
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+})
+
 describe('theme defaults', () => {
   it('starts with the mono palette when no preference is stored', () => {
     const settings = initializeTheme()
 
     expect(settings.palette).toBe('monotone')
     expect(document.documentElement.dataset.palette).toBe('monotone')
+  })
+
+  it('follows live system theme changes until the user chooses a theme', () => {
+    const listeners = new Set()
+    const mediaQuery = {
+      matches: false,
+      addEventListener: (_event, listener) => listeners.add(listener),
+      removeEventListener: (_event, listener) => listeners.delete(listener)
+    }
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => mediaQuery)
+    )
+
+    expect(initializeTheme()).toMatchObject({
+      theme: 'light',
+      themeSource: 'system'
+    })
+
+    mediaQuery.matches = true
+    listeners.forEach((listener) => listener({ matches: true }))
+    expect(getUiSettings().theme).toBe('dark')
+
+    updateUiSettings({ theme: 'light' })
+    expect(getUiSettings().themeSource).toBe('user')
+    mediaQuery.matches = true
+    listeners.forEach((listener) => listener({ matches: true }))
+    expect(getUiSettings().theme).toBe('light')
+  })
+
+  it('keeps settings usable when local storage rejects writes', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Storage blocked', 'SecurityError')
+    })
+
+    expect(() => updateUiSettings({ absoluteYAxis: true })).not.toThrow()
+    expect(getUiSettings().absoluteYAxis).toBe(true)
   })
 
   it('offers the five season palettes in display order', () => {

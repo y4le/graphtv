@@ -1,11 +1,14 @@
 import { createProviderRating } from '../data/schema.js'
 
+const htmlParser = new DOMParser()
+
 export function cleanHtmlSummary(value) {
   if (!value) {
     return null
   }
 
-  return value.replace(/<[^>]*>/g, '').trim() || null
+  const document = htmlParser.parseFromString(String(value), 'text/html')
+  return document.body.textContent.trim() || null
 }
 
 export function getYear(value) {

@@ -74,6 +74,17 @@ describe('data/stats', () => {
     })
   })
 
+  it('excludes non-finite coordinates from regression', () => {
+    expect(
+      linearRegressionFromPoints([
+        { x: 1, y: 4 },
+        { x: 2, y: Number.NaN },
+        { x: 3, y: Number.POSITIVE_INFINITY },
+        { x: 4, y: 10 }
+      ])
+    ).toEqual({ slope: 2, intercept: 2 })
+  })
+
   it('keeps explicit-point trendlines aligned to the first and last rated x values', () => {
     expect(
       trendlineFromPoints([

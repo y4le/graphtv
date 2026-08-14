@@ -1,3 +1,5 @@
+import { escapeHtml } from '../lib/html.js'
+
 const SKELETON_CARD_COUNT = 8
 const SCROLL_END_TOLERANCE = 1
 
@@ -260,12 +262,4 @@ function prefersReducedMotion(view) {
     typeof view?.matchMedia === 'function' &&
     view.matchMedia('(prefers-reduced-motion: reduce)').matches
   )
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
 }

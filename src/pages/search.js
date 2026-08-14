@@ -9,6 +9,7 @@ import {
   loadSearchCollections
 } from '../data/collections.js'
 import { buildUrl, getUrlParams, preserveDebugParams } from '../lib/url.js'
+import { escapeHtml } from '../lib/html.js'
 import { createPlaceholderRotation } from '../ui/placeholderRotation.js'
 import {
   createShowCarousel,
@@ -290,7 +291,7 @@ export function renderSearchPage(container) {
 
       if (results.length === 0) {
         resultsStatus.innerHTML = renderEmpty(
-          `No shows found for “${escapeHtml(nextQuery)}”.`
+          `No shows found for “${nextQuery}”.`
         )
         return
       }
@@ -311,7 +312,7 @@ export function renderSearchPage(container) {
       }
 
       resultsStatus.innerHTML = renderError(
-        escapeHtml(error?.message || 'Search failed. Try again.')
+        error?.message || 'Search failed. Try again.'
       )
     } finally {
       if (requestId === state.requestId) {
@@ -446,14 +447,6 @@ export function buildShowLink(showId, { includeQuery = true } = {}) {
     params.set('q', currentParams.get('q'))
   }
   return buildUrl(params)
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
 }
 
 function clamp(value, min, max) {

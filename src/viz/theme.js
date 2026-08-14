@@ -2,6 +2,7 @@ const STORAGE_KEY = 'graphtv-ui-settings'
 const MEDIA_QUERY = '(prefers-color-scheme: dark)'
 
 export const THEMES = ['light', 'dark']
+export const THEME_CHOICES = ['system', ...THEMES]
 export const EPISODE_DENSITIES = ['roomy', 'balanced', 'dense', 'all']
 export const PALETTES = [
   'monotone',
@@ -68,6 +69,7 @@ const THEME_TOKENS = {
 
 const SETTINGS_DEFAULTS = {
   theme: 'light',
+  themeSource: 'system',
   palette: 'monotone',
   seasonTrendlines: true,
   fullShowTrendline: true,
@@ -115,10 +117,19 @@ function normalizePaletteId(paletteId) {
 }
 
 function sanitizeSettings(candidate = {}) {
+  const themeSource =
+    candidate.themeSource === 'system'
+      ? 'system'
+      : candidate.themeSource === 'user' || THEMES.includes(candidate.theme)
+        ? 'user'
+        : 'system'
+
   return {
-    theme: THEMES.includes(candidate.theme)
-      ? candidate.theme
-      : getSystemTheme(),
+    theme:
+      themeSource === 'user' && THEMES.includes(candidate.theme)
+        ? candidate.theme
+        : getSystemTheme(),
+    themeSource,
     palette: normalizePaletteId(candidate.palette),
     seasonTrendlines:
       typeof candidate.seasonTrendlines === 'boolean'
@@ -164,7 +175,11 @@ function writeStoredSettings(settings) {
     return
   }
 
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
+  } catch {
+    // Settings still apply for this session when persistence is unavailable.
+  }
 }
 
 function setCssVar(root, token, value) {
@@ -197,24 +212,30 @@ function applyCssTokens(settings) {
 }
 
 let uiSettings = SETTINGS_DEFAULTS
+let systemThemeQuery = null
+let systemThemeListener = null
 
 export function initializeTheme() {
   uiSettings = readStoredSettings()
   applyCssTokens(uiSettings)
 
+  systemThemeQuery?.removeEventListener?.('change', systemThemeListener)
+  systemThemeQuery = null
+  systemThemeListener = null
+
   if (
     typeof window !== 'undefined' &&
     typeof window.matchMedia === 'function'
   ) {
-    const mediaQuery = window.matchMedia(MEDIA_QUERY)
-    mediaQuery.addEventListener('change', () => {
-      const stored = readStoredSettings()
-      if (!stored.theme || !THEMES.includes(stored.theme)) {
-        uiSettings = sanitizeSettings(stored)
+    systemThemeQuery = window.matchMedia(MEDIA_QUERY)
+    systemThemeListener = () => {
+      if (uiSettings.themeSource === 'system') {
+        uiSettings = sanitizeSettings({ ...uiSettings, themeSource: 'system' })
         applyCssTokens(uiSettings)
         emitSettingsChange()
       }
-    })
+    }
+    systemThemeQuery.addEventListener('change', systemThemeListener)
   }
 
   return uiSettings
@@ -231,17 +252,18 @@ export function getUiSettings() {
 }
 
 export function updateUiSettings(nextPartial) {
-  uiSettings = sanitizeSettings({ ...uiSettings, ...nextPartial })
+  const candidate = { ...uiSettings, ...nextPartial }
+  if (
+    Object.hasOwn(nextPartial, 'theme') &&
+    !Object.hasOwn(nextPartial, 'themeSource')
+  ) {
+    candidate.themeSource = 'user'
+  }
+  uiSettings = sanitizeSettings(candidate)
   writeStoredSettings(uiSettings)
   applyCssTokens(uiSettings)
   emitSettingsChange()
   return uiSettings
-}
-
-export function toggleTheme() {
-  return updateUiSettings({
-    theme: uiSettings.theme === 'light' ? 'dark' : 'light'
-  })
 }
 
 export function cyclePalette() {

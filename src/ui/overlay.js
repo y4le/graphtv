@@ -1,13 +1,14 @@
 import {
   EPISODE_DENSITIES,
   PALETTES,
+  THEME_CHOICES,
   THEMES,
   getUiSettings,
-  toggleTheme,
   updateUiSettings,
   cyclePalette
 } from '../viz/theme.js'
 import { hasCommandModifier } from '../lib/keyboard.js'
+import { escapeHtml } from '../lib/html.js'
 import { clearApiCache } from '../data/apiCache.js'
 import { resetAllAppData } from '../data/appData.js'
 import { renderCreditsContent } from './credits.js'
@@ -392,7 +393,7 @@ function renderRawJsonLink(section) {
 
   const href = `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(section.data, null, 2))}`
 
-  return `<a class="debug-raw-link" href="${escapeAttribute(href)}" target="_blank" rel="noreferrer">raw</a>`
+  return `<a class="debug-raw-link" href="${escapeHtml(href)}" target="_blank" rel="noreferrer">raw</a>`
 }
 
 function isRawJsonSection(section) {
@@ -666,7 +667,7 @@ function renderViewOptionsContent() {
       <div class="view-option-row" data-option="theme" tabindex="0">
         <span class="view-option-label">Theme</span>
         <span class="view-option-values">
-          ${THEMES.map((theme) => renderValueButton('theme', theme, settings.theme === theme)).join('')}
+          ${THEME_CHOICES.map((theme) => renderValueButton('theme', theme, getThemeChoice(settings) === theme)).join('')}
         </span>
         <kbd class="view-option-hint keycap">t</kbd>
       </div>
@@ -730,7 +731,7 @@ function bindViewOptions(content) {
   content.querySelectorAll('[data-view-theme]').forEach((button) => {
     button.addEventListener('click', (event) => {
       event.stopPropagation()
-      updateUiSettings({ theme: button.dataset.viewTheme })
+      selectThemeChoice(button.dataset.viewTheme)
       syncViewOptions(content)
     })
   })
@@ -769,7 +770,7 @@ function syncViewOptions(content) {
   content.querySelectorAll('[data-view-theme]').forEach((button) => {
     button.setAttribute(
       'aria-pressed',
-      String(button.dataset.viewTheme === settings.theme)
+      String(button.dataset.viewTheme === getThemeChoice(settings))
     )
   })
   content.querySelectorAll('[data-view-palette]').forEach((button) => {
@@ -925,7 +926,8 @@ function toggleSetting(key) {
 
 function activateViewOption(option) {
   if (option === 'theme') {
-    toggleTheme()
+    const settings = getUiSettings()
+    selectThemeChoice(stepValue(THEME_CHOICES, getThemeChoice(settings), 1))
     return
   }
 
@@ -955,7 +957,9 @@ function setViewOptionDirection(option, direction) {
   const settings = getUiSettings()
 
   if (option === 'theme') {
-    updateUiSettings({ theme: stepValue(THEMES, settings.theme, direction) })
+    selectThemeChoice(
+      stepValue(THEME_CHOICES, getThemeChoice(settings), direction)
+    )
     return
   }
 
@@ -980,6 +984,21 @@ function setViewOptionDirection(option, direction) {
   const settingKey = VIEW_OPTION_SETTING_KEYS[option]
   if (settingKey) {
     updateUiSettings({ [settingKey]: direction > 0 })
+  }
+}
+
+function getThemeChoice(settings) {
+  return settings.themeSource === 'system' ? 'system' : settings.theme
+}
+
+function selectThemeChoice(choice) {
+  if (choice === 'system') {
+    updateUiSettings({ themeSource: 'system' })
+    return
+  }
+
+  if (THEMES.includes(choice)) {
+    updateUiSettings({ theme: choice, themeSource: 'user' })
   }
 }
 
@@ -1128,17 +1147,6 @@ function getFocusable(root) {
     (element) =>
       !element.hasAttribute('disabled') && !element.getAttribute('aria-hidden')
   )
-}
-
-function escapeHtml(value) {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-}
-
-function escapeAttribute(value) {
-  return escapeHtml(value).replaceAll('"', '&quot;')
 }
 
 function getMotionBehavior() {

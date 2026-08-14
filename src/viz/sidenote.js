@@ -5,6 +5,7 @@ import {
 } from '../data/ratingProviders.js'
 import { isTrustedRating, isUsableProviderRating } from '../data/stats.js'
 import { formatCompactNumber } from '../lib/number.js'
+import { escapeHtml } from '../lib/html.js'
 
 let trendInfoSequence = 0
 const trendInfoDocuments = new WeakSet()
@@ -713,12 +714,4 @@ function formatSignedDelta(value) {
 
 function formatMagnitude(value) {
   return value > 0 && value < 0.05 ? '<0.1' : value.toFixed(1)
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
 }

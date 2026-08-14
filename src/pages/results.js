@@ -13,6 +13,8 @@ import {
   renderPublisherBrand
 } from './shared.js'
 import { orderVisibleRatings } from '../data/ratingProviders.js'
+import { buildUrl, preserveDebugParams } from '../lib/url.js'
+import { escapeHtml } from '../lib/html.js'
 
 export function renderResultsMasthead({ interactive = false } = {}) {
   return `
@@ -122,7 +124,11 @@ export async function renderResultsPage(container, showRef, options = {}) {
       debugEnabled,
       chart,
       whenSettled,
-      focusInitial() {},
+      focusInitial() {
+        container
+          .querySelector('.results-title')
+          ?.focus({ preventScroll: true })
+      },
       focusSearch() {
         window.location.href = buildBackHref()
       },
@@ -189,7 +195,11 @@ export async function renderResultsPage(container, showRef, options = {}) {
       kind: 'results',
       debugEnabled: false,
       chart: null,
-      focusInitial() {},
+      focusInitial() {
+        container
+          .querySelector('.results-title')
+          ?.focus({ preventScroll: true })
+      },
       focusSearch() {
         window.location.href = buildBackHref()
       },
@@ -320,13 +330,5 @@ function getLoadedProviders(bundle) {
 }
 
 function buildBackHref() {
-  return window.location.pathname
-}
-
-function escapeHtml(value) {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
+  return buildUrl(preserveDebugParams(new URLSearchParams()))
 }

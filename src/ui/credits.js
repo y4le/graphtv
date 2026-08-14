@@ -1,5 +1,6 @@
 import tmdbLogoMarkup from '../assets/tmdb-blue-short.svg?raw'
 import { getRatingSourceUrl } from '../data/ratingProviders.js'
+import { escapeHtml } from '../lib/html.js'
 
 const CREDITED_PROVIDERS = new Set(['omdb', 'tmdb', 'tvmaze'])
 
@@ -121,7 +122,7 @@ function renderProviderSeriesLink(provider, show) {
 
   const destination =
     provider === 'omdb' ? 'IMDb' : provider === 'tmdb' ? 'TMDB' : 'TVmaze'
-  return `<p class="credits-series-link"><a href="${escapeAttribute(url)}">View “${escapeHtml(show.title)}” on ${destination}</a></p>`
+  return `<p class="credits-series-link"><a href="${escapeHtml(url)}">View “${escapeHtml(show.title)}” on ${destination}</a></p>`
 }
 
 function renderRatingGraphLink(show) {
@@ -131,16 +132,5 @@ function renderRatingGraphLink(show) {
 
   const title = String(show.title).trim()
   const url = `https://www.ratingraph.com/search-results/${encodeURIComponent(title)}/`
-  return `<a href="${escapeAttribute(url)}">Find “${escapeHtml(title)}” on Rating Graph</a>, a more full-featured alternative.`
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-}
-
-function escapeAttribute(value) {
-  return escapeHtml(value).replaceAll('"', '&quot;')
+  return `<a href="${escapeHtml(url)}">Find “${escapeHtml(title)}” on Rating Graph</a>, a more full-featured alternative.`
 }

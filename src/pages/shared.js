@@ -4,12 +4,13 @@ import {
   getRatingSourceUrl
 } from '../data/ratingProviders.js'
 import { formatCompactNumber } from '../lib/number.js'
+import { escapeHtml } from '../lib/html.js'
 
 export function renderLoading(
   message = 'Loading...',
   { announce = true } = {}
 ) {
-  return `<p class="state-copy"${announce ? ' role="status"' : ''}>${message}</p>`
+  return `<p class="state-copy"${announce ? ' role="status"' : ''}>${escapeHtml(message)}</p>`
 }
 
 export function renderPublisherBrand() {
@@ -21,11 +22,11 @@ export function renderPublisherBrand() {
 }
 
 export function renderEmpty(message) {
-  return `<p class="state-copy">${message}</p>`
+  return `<p class="state-copy">${escapeHtml(message)}</p>`
 }
 
 export function renderError(message) {
-  return `<p class="state-copy error-state">${message}</p>`
+  return `<p class="state-copy error-state">${escapeHtml(message)}</p>`
 }
 
 export function formatRatingBadge(rating, { show = null } = {}) {
@@ -49,12 +50,4 @@ export function formatRatingBadge(rating, { show = null } = {}) {
 
 function renderRatingBadgeColumns(source, rating, votes) {
   return `${source}<span class="rating-badge-value">${rating}</span><span class="rating-badge-votes">${votes}</span>`
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
 }

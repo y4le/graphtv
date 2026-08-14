@@ -4,6 +4,7 @@ import { getUrlParams, normalizeLegacyParams } from './lib/url.js'
 import { createKeyboardController } from './ui/keyboard.js'
 import { createOverlayController } from './ui/overlay.js'
 import { initializeTheme } from './viz/theme.js'
+import { renderError, renderPublisherBrand } from './pages/shared.js'
 
 async function bootstrap() {
   const app = document.querySelector('#app')
@@ -37,4 +38,16 @@ async function bootstrap() {
   pageController.focusInitial?.()
 }
 
-bootstrap()
+bootstrap().catch((error) => {
+  const app = document.querySelector('#app')
+  if (!app) {
+    return
+  }
+
+  app.innerHTML = `
+    <main class="document-shell">
+      ${renderPublisherBrand()}
+      ${renderError(error?.message || 'graphtv could not start.')}
+    </main>
+  `
+})
