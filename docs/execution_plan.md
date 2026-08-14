@@ -12,7 +12,7 @@ These items are implemented and are no longer open work:
 - tokenized light/dark theme system and season palettes
 - results-page two-column composition
 - sparkline + viewport-based chart architecture
-- range-frame Y-axis and macro/micro trendlines
+- range-frame Y-axis, integrated bottom season axis, and macro/micro trendlines
 - desktop sidenote and mobile inline detail replacing tooltip-first behavior
 
 ## Remaining work

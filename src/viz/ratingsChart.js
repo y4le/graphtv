@@ -16,6 +16,7 @@ import {
   renderCrosshair,
   renderPoints,
   renderRangeFrame,
+  renderSeasonAxis,
   renderSourceSpreads,
   renderSeriesBreakpoint,
   renderTrendlines
@@ -1177,6 +1178,19 @@ export function createChart(container, seasons, options = {}) {
     }
   }
 
+  function getSeasonAxisInteractions() {
+    const selectedTrend = getTrendSummary(selectedTrendId)
+    return {
+      activeSeasonNumber:
+        selectedTrend?.kind === 'season' ? selectedTrend.seasonNumber : null,
+      isSelectable(seasonNumber) {
+        return Boolean(getTrendSummary(`season:${seasonNumber}`))
+      },
+      onSelect: selectSeasonTrend,
+      shouldSuppressClick
+    }
+  }
+
   function renderDesktopChart(
     chartTheme,
     axisWidth,
@@ -1276,6 +1290,15 @@ export function createChart(container, seasons, options = {}) {
       mainScales,
       { width: chartWidth, height: chartHeight },
       chartTheme
+    )
+    renderSeasonAxis(
+      mainSvg,
+      model.seasonSpans,
+      viewport,
+      mainScales,
+      { width: chartWidth, height: chartHeight },
+      chartTheme,
+      getSeasonAxisInteractions()
     )
 
     renderSparkline(
@@ -1411,6 +1434,15 @@ export function createChart(container, seasons, options = {}) {
       fullScales,
       { width: contentWidth, height: chartHeight },
       chartTheme
+    )
+    renderSeasonAxis(
+      mainSvg,
+      model.seasonSpans,
+      { start: 1, end: model.xMax },
+      fullScales,
+      { width: contentWidth, height: chartHeight },
+      chartTheme,
+      getSeasonAxisInteractions()
     )
 
     renderSparkline(

@@ -13,6 +13,7 @@ These redesign goals are already implemented:
 - desktop two-column results composition
 - sparkline minimap + viewport-based main chart
 - range-frame Y-axis
+- integrated bottom season axis with responsive labels
 - macro and micro trendlines
 - desktop sidenote and mobile inline detail replacing floating tooltips
 

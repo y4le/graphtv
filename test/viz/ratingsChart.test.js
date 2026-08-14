@@ -369,7 +369,7 @@ describe('createChart', () => {
     expect(chart.getDebugState().selectedTrendId).toBe('season:1')
   })
 
-  it('does not render season labels inside the plot', () => {
+  it('keeps selectable season-axis labels in sync with season trends', () => {
     const container = document.createElement('div')
     Object.defineProperty(container, 'clientWidth', {
       configurable: true,
@@ -382,8 +382,129 @@ describe('createChart', () => {
     expect(container.querySelector('.ratings-chart').getAttribute('role')).toBe(
       'group'
     )
-    expect(container.querySelector('.season-label-layer')).toBeNull()
+    const labels = Array.from(container.querySelectorAll('.season-axis-label'))
+
+    expect(labels.map((label) => label.textContent)).toEqual([
+      'Season 1',
+      'Season 2'
+    ])
+    expect(new Set(labels.map((label) => label.getAttribute('y'))).size).toBe(1)
+    expect(labels.every((label) => label.getAttribute('role') === 'button')).toBe(
+      true
+    )
+    expect(labels.every((label) => label.getAttribute('tabindex') === '0')).toBe(
+      true
+    )
+    expect(
+      labels.every(
+        (label) => label.getAttribute('data-keyboard-chart') === 'true'
+      )
+    ).toBe(true)
+    expect(labels[0].getAttribute('aria-pressed')).toBe('true')
+    expect(labels[0].getAttribute('aria-label')).toBe(
+      'Season 1 trendline selected'
+    )
+    expect(labels[0].classList.contains('is-active')).toBe(true)
+    expect(labels[1].getAttribute('aria-pressed')).toBe('false')
+
+    labels[1].dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    expect(chart.getDebugState().selectedTrendId).toBe('season:2')
+    expect(labels[0].getAttribute('aria-pressed')).toBe('false')
+    expect(labels[1].getAttribute('aria-pressed')).toBe('true')
+    expect(labels[1].classList.contains('is-active')).toBe(true)
+
+    labels[0].dispatchEvent(
+      new KeyboardEvent('keydown', { bubbles: true, key: ' ' })
+    )
+
+    expect(chart.getDebugState().selectedTrendId).toBe('season:1')
+    expect(labels[0].getAttribute('aria-pressed')).toBe('true')
+
+    updateUiSettings({ seasonTrendlines: false })
+    expect(chart.getDebugState().selectedTrendId).toBeNull()
+    labels[1].dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(chart.getDebugState()).toMatchObject({
+      selectedTrendId: 'season:2',
+      uiSettings: { seasonTrendlines: true }
+    })
+    expect(labels[1].getAttribute('aria-pressed')).toBe('true')
+
+    expect(container.querySelectorAll('.season-axis-tick')).toHaveLength(3)
+    expect(
+      Number(container.querySelector('.season-axis-line').getAttribute('y1'))
+    ).toBeGreaterThan(Number(labels[0].getAttribute('y')))
+    const chartHeight = getViewBoxHeight(
+      container.querySelector('.ratings-chart')
+    )
+    expect(
+      Number(container.querySelector('.season-axis-line').getAttribute('y1'))
+    ).toBe(chartHeight - 0.5)
+    expect(
+      Number(container.querySelector('.season-axis-line').getAttribute('x1'))
+    ).toBeLessThan(0)
+    expect(
+      Number(container.querySelector('.range-line').getAttribute('y2'))
+    ).toBe(chartHeight)
+    const firstTick = container.querySelector('.season-axis-tick')
+    expect(Number(firstTick.getAttribute('y2'))).toBeLessThan(
+      Number(firstTick.getAttribute('y1'))
+    )
     expect(container.querySelector('.season-label')).toBeNull()
+  })
+
+  it('keeps a season label plain when no season trendline is available', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(
+      container,
+      createTwoSeasons({ secondEpisodeCount: 2 })
+    )
+    const secondSeason = Array.from(
+      container.querySelectorAll('.season-axis-label')
+    ).find((label) => label.__data__.seasonNumber === 2)
+
+    expect(secondSeason.getAttribute('role')).toBeNull()
+    expect(secondSeason.getAttribute('tabindex')).toBeNull()
+    expect(secondSeason.getAttribute('aria-pressed')).toBeNull()
+    expect(secondSeason.getAttribute('aria-hidden')).toBe('true')
+    expect(secondSeason.getAttribute('data-keyboard-chart')).toBeNull()
+  })
+
+  it('moves focus to the plot when a focused season-axis label leaves the viewport', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+    const seasons = Array.from({ length: 8 }, (_, seasonIndex) => ({
+      number: seasonIndex + 1,
+      episodes: Array.from({ length: 10 }, (_, episodeIndex) => ({
+        id: `season-${seasonIndex + 1}-episode-${episodeIndex + 1}`,
+        title: `Season ${seasonIndex + 1} Episode ${episodeIndex + 1}`,
+        season: seasonIndex + 1,
+        number: episodeIndex + 1,
+        ratings: [{ source: 'test', rating: 7 + episodeIndex / 10 }]
+      }))
+    }))
+
+    chart = createChart(container, seasons)
+    const firstSeason = Array.from(
+      container.querySelectorAll('.season-axis-label')
+    ).find((label) => label.__data__.seasonNumber === 1)
+    firstSeason.focus()
+
+    chart.jumpBoundary('end')
+
+    expect(document.activeElement).toBe(
+      container.querySelector('.ratings-chart')
+    )
   })
 
   it('selects best and worst season trendlines from the series summary', () => {
@@ -1671,6 +1792,10 @@ describe('createChart', () => {
 
 function getViewBoxWidth(svg) {
   return Number(svg.getAttribute('viewBox').split(/\s+/)[2])
+}
+
+function getViewBoxHeight(svg) {
+  return Number(svg.getAttribute('viewBox').split(/\s+/)[3])
 }
 
 function getAxisLabels(container) {

@@ -14,6 +14,10 @@ const SOURCE_RATING_OPACITY = 0.68
 const FALLBACK_POINT_FILL_OPACITY = 0.2
 const DEFAULT_POINT_RADIUS = 3
 const ACTIVE_POINT_RADIUS_OFFSET = 1.5
+const SEASON_AXIS_FONT_SIZE = 12
+const SEASON_AXIS_FULL_LABEL_PADDING = 12
+const SEASON_AXIS_LEFT_EXTENSION = 15
+const SEASON_AXIS_TICK_SIZE = 5
 
 export function renderRangeFrame(svg, scales, dimensions, theme) {
   const [minRating, maxRating] = scales.yDomain
@@ -61,6 +65,228 @@ export function renderRangeFrame(svg, scales, dimensions, theme) {
     .attr('font-family', 'var(--font-sans)')
     .attr('font-size', 12)
     .text((tick) => formatRating(tick))
+}
+
+export function renderSeasonAxis(
+  svg,
+  spans,
+  viewport,
+  scales,
+  dimensions,
+  theme,
+  interactions = {}
+) {
+  const focusedLabel = svg.node()?.ownerDocument.activeElement
+  const focusedSeasonNumber = focusedLabel?.matches?.('.season-axis-label')
+    ? focusedLabel.__data__?.seasonNumber
+    : null
+  const layer = svg
+    .selectAll('.season-axis-layer')
+    .data([null])
+    .join('g')
+    .attr('class', 'season-axis-layer')
+    .raise()
+  const visibleSpans = createVisibleSeasonAxisSpans(spans, viewport, scales)
+  const boundaries = createVisibleSeasonBoundaries(spans, viewport)
+  const [, axisEndX] = scales.xScale.range()
+  const axisY = dimensions.height - 0.5
+
+  if (
+    focusedSeasonNumber != null &&
+    !visibleSpans.some(
+      (span) =>
+        span.seasonNumber === focusedSeasonNumber &&
+        isSelectableSeasonAxisLabel(span, interactions)
+    )
+  ) {
+    svg.node().focus({ preventScroll: true })
+  }
+
+  layer
+    .selectAll('.season-axis-line')
+    .data(spans.length > 0 ? [null] : [])
+    .join('line')
+    .attr('class', 'season-axis-line')
+    .attr('x1', -SEASON_AXIS_LEFT_EXTENSION)
+    .attr('x2', axisEndX)
+    .attr('y1', axisY)
+    .attr('y2', axisY)
+    .attr('stroke', theme.textSecondary)
+    .attr('stroke-opacity', 0.45)
+    .attr('stroke-width', 1)
+    .attr('aria-hidden', 'true')
+    .attr('pointer-events', 'none')
+
+  layer
+    .selectAll('.season-axis-tick')
+    .data(boundaries, (boundary) => String(boundary))
+    .join('line')
+    .attr('class', 'season-axis-tick')
+    .attr('x1', (boundary) => scales.xScale(boundary))
+    .attr('x2', (boundary) => scales.xScale(boundary))
+    .attr('y1', axisY)
+    .attr('y2', axisY - SEASON_AXIS_TICK_SIZE)
+    .attr('stroke', theme.textSecondary)
+    .attr('stroke-opacity', 0.7)
+    .attr('stroke-width', 1)
+    .attr('aria-hidden', 'true')
+    .attr('pointer-events', 'none')
+
+  const labels = layer
+    .selectAll('.season-axis-label')
+    .data(visibleSpans, (span) => span.seasonNumber)
+    .join('text')
+    .attr('class', (span) =>
+      span.seasonNumber === interactions.activeSeasonNumber
+        ? 'season-axis-label is-active'
+        : 'season-axis-label'
+    )
+    .attr('x', (span) => span.centerX)
+    .attr('y', dimensions.height - SEASON_AXIS_TICK_SIZE - 4)
+    .attr('fill', (span) =>
+      span.seasonNumber === interactions.activeSeasonNumber
+        ? theme.spotColor
+        : theme.textSecondary
+    )
+    .attr('text-anchor', 'middle')
+    .attr('font-family', 'var(--font-sans)')
+    .attr('font-size', SEASON_AXIS_FONT_SIZE)
+    .attr('role', (span) =>
+      isSelectableSeasonAxisLabel(span, interactions) ? 'button' : null
+    )
+    .attr('tabindex', (span) =>
+      isSelectableSeasonAxisLabel(span, interactions) ? 0 : null
+    )
+    .attr('aria-hidden', (span) =>
+      isSelectableSeasonAxisLabel(span, interactions) ? null : 'true'
+    )
+    .attr('aria-label', (span) =>
+      isSelectableSeasonAxisLabel(span, interactions)
+        ? getSeasonAxisLabelAriaLabel(span, interactions)
+        : null
+    )
+    .attr('aria-pressed', (span) =>
+      isSelectableSeasonAxisLabel(span, interactions)
+        ? String(span.seasonNumber === interactions.activeSeasonNumber)
+        : null
+    )
+    .attr('data-keyboard-chart', (span) =>
+      isSelectableSeasonAxisLabel(span, interactions) ? 'true' : null
+    )
+    .attr('pointer-events', (span) =>
+      isSelectableSeasonAxisLabel(span, interactions) ? null : 'none'
+    )
+    .on('click', (event, span) => {
+      if (!isSelectableSeasonAxisLabel(span, interactions)) {
+        return
+      }
+      event.stopPropagation()
+      if (interactions.shouldSuppressClick?.()) {
+        return
+      }
+      interactions.onSelect?.(span.seasonNumber)
+    })
+    .on('keydown', (event, span) => {
+      if (
+        !isSelectableSeasonAxisLabel(span, interactions) ||
+        (event.key !== 'Enter' && event.key !== ' ')
+      ) {
+        return
+      }
+      event.preventDefault()
+      event.stopPropagation()
+      interactions.onSelect?.(span.seasonNumber)
+    })
+    .text((span) => `Season ${span.seasonNumber}`)
+
+  labels
+    .each(function (span) {
+      const fullLabel = `Season ${span.seasonNumber}`
+      const fullLabelWidth = measureSvgText(this, fullLabel)
+      this.textContent =
+        fullLabelWidth + SEASON_AXIS_FULL_LABEL_PADDING <= span.availableWidth
+          ? fullLabel
+          : String(span.seasonNumber)
+    })
+}
+
+function isSelectableSeasonAxisLabel(span, interactions) {
+  return interactions.isSelectable?.(span.seasonNumber) ?? false
+}
+
+function getSeasonAxisLabelAriaLabel(span, interactions) {
+  return span.seasonNumber === interactions.activeSeasonNumber
+    ? `Season ${span.seasonNumber} trendline selected`
+    : `Select Season ${span.seasonNumber} trendline`
+}
+
+function createVisibleSeasonAxisSpans(spans, viewport, scales) {
+  if (
+    spans.length === 1 &&
+    spans[0].start === spans[0].end &&
+    viewport.start === viewport.end
+  ) {
+    const [rangeStart, rangeEnd] = scales.xScale.range()
+    return [
+      {
+        ...spans[0],
+        visibleStart: viewport.start,
+        visibleEnd: viewport.end,
+        centerX: (rangeStart + rangeEnd) / 2,
+        availableWidth: Math.abs(rangeEnd - rangeStart)
+      }
+    ]
+  }
+
+  return spans
+    .map((span, index) => {
+      const startBoundary = index === 0 ? span.start : span.start - 0.5
+      const endBoundary = index === spans.length - 1 ? span.end : span.end + 0.5
+      const visibleStart = Math.max(startBoundary, viewport.start)
+      const visibleEnd = Math.min(endBoundary, viewport.end)
+      const startX = scales.xScale(visibleStart)
+      const endX = scales.xScale(visibleEnd)
+
+      return {
+        ...span,
+        visibleStart,
+        visibleEnd,
+        centerX: (startX + endX) / 2,
+        availableWidth: Math.abs(endX - startX)
+      }
+    })
+    .filter((span) => span.visibleEnd > span.visibleStart)
+}
+
+function createVisibleSeasonBoundaries(spans, viewport) {
+  if (spans.length === 0) {
+    return []
+  }
+
+  return Array.from(
+    new Set([
+      spans[0].start,
+      ...spans.slice(1).map((span) => span.start - 0.5),
+      spans.at(-1).end
+    ])
+  ).filter(
+    (boundary) => boundary >= viewport.start && boundary <= viewport.end
+  )
+}
+
+function measureSvgText(node, text) {
+  try {
+    if (typeof node.getComputedTextLength === 'function') {
+      const measuredWidth = node.getComputedTextLength()
+      if (Number.isFinite(measuredWidth) && measuredWidth > 0) {
+        return measuredWidth
+      }
+    }
+  } catch {
+    // Fall back to the monospaced estimate when SVG measurement is unavailable.
+  }
+
+  return text.length * SEASON_AXIS_FONT_SIZE * 0.62
 }
 
 export function renderTrendlines(

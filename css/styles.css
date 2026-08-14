@@ -27,6 +27,7 @@
   --searchMaxWidth: clamp(39rem, calc(24rem + 12vw), 52rem);
   --searchCollectionMaxWidth: clamp(39rem, calc(18rem + 24vw), 75rem);
   --columnGap: clamp(2rem, 4vw, 4rem);
+  --chartColumnGap: 0.9rem;
   --rhythm: 1.5rem;
   --tight: 0.75rem;
   --chartDesktopHeight: 25rem;
@@ -869,7 +870,7 @@ button {
 .reading-pane-shell {
   display: grid;
   grid-template-columns: var(--axis-width, 56px) minmax(0, 1fr);
-  gap: 0.9rem;
+  gap: var(--chartColumnGap);
   align-items: start;
 }
 
@@ -1462,6 +1463,28 @@ button {
 .source-spread-layer,
 .crosshair-layer {
   pointer-events: none;
+}
+
+.season-axis-label[role='button'] {
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.season-axis-label[role='button']:focus-visible {
+  outline: 2px solid var(--spotColor);
+  outline-offset: 2px;
+}
+
+.season-axis-label[role='button']:hover,
+.season-axis-label[role='button']:focus-visible {
+  fill: var(--spotColor);
+  text-decoration: underline;
+}
+
+.season-axis-line {
+  x1: calc(0px - var(--chartColumnGap));
 }
 
 .point-layer .episode-point,

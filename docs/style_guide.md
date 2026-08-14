@@ -153,7 +153,7 @@ Charts are the product core. They should feel engineered, not skinned.
 
 Rules:
 - Remove full plot boxes and heavy grid systems.
-- Keep season names out of the plot area; communicate season context through episode details and trend summaries.
+- Use one season row inside the graph with its rule serving as the graph's bottom edge, bridging left to the Y-axis, and boundary ticks pointing upward. Show `Season N` when it fits and only `N` when space is tight. Selectable labels and season trendlines share one selection state.
 - Show episode points clearly; trendlines should support interpretation without overpowering the points.
 - Use a range-frame or other light reference marks instead of conventional chart scaffolding when possible.
 - For dense series, pair a sparkline overview with a viewport-based detailed chart. The main chart should always render episodes at comfortable spacing — never compress the entire series into an unreadable mass.
