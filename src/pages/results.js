@@ -53,10 +53,13 @@ export async function renderResultsPage(container, showRef, options = {}) {
   let destroyed = false
   let iterator = null
   let latestBundle = null
+  let latestShow = null
+  let primaryProvider = null
 
   try {
     const debugEnabled = true
     const { provider } = parseShowRef(showRef)
+    primaryProvider = provider
     const progress = bundleStream(showRef, {
       compareProviders:
         options.compareProviders ?? getComparisonProviders(provider),
@@ -68,6 +71,7 @@ export async function renderResultsPage(container, showRef, options = {}) {
       throw new Error('Provider returned no show details.')
     }
 
+    latestShow = showSnapshot.value.show
     renderResultsShell(container, showSnapshot.value.show)
     document.title = `${showSnapshot.value.show.title} · graphtv`
 
@@ -77,6 +81,7 @@ export async function renderResultsPage(container, showRef, options = {}) {
     }
 
     latestBundle = primarySnapshot.value.bundle
+    latestShow = latestBundle.show
     updateResultsContent(container, latestBundle)
     const episodeDetailLoader = detailLoaderFactory({
       expectedSeriesId: latestBundle.show.externalIds.imdb,
@@ -101,6 +106,7 @@ export async function renderResultsPage(container, showRef, options = {}) {
         }
 
         latestBundle = snapshot.bundle
+        latestShow = latestBundle.show
         updateResultsContent(container, latestBundle)
         chart.updateSeasons(latestBundle.seasons, { show: latestBundle.show })
         updateProgress(container, snapshot)
@@ -122,6 +128,12 @@ export async function renderResultsPage(container, showRef, options = {}) {
       },
       goBack() {
         window.location.href = buildBackHref()
+      },
+      getCreditsContext() {
+        return {
+          providers: getLoadedProviders(latestBundle),
+          show: latestShow
+        }
       },
       getDebugSections() {
         return [
@@ -183,6 +195,12 @@ export async function renderResultsPage(container, showRef, options = {}) {
       },
       goBack() {
         window.location.href = buildBackHref()
+      },
+      getCreditsContext() {
+        return {
+          providers: latestShow && primaryProvider ? [primaryProvider] : [],
+          show: latestShow
+        }
       },
       getDebugSections() {
         return []
@@ -286,6 +304,19 @@ async function consumeRemainingSnapshots(iterator, onSnapshot) {
     }
     await onSnapshot(next.value)
   }
+}
+
+function getLoadedProviders(bundle) {
+  if (Array.isArray(bundle?.sourceRecords)) {
+    return bundle.sourceRecords.map((record) => record.provider)
+  }
+
+  return [
+    bundle?.primarySource,
+    ...(bundle?.providerDiagnostics ?? [])
+      .filter((diagnostic) => diagnostic.status === 'loaded')
+      .map((diagnostic) => diagnostic.provider)
+  ].filter(Boolean)
 }
 
 function buildBackHref() {

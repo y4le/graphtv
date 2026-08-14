@@ -10,6 +10,7 @@ import {
 import { hasCommandModifier } from '../lib/keyboard.js'
 import { clearApiCache } from '../data/apiCache.js'
 import { resetAllAppData } from '../data/appData.js'
+import { renderCreditsContent } from './credits.js'
 
 const VIEW_OPTION_SHORTCUTS = {
   c: 'palette',
@@ -139,9 +140,14 @@ export function createOverlayController() {
   }
 }
 
-export function openHelpOverlay(overlayController, page) {
+export function openHelpOverlay(overlayController, page, options = {}) {
   const sections =
     page.kind === 'results' ? resultsHelpSections() : searchHelpSections()
+  const openCredits = () => {
+    overlayController.close()
+    openCreditsOverlay(overlayController, page)
+  }
+
   overlayController.open({
     id: 'help',
     title: 'Keyboard shortcuts',
@@ -172,6 +178,11 @@ export function openHelpOverlay(overlayController, page) {
           )
           .join('')}
       </div>
+      <div class="help-footer">
+        <button type="button" class="help-credits-action" data-help-action="credits">
+          Credits &amp; attribution <span aria-hidden="true">→</span>
+        </button>
+      </div>
     `,
     onMount({ content }) {
       content
@@ -180,6 +191,49 @@ export function openHelpOverlay(overlayController, page) {
           overlayController.close()
           openDebugOverlay(overlayController, page)
         })
+      const creditsAction = content.querySelector(
+        '[data-help-action="credits"]'
+      )
+      creditsAction.addEventListener('click', openCredits)
+      if (options.focusCreditsAction) {
+        creditsAction.focus({ preventScroll: true })
+      }
+    },
+    onKeyDown(event, { content }) {
+      if (event.key === 'a' || event.key === 'c') {
+        event.preventDefault()
+        event.stopPropagation()
+        openCredits()
+        return
+      }
+
+      if (event.key === 'j' || event.key === 'ArrowDown') {
+        event.preventDefault()
+        content.scrollBy({ top: 56, behavior: getMotionBehavior() })
+      }
+
+      if (event.key === 'k' || event.key === 'ArrowUp') {
+        event.preventDefault()
+        content.scrollBy({ top: -56, behavior: getMotionBehavior() })
+      }
+    }
+  })
+}
+
+export function openCreditsOverlay(overlayController, page) {
+  overlayController.open({
+    id: 'credits',
+    title: 'Credits & attribution',
+    className: 'overlay-credits',
+    compactClose: true,
+    content: renderCreditsContent(page),
+    onMount({ content }) {
+      const backButton = content.querySelector('[data-credits-back]')
+      backButton.addEventListener('click', () => {
+        overlayController.close()
+        openHelpOverlay(overlayController, page, { focusCreditsAction: true })
+      })
+      backButton.focus({ preventScroll: true })
     },
     onKeyDown(event, { content }) {
       if (event.key === 'j' || event.key === 'ArrowDown') {

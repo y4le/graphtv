@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   createOverlayController,
+  openCreditsOverlay,
   openDebugOverlay,
   openHelpOverlay,
   openViewOptionsOverlay
@@ -94,9 +95,7 @@ describe('view options overlay', () => {
 
     const row = document.querySelector('[data-option="episode-density"]')
     const values = Array.from(row.querySelectorAll('.view-value'))
-    const denseButton = row.querySelector(
-      '[data-view-episode-density="dense"]'
-    )
+    const denseButton = row.querySelector('[data-view-episode-density="dense"]')
     const infoButton = row.querySelector('[data-view-option-info]')
     const tooltip = row.querySelector('[role="tooltip"]')
 
@@ -126,7 +125,8 @@ describe('view options overlay', () => {
     expect(tooltip.hidden).toBe(true)
 
     expect(
-      row.querySelector('[data-view-episode-density="balanced"]')
+      row
+        .querySelector('[data-view-episode-density="balanced"]')
         .getAttribute('aria-pressed')
     ).toBe('true')
 
@@ -159,8 +159,9 @@ describe('view options overlay', () => {
     const yAxisValues = Array.from(yAxisRow.querySelectorAll('.view-value'))
 
     expect(
-      Array.from(paletteRow.querySelectorAll('.view-value'), (value) =>
-        value.textContent
+      Array.from(
+        paletteRow.querySelectorAll('.view-value'),
+        (value) => value.textContent
       )
     ).toEqual(['Mono', 'Alternating', 'Rainbow', 'Zigzag', 'Maximin'])
     expect(yAxisValues.map((value) => value.textContent)).toEqual(['Off', 'On'])
@@ -277,7 +278,7 @@ describe('keyboard help overlay', () => {
       ])
     )
     expect(keycapLabels).not.toEqual(
-      expect.arrayContaining(['w', '0', '$', 'd'])
+      expect.arrayContaining(['w', '0', '$', 'd', 'a', 'c'])
     )
     expect(document.querySelector('.help-sections').textContent).toContain(
       'Select best breakpoint (ignores confidence threshold)'
@@ -336,6 +337,156 @@ describe('keyboard help overlay', () => {
     expect(helpText).not.toContain('Browse collections')
     expect(helpText).not.toContain('Scroll collection backward')
     expect(helpText).not.toContain('Scroll collection forward')
+  })
+
+  it('opens contextual credits from help and returns focus to the entry', () => {
+    const origin = document.createElement('button')
+    origin.textContent = 'Help'
+    document.body.appendChild(origin)
+    origin.focus()
+    const overlayController = createOverlayController()
+    const page = {
+      kind: 'results',
+      debugEnabled: true,
+      getCreditsContext: () => ({
+        providers: ['tvmaze', 'omdb', 'tmdb', 'tvmaze', 'testdb'],
+        show: {
+          title: 'Example & Friends',
+          externalIds: { imdb: 'tt1234567', tmdb: 1438, tvmaze: 1 }
+        }
+      })
+    }
+
+    openHelpOverlay(overlayController, page)
+    document.querySelector('[data-help-action="credits"]').click()
+
+    expect(overlayController.getActiveId()).toBe('credits')
+    expect(document.querySelector('.overlay-title').textContent).toBe(
+      'Credits & attribution'
+    )
+    expect(document.activeElement).toBe(
+      document.querySelector('[data-credits-back]')
+    )
+    expect(
+      Array.from(
+        document.querySelectorAll('[data-credit-provider]'),
+        (item) => item.dataset.creditProvider
+      )
+    ).toEqual(['tvmaze', 'omdb', 'tmdb'])
+
+    document.querySelector('[data-credits-back]').click()
+
+    expect(overlayController.getActiveId()).toBe('help')
+    expect(document.activeElement).toBe(
+      document.querySelector('[data-help-action="credits"]')
+    )
+
+    document.querySelector('[data-help-action="credits"]').click()
+    document.querySelector('[data-overlay-close]').click()
+    expect(document.activeElement).toBe(origin)
+  })
+
+  it.each(['a', 'c'])(
+    'opens credits with the undocumented %s shortcut',
+    (key) => {
+      const overlayController = createOverlayController()
+      openHelpOverlay(overlayController, {
+        kind: 'search',
+        getCreditsContext: () => ({ providers: [], show: null })
+      })
+      const event = new KeyboardEvent('keydown', {
+        key,
+        bubbles: true,
+        cancelable: true
+      })
+
+      document.activeElement.dispatchEvent(event)
+
+      expect(event.defaultPrevented).toBe(true)
+      expect(overlayController.getActiveId()).toBe('credits')
+      expect(document.querySelector('.overlay-title').textContent).toBe(
+        'Credits & attribution'
+      )
+    }
+  )
+})
+
+describe('credits overlay', () => {
+  it('puts page data first and renders the required credits and links', () => {
+    const overlayController = createOverlayController()
+    openCreditsOverlay(overlayController, {
+      kind: 'results',
+      getCreditsContext: () => ({
+        providers: ['tvmaze', 'omdb', 'tmdb'],
+        show: {
+          title: 'Example & Friends',
+          externalIds: { imdb: 'tt1234567', tmdb: 1438, tvmaze: 1 }
+        }
+      })
+    })
+
+    const content = document.querySelector('.overlay-content')
+    const headings = Array.from(content.querySelectorAll('h3'), (heading) =>
+      heading.textContent.trim()
+    )
+    const links = Array.from(content.querySelectorAll('a'))
+    const linkByText = (text) =>
+      links.find((link) => link.textContent.includes(text))
+
+    expect(headings).toEqual([
+      'Project',
+      'Inspiration and alternatives',
+      'Data on this page',
+      'Under the hood'
+    ])
+    expect(content.textContent).toContain(
+      'This product uses the TMDB API but is not endorsed or certified by TMDB.'
+    )
+    const tmdbLogo = document.querySelector('.credits-tmdb-logo')
+    expect(tmdbLogo.getAttribute('aria-label')).toBe('TMDB')
+    expect(tmdbLogo.querySelector('svg').getAttribute('viewBox')).toBe(
+      '0 0 273.42 35.52'
+    )
+    expect(linkByText('View “Example & Friends” on TVmaze').href).toBe(
+      'https://www.tvmaze.com/shows/1'
+    )
+    expect(linkByText('View “Example & Friends” on IMDb').href).toBe(
+      'https://www.imdb.com/title/tt1234567/'
+    )
+    expect(linkByText('View “Example & Friends” on TMDB').href).toBe(
+      'https://www.themoviedb.org/tv/1438'
+    )
+    expect(linkByText('Find “Example & Friends” on Rating Graph').href).toBe(
+      'https://www.ratingraph.com/search-results/Example%20%26%20Friends/'
+    )
+    expect(content.textContent).toContain(
+      'This site was built by Yale Thomas using Claude Code and Codex.'
+    )
+    expect(linkByText('Source code on GitHub').href).toBe(
+      'https://github.com/y4le/graphtv'
+    )
+    expect(content.textContent).toContain(
+      'No television shows were canceled in the making of this graph.'
+    )
+    expect(content.textContent).not.toContain('Self-rating')
+  })
+
+  it('states when the current page has no external data', () => {
+    const overlayController = createOverlayController()
+    openCreditsOverlay(overlayController, {
+      kind: 'search',
+      getCreditsContext: () => ({ providers: [], show: null })
+    })
+
+    expect(
+      document.querySelector('.credits-current-data').textContent
+    ).toContain('No external TV data is currently displayed on this page.')
+    expect(document.querySelector('[data-credit-provider]')).toBeNull()
+    expect(
+      Array.from(document.querySelectorAll('a')).find((link) =>
+        link.textContent.includes('Explore Rating Graph')
+      ).href
+    ).toBe('https://www.ratingraph.com/')
   })
 })
 

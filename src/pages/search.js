@@ -53,6 +53,7 @@ export function renderSearchPage(container) {
     abortController: null,
     results: [],
     selectedIndex: -1,
+    collectionsProvider: null,
     collections: SEARCH_PAGE_COLLECTIONS.map(({ id }) => ({
       id,
       status: collectionsEnabled ? 'loading' : 'unavailable',
@@ -144,6 +145,12 @@ export function renderSearchPage(container) {
       status,
       count: shows.length
     }))
+    state.collectionsProvider = collections.some(
+      (collection) =>
+        collection.status === 'ready' && collection.shows.length > 0
+    )
+      ? 'tmdb'
+      : null
 
     for (const collection of collections) {
       const rail = Array.from(
@@ -343,6 +350,12 @@ export function renderSearchPage(container) {
       )
       if (active) {
         active.click()
+      }
+    },
+    getCreditsContext() {
+      return {
+        providers: [provider, state.collectionsProvider].filter(Boolean),
+        show: null
       }
     },
     getDebugSections() {

@@ -159,6 +159,10 @@ describe('renderResultsPage', () => {
     resolvePrimary()
     const page = await pagePromise
     expect(chartFactory).toHaveBeenCalledTimes(1)
+    expect(page.getCreditsContext()).toEqual({
+      providers: ['tvmaze'],
+      show: primaryBundle.show
+    })
     expect(container.querySelector('.results-progress').textContent).toBe(
       'Loading additional ratings…'
     )
@@ -195,6 +199,10 @@ describe('renderResultsPage', () => {
     expect(
       container.querySelector('.results-data').getAttribute('aria-busy')
     ).toBe('false')
+    expect(page.getCreditsContext()).toEqual({
+      providers: ['tvmaze', 'omdb', 'tmdb'],
+      show: supplementalBundle.show
+    })
 
     page.destroy()
     expect(chart.destroy).toHaveBeenCalledTimes(1)
@@ -230,6 +238,10 @@ describe('renderResultsPage', () => {
     expect(
       container.querySelector('.results-data').getAttribute('aria-busy')
     ).toBe('false')
+    expect(page.getCreditsContext()).toEqual({
+      providers: ['tvmaze'],
+      show: createBundle().show
+    })
   })
 })
 
@@ -278,6 +290,10 @@ function createBundle({ supplemental = false } = {}) {
     alignment: [],
     alignmentIssues: [],
     mismatches: [],
+    sourceRecords: [
+      { provider: 'tvmaze' },
+      ...(supplemental ? [{ provider: 'omdb' }, { provider: 'tmdb' }] : [])
+    ],
     providerDiagnostics: supplemental
       ? [{ provider: 'tmdb', role: 'supplemental', status: 'loaded' }]
       : []

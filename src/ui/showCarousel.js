@@ -5,10 +5,6 @@ export function renderCollectionRailsShell(collections) {
   return `
     <section class="collection-rails" aria-label="Browse show collections">
       ${collections.map(renderCollectionRailShell).join('')}
-      <p class="collection-attribution">
-        TV data and artwork from <a href="https://www.themoviedb.org/">TMDB</a>.
-        This product uses the TMDB API but is not endorsed or certified by TMDB.
-      </p>
     </section>
   `
 }

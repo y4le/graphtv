@@ -191,6 +191,10 @@ describe('renderSearchPage', () => {
     expect(container.querySelector('.error-state').textContent).toBe(
       'Popular is unavailable right now.'
     )
+    expect(page.getCreditsContext()).toEqual({
+      providers: ['tvmaze', 'tmdb'],
+      show: null
+    })
 
     page.destroy()
   })
@@ -314,6 +318,34 @@ describe('renderSearchPage', () => {
     expect(container.querySelector('.search-document').classList).not.toContain(
       'search-document-has-results'
     )
+
+    page.destroy()
+  })
+
+  it('credits the search provider before and after results are displayed', async () => {
+    vi.mocked(canLoadSearchCollections).mockReturnValue(false)
+    vi.mocked(searchShows).mockResolvedValue([createSearchResult()])
+    const { clearButton, form, input, page, results } = renderPage()
+
+    expect(page.getCreditsContext()).toEqual({
+      providers: ['tvmaze'],
+      show: null
+    })
+
+    input.value = 'wire'
+    form.requestSubmit()
+    await vi.waitFor(() => expect(results.children).toHaveLength(1))
+
+    expect(page.getCreditsContext()).toEqual({
+      providers: ['tvmaze'],
+      show: null
+    })
+
+    clearButton.click()
+    expect(page.getCreditsContext()).toEqual({
+      providers: ['tvmaze'],
+      show: null
+    })
 
     page.destroy()
   })

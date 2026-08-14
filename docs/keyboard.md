@@ -10,7 +10,7 @@ GraphTV uses a mode system inspired by vim:
 
 **Insert mode** — active when the search input is focused. All keys type into the input. Only `Escape` (exit to normal), `Enter` (submit), and standard text editing keys work.
 
-**Overlay mode** — active when the help overlay, view options panel, or debug panel is open. The overlay traps focus. The toggle key, `Escape`, `q`, or clicking outside closes it. Content is navigable with `j`/`k`/`ArrowUp`/`ArrowDown`.
+**Overlay mode** — active when the help, credits, view options, or debug panel is open. The overlay traps focus. The toggle key, `Escape`, `q`, or clicking outside closes it. Scrollable content is navigable with `j`/`k`/`ArrowUp`/`ArrowDown`.
 
 ## Chord handling
 
@@ -102,12 +102,12 @@ The panel shows the available options as a short list. Each option displays its 
 
 #### Navigation
 
-| Action                      | Vim                   | Conventional             | Notes                                            |
-| --------------------------- | --------------------- | ------------------------ | ------------------------------------------------ |
-| Move between options        | `j`/`k`               | `ArrowUp`/`ArrowDown`    |                                                  |
-| Change focused value        | `h`/`l`               | `ArrowLeft`/`ArrowRight` | Left selects Off/previous; right selects On/next |
+| Action                      | Vim                   | Conventional             | Notes                                                      |
+| --------------------------- | --------------------- | ------------------------ | ---------------------------------------------------------- |
+| Move between options        | `j`/`k`               | `ArrowUp`/`ArrowDown`    |                                                            |
+| Change focused value        | `h`/`l`               | `ArrowLeft`/`ArrowRight` | Left selects Off/previous; right selects On/next           |
 | Toggle/cycle focused option | `Enter`               | `Enter` or `Space`       | Theme, palette, and density cycle; boolean settings toggle |
-| Close panel                 | `v`, `q`, or `Escape` | `Escape`                 |                                                  |
+| Close panel                 | `v`, `q`, or `Escape` | `Escape`                 |                                                            |
 
 #### Direct accelerators
 
@@ -141,6 +141,8 @@ The panel shows the available options as a short list. Each option displays its 
 
 The help overlay is context-sensitive: it shows bindings relevant to the current screen with global bindings always visible. Both conventional and vim keys are shown, conventional listed first. Non-vim users should not have to parse vim notation to find their key.
 
+The footer links to a separate credits and attribution panel. Its data-provider section reflects the data currently visible on the page, and its back action returns to the help footer with focus restored to the credits entry.
+
 ### Debug panel (overlay mode)
 
 | Action         | Keys                           | Notes                |
@@ -168,7 +170,7 @@ Within each zone, the zone's internal navigation takes over where applicable. `T
 
 ### Focus restoration
 
-- When closing an overlay (help, view options, debug), focus returns to the element that was focused before the overlay opened.
+- When closing an overlay (help, credits, view options, debug), focus returns to the element that was focused before the overlay opened.
 - When navigating from search to results, initial focus goes to the show title region, not the chart. The user can Tab into the chart when ready.
 - When navigating back to search from results, focus goes to the search input.
 

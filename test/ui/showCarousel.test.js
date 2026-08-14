@@ -29,6 +29,10 @@ describe('show carousel', () => {
         (rail) => rail.getAttribute('aria-busy') === 'true'
       )
     ).toBe(true)
+    expect(container.querySelector('.collection-attribution')).toBeNull()
+    expect(container.textContent).not.toContain(
+      'This product uses the TMDB API'
+    )
   })
 
   it('renders an accessible horizontal show list with responsive artwork', () => {
