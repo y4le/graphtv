@@ -116,7 +116,7 @@ describe('createChart', () => {
     chart.zoomBy(0.5)
     expect(chart.getDebugState().viewport).not.toEqual({ start: 1, end: 32 })
     const showBreakpoint = detailRoot.querySelector('[data-series-breakpoint]')
-    expect(showBreakpoint.textContent).toBe('Show detected breakpoint')
+    expect(showBreakpoint.textContent).toBe('🦈 shark jump detected')
     showBreakpoint.click()
 
     expect(chart.getDebugState().selectedTrendId).toBe('series:breakpoint')

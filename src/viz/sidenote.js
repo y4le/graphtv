@@ -290,7 +290,7 @@ export function createSidenote({
       ? `
           <span class="trend-summary-breakpoint-action">
             <span aria-hidden="true">·</span>
-            <button type="button" class="trend-summary-breakpoint-button" data-series-breakpoint>Show detected breakpoint</button>
+            <button type="button" class="trend-summary-breakpoint-button" data-series-breakpoint>🦈 shark jump detected</button>
           </span>
         `
       : ''

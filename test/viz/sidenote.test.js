@@ -517,7 +517,7 @@ describe('createSidenote', () => {
 
     expect(root.textContent).toContain('No clear trend −0.5')
     const breakpointButton = root.querySelector('[data-series-breakpoint]')
-    expect(breakpointButton.textContent).toBe('Show detected breakpoint')
+    expect(breakpointButton.textContent).toBe('🦈 shark jump detected')
     breakpointButton.click()
     expect(onSelectSeriesBreakpoint).toHaveBeenCalledOnce()
 
