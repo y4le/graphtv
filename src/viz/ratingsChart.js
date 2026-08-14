@@ -35,7 +35,7 @@ const TREND_HOVER_DELAY_MS = 100
 const MAX_DETAIL_ERRORS = 25
 const TOUCH_DRAG_START_TOLERANCE_PX = 9
 const MIN_VIEWPORT_SPAN = 4
-const KEYBOARD_VIEWPORT_EDGE_RATIO = 0.1
+const VIEWPORT_FOLLOW_EDGE_RATIO = 0.1
 const VIEWPORT_ANNOUNCEMENT_DELAY_MS = 120
 const SELECTION_ANNOUNCEMENT_DELAY_MS = 120
 const SUPPRESS_CLICK_DURATION_MS = 350
@@ -594,7 +594,7 @@ export function createChart(container, seasons, options = {}) {
     if (usesScrollableBody()) {
       syncScrollableViewportToPoint(point, source === 'keyboard')
     } else if (source === 'keyboard') {
-      followKeyboardSelection(point)
+      followViewportToX(point.x)
     } else if (point.x < viewport.start || point.x > viewport.end) {
       const width = viewport.end - viewport.start + 1
       const halfWidth = Math.floor(width / 2)
@@ -610,17 +610,17 @@ export function createChart(container, seasons, options = {}) {
     render()
   }
 
-  function followKeyboardSelection(point) {
+  function followViewportToX(x) {
     const span = viewport.end - viewport.start
-    const edgeInset = span * KEYBOARD_VIEWPORT_EDGE_RATIO
+    const edgeInset = span * VIEWPORT_FOLLOW_EDGE_RATIO
     const leftFollowEdge = viewport.start + edgeInset
     const rightFollowEdge = viewport.end - edgeInset
     let offset = 0
 
-    if (point.x < leftFollowEdge) {
-      offset = point.x - leftFollowEdge
-    } else if (point.x > rightFollowEdge) {
-      offset = point.x - rightFollowEdge
+    if (x < leftFollowEdge) {
+      offset = x - leftFollowEdge
+    } else if (x > rightFollowEdge) {
+      offset = x - rightFollowEdge
     }
 
     if (offset === 0) {
@@ -634,6 +634,22 @@ export function createChart(container, seasons, options = {}) {
       },
       model
     )
+  }
+
+  function followSeasonSelection(summary) {
+    const seasonSpan = model.seasonSpans.find(
+      (span) => span.seasonNumber === summary.seasonNumber
+    )
+    if (!seasonSpan) {
+      return
+    }
+
+    followViewportToX(seasonSpan.end)
+    followViewportToX(seasonSpan.start)
+
+    if (usesScrollableBody()) {
+      syncScrollableBodyToViewport()
+    }
   }
 
   function setSelectedTrend(id) {
@@ -650,6 +666,9 @@ export function createChart(container, seasons, options = {}) {
     hoverPointId = null
     selectedPointId = null
     selectedTrendId = isTogglingOff ? null : id
+    if (!isTogglingOff && summary.kind === 'season') {
+      followSeasonSelection(summary)
+    }
     cancelScheduledDetailLoad()
     announceSelection(isTogglingOff ? null : { summary })
     render()
@@ -917,16 +936,20 @@ export function createChart(container, seasons, options = {}) {
     panViewport((Math.sign(direction) * span) / 2)
 
     if (usesScrollableBody()) {
-      const width = Math.max(bodyShell.clientWidth, 240)
-      const contentWidth = getScrollableBodyWidth(width)
-      const maxScrollLeft = Math.max(contentWidth - width, 0)
-      const viewportWidth = viewport.end - viewport.start + 1
-      const maxStart = Math.max(1, model.xMax - viewportWidth + 1)
-      const ratio = maxStart > 1 ? (viewport.start - 1) / (maxStart - 1) : 0
-      setScrollLeftSuppressed(ratio * maxScrollLeft)
+      syncScrollableBodyToViewport()
     }
 
     announceViewport()
+  }
+
+  function syncScrollableBodyToViewport() {
+    const width = Math.max(bodyShell.clientWidth, 240)
+    const contentWidth = getScrollableBodyWidth(width)
+    const maxScrollLeft = Math.max(contentWidth - width, 0)
+    const viewportWidth = viewport.end - viewport.start + 1
+    const maxStart = Math.max(1, model.xMax - viewportWidth + 1)
+    const ratio = maxStart > 1 ? (viewport.start - 1) / (maxStart - 1) : 0
+    setScrollLeftSuppressed(ratio * maxScrollLeft)
   }
 
   function zoomViewport(scale, anchorRatio) {

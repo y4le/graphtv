@@ -443,6 +443,43 @@ describe('createChart', () => {
     expect(chart.getDebugState().selectedTrendId).toBe('season:1')
   })
 
+  it('moves the viewport to contain a selected season within the 10% edges', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+    const seasons = createSeasonLengths([10, 10, 10, 10, 10])
+
+    chart = createChart(container, seasons)
+    chart.moveSeason(2)
+
+    const { viewport, selectedTrendId } = chart.getDebugState()
+    const span = viewport.end - viewport.start
+    expect(selectedTrendId).toBe('season:3')
+    expect((21 - viewport.start) / span).toBeGreaterThanOrEqual(0.1)
+    expect((30 - viewport.start) / span).toBeCloseTo(0.9)
+  })
+
+  it('prioritizes the first episode when a selected season exceeds the buffered viewport', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+    const seasons = createSeasonLengths([3, 30, 40])
+
+    chart = createChart(container, seasons)
+    chart.moveSeason(1)
+
+    const { viewport, selectedTrendId } = chart.getDebugState()
+    const span = viewport.end - viewport.start
+    expect(selectedTrendId).toBe('season:2')
+    expect((4 - viewport.start) / span).toBeCloseTo(0.1)
+  })
+
   it('keeps selectable season-axis labels in sync with season trends', () => {
     const container = document.createElement('div')
     Object.defineProperty(container, 'clientWidth', {
@@ -1974,6 +2011,19 @@ function createTwoSeasons({ secondEpisodeCount = 3 } = {}) {
         ratings: [{ source: 'test', rating: 7 + episodeIndex / 10 }]
       })
     )
+  }))
+}
+
+function createSeasonLengths(episodeCounts) {
+  return episodeCounts.map((episodeCount, seasonIndex) => ({
+    number: seasonIndex + 1,
+    episodes: Array.from({ length: episodeCount }, (_, episodeIndex) => ({
+      id: `season-${seasonIndex + 1}-episode-${episodeIndex + 1}`,
+      title: `Season ${seasonIndex + 1} Episode ${episodeIndex + 1}`,
+      season: seasonIndex + 1,
+      number: episodeIndex + 1,
+      ratings: [{ source: 'test', rating: 7 + (episodeIndex % 3) / 10 }]
+    }))
   }))
 }
 
