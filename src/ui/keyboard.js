@@ -40,6 +40,10 @@ export function createKeyboardController({ page, overlayController }) {
     const isLocalKeyboardTarget = Boolean(
       activeElement?.closest?.('[data-keyboard-local]')
     )
+    const isChartKeyboardTarget = Boolean(
+      page.kind === 'results' &&
+        activeElement?.closest?.('[data-keyboard-chart]')
+    )
 
     if (isEditableElement(activeElement)) {
       chordTracker.reset()
@@ -53,7 +57,8 @@ export function createKeyboardController({ page, overlayController }) {
     if (
       (isSuppressedInteractiveElement(activeElement) ||
         isLocalKeyboardTarget) &&
-      !isSearchResultTarget
+      !isSearchResultTarget &&
+      !isChartKeyboardTarget
     ) {
       chordTracker.reset()
 

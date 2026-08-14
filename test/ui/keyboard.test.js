@@ -136,7 +136,7 @@ describe('createKeyboardController', () => {
   it('keeps only global result shortcuts available from an SVG button', () => {
     document.body.innerHTML = `
       <svg>
-        <text role="button" tabindex="0">Season 1</text>
+        <text role="button" tabindex="0">Chart info</text>
       </svg>
     `
     const chart = {
@@ -160,6 +160,29 @@ describe('createKeyboardController', () => {
     expect(chart.moveEpisode).not.toHaveBeenCalled()
     expect(chart.clearSelection).toHaveBeenCalledOnce()
     expect(goBack).toHaveBeenCalledOnce()
+  })
+
+  it('keeps chart navigation available from a season-axis label', () => {
+    document.body.innerHTML = `
+      <svg>
+        <text role="button" tabindex="0" data-keyboard-chart="true">Season 1</text>
+      </svg>
+    `
+    const chart = {
+      moveSeason: vi.fn()
+    }
+    keyboardController = createKeyboardController({
+      page: { kind: 'results', chart },
+      overlayController: createClosedOverlayController()
+    })
+    document.querySelector('[data-keyboard-chart]').focus()
+
+    pressKey('j')
+    pressKey('ArrowDown')
+    pressKey('k')
+    pressKey('ArrowUp')
+
+    expect(chart.moveSeason.mock.calls).toEqual([[1], [1], [-1], [-1]])
   })
 
   it('closes view options with o without reopening it as the event bubbles', () => {
