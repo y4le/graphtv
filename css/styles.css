@@ -644,9 +644,11 @@ button {
 .results-heading {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 0.35rem 0.8rem;
   align-items: baseline;
   margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
+  text-align: center;
 }
 
 .results-title {
@@ -1414,6 +1416,12 @@ button {
 
 .overlay-help .overlay-content {
   padding: 0.85rem 1rem 1rem;
+}
+
+@media (min-width: 861px) {
+  .overlay-help .overlay-content {
+    padding-top: 1.4rem;
+  }
 }
 
 .overlay-header {
