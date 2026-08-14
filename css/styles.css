@@ -24,7 +24,8 @@
   --type-size-meta: 0.875rem;
   --type-size-utility: 0.78rem;
   --pageMaxWidth: 75rem;
-  --searchMaxWidth: 39rem;
+  --searchMaxWidth: clamp(39rem, calc(24rem + 12vw), 52rem);
+  --searchCollectionMaxWidth: clamp(39rem, calc(18rem + 24vw), 75rem);
   --columnGap: clamp(2rem, 4vw, 4rem);
   --rhythm: 1.5rem;
   --tight: 0.75rem;
@@ -46,6 +47,7 @@ html {
   min-height: 100%;
   background: var(--canvas);
   color: var(--textPrimary);
+  font-size: clamp(100%, calc(0.875rem + 0.125vw), 125%);
 }
 
 body {
@@ -105,7 +107,17 @@ button {
 }
 
 .document-shell-search {
+  min-height: 100svh;
   max-width: none;
+}
+
+.document-shell-search:has(.search-document-empty) {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.document-shell-search:has(.search-document-empty) .search-landing-content {
+  align-self: safe center;
 }
 
 .masthead {
@@ -1807,7 +1819,7 @@ button {
   }
 
   .document-shell-search .collection-rails {
-    width: min(100%, var(--searchMaxWidth));
+    width: min(100%, var(--searchCollectionMaxWidth));
   }
 
   .document-shell-search .collection-rail-title {
@@ -1822,8 +1834,8 @@ button {
   }
 
   .document-shell-search .collection-track {
-    grid-auto-columns: 7rem;
-    gap: 0.625rem;
+    grid-auto-columns: clamp(7rem, 8vw, 10.5rem);
+    gap: clamp(0.625rem, 1vw, 1rem);
   }
 
   .document-shell-search .collection-card-link {
@@ -1979,17 +1991,7 @@ button {
   }
 
   .document-shell-search {
-    min-height: 100svh;
     padding-bottom: 1.5rem;
-  }
-
-  .document-shell-search:has(.search-document-empty) {
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
-  }
-
-  .document-shell-search:has(.search-document-empty) .search-landing-content {
-    align-self: safe center;
   }
 
   .masthead,

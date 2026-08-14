@@ -143,6 +143,7 @@ Rules:
 - On desktop, prefer asymmetric two-column layouts with context on the left and evidence on the right.
 - On mobile, stack content in reading order and keep the chart usable with sticky reference elements where needed.
 - Align poster, title, metadata, synopsis, and note regions to a shared text measure.
+- Let landing-page type, artwork, and content measures grow when large displays provide meaningful extra room; avoid leaving a laptop-sized island on high-resolution viewports.
 
 Responsive approach: fluid, not breakpoint-driven. Use relative units, flexible containers, and CSS features like `clamp()`, container queries, and flexible grids so the layout adapts continuously. Reserve breakpoints for genuine layout restructuring (e.g., collapsing two columns to one), not for adjusting spacing or type size at arbitrary thresholds.
 
