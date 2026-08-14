@@ -813,11 +813,17 @@ button {
 }
 
 .chart-source-status {
-  margin: 0 0 -0.25rem var(--axis-width, 56px);
-  padding-left: 0.9rem;
+  margin: 0 0 -0.25rem;
   color: var(--textSecondary);
   font-family: var(--font-sans);
   font-size: var(--type-size-utility);
+  text-align: center;
+}
+
+@media (max-width: 767px) {
+  .chart-source-status {
+    display: none;
+  }
 }
 
 .sparkline-chart,

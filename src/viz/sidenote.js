@@ -227,7 +227,11 @@ export function createSidenote({
         ? 'too few rated episodes for a trend'
         : null
     ].filter(Boolean)
-    const provenance = `${summary.n} of ${summary.totalEpisodes} rated · ${escapeHtml(getRatingSourceLabel(summary.source))}${
+    const sourceCopy =
+      summary.kind === 'series' && summary.plottingStatus
+        ? summary.plottingStatus
+        : getRatingSourceLabel(summary.source)
+    const provenance = `${summary.n} of ${summary.totalEpisodes} rated · ${escapeHtml(sourceCopy)}${
       provenanceNotes.length > 0
         ? ` — ${escapeHtml(provenanceNotes.join('; '))}`
         : ''

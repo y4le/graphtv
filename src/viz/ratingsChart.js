@@ -510,7 +510,14 @@ export function createChart(container, seasons, options = {}) {
       cancelScheduledDetailLoad()
       shell.dataset.detailKind = 'trend'
       shell.style.removeProperty('--reading-pane-marker')
-      sidenote.renderTrendSummary(activeTrend)
+      sidenote.renderTrendSummary(
+        activeTrend.kind === 'series'
+          ? {
+              ...activeTrend,
+              plottingStatus: formatPlottingStatus(model, getUiSettings())
+            }
+          : activeTrend
+      )
       return
     }
 
@@ -1411,10 +1418,11 @@ export function createChart(container, seasons, options = {}) {
     const axisWidth = isMobile() ? 40 : 56
     const chartWidth = Math.max(width - axisWidth - 16, 240)
     const { chartHeight, sparklineHeight } = getChartDimensions()
+    const defaultViewport = createDefaultViewport(model, chartWidth, isMobile())
 
     shell.style.setProperty('--axis-width', `${axisWidth}px`)
     shell.style.setProperty('--chart-height', `${chartHeight}px`)
-    renderSourceStatus(sourceStatus, model, getUiSettings())
+    renderSourceStatus(sourceStatus, model, defaultViewport)
 
     if (usesScrollableBody()) {
       renderScrollableMobileChart(
@@ -1921,10 +1929,20 @@ function getWheelZoomScale(event) {
   return 2 ** exponent
 }
 
-function renderSourceStatus(root, model, settings) {
+function renderSourceStatus(root, model, defaultViewport) {
+  root.hidden = false
   if (!model.primaryRatingSource) {
     root.textContent = 'No usable episode ratings.'
     return
+  }
+
+  root.hidden = defaultViewport.start <= 1 && defaultViewport.end >= model.xMax
+  root.textContent = 'Drag the overview window to pan; resize it to zoom.'
+}
+
+function formatPlottingStatus(model, settings) {
+  if (!model.primaryRatingSource) {
+    return null
   }
 
   const otherSources = model.ratingSourceCoverage
@@ -1935,7 +1953,7 @@ function renderSourceStatus(root, model, settings) {
       ? ` · source spread shows ${formatList(otherSources)}`
       : ''
 
-  root.textContent = `Plotting ${getRatingSourceLabel(model.primaryRatingSource)}${spreadText} · Pinch or drag the overview to adjust the visible range.`
+  return `Plotting ${getRatingSourceLabel(model.primaryRatingSource)}${spreadText}`
 }
 
 function formatList(values) {

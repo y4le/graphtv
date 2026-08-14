@@ -626,6 +626,22 @@ describe('createChart', () => {
     )
   })
 
+  it('hides the viewport hint when the default view shows every episode', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 1200
+    })
+    document.body.appendChild(container)
+    const seasons = createSeasons()
+    seasons[0].episodes = seasons[0].episodes.slice(0, 50)
+
+    chart = createChart(container, seasons)
+
+    expect(chart.getDebugState().viewport).toEqual({ start: 1, end: 50 })
+    expect(container.querySelector('.chart-source-status').hidden).toBe(true)
+  })
+
   it('shows provider disagreement by default and lets the setting hide it', () => {
     const container = document.createElement('div')
     Object.defineProperty(container, 'clientWidth', {
@@ -639,15 +655,19 @@ describe('createChart', () => {
     chart = createChart(container, seasons)
 
     expect(container.querySelectorAll('.source-spread')).toHaveLength(1)
+    expect(container.querySelector('.chart-source-status').hidden).toBe(false)
+    expect(container.querySelector('.chart-source-status').textContent).toBe(
+      'Drag the overview window to pan; resize it to zoom.'
+    )
     expect(
       container.querySelector('.chart-source-status').textContent
-    ).toContain('Plotting TEST')
+    ).not.toContain('Plotting TEST')
+
+    chart.toggleSeriesTrend()
+
     expect(
-      container.querySelector('.chart-source-status').textContent
-    ).toContain('source spread shows TMDB')
-    expect(
-      container.querySelector('.chart-source-status').textContent
-    ).toContain('Pinch or drag the overview to adjust the visible range.')
+      container.querySelector('.trend-summary-provenance').textContent
+    ).toContain('rated · Plotting TEST · source spread shows TMDB')
     expect(getAxisLabels(container)).toEqual(
       expect.arrayContaining(['0.0', '10.0'])
     )
@@ -675,6 +695,15 @@ describe('createChart', () => {
     expect(container.querySelectorAll('.source-rating-point')).toHaveLength(0)
     expect(container.querySelectorAll('.crosshair')).toHaveLength(1)
     expect(getAxisLabels(container)).not.toContain('0.0')
+
+    chart.toggleSeriesTrend()
+
+    expect(
+      container.querySelector('.trend-summary-provenance').textContent
+    ).toContain('rated · Plotting TEST')
+    expect(
+      container.querySelector('.trend-summary-provenance').textContent
+    ).not.toContain('source spread shows TMDB')
   })
 
   it('renders a borrowed provider rating as a deemphasized palette-colored point', () => {

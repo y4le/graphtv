@@ -303,6 +303,31 @@ describe('createSidenote', () => {
     outsideButton.remove()
   })
 
+  it('places full-series plotting context beside the rated episode count', () => {
+    const root = document.createElement('section')
+    const sidenote = createSidenote({ root })
+
+    sidenote.renderTrendSummary({
+      label: 'Full series',
+      kind: 'series',
+      n: 24,
+      totalEpisodes: 32,
+      excludedFallback: 0,
+      source: 'omdb',
+      plottingStatus: 'Plotting IMDb · source spread shows TMDB',
+      mean: 8.2,
+      direction: 'up',
+      delta: 0.4,
+      trendCriteria: createTrendCriteria(),
+      top: [],
+      bottom: []
+    })
+
+    expect(root.querySelector('.trend-summary-provenance').textContent).toBe(
+      '24 of 32 rated · Plotting IMDb · source spread shows TMDB'
+    )
+  })
+
   it('does not show a numeric delta when the trend is unclear', () => {
     const root = document.createElement('section')
     const sidenote = createSidenote({ root })
