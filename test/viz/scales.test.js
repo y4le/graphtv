@@ -8,6 +8,7 @@ import {
   createMainScales,
   createSparklineScales,
   getMacroTrendline,
+  getVisiblePoints,
   getVisibleSeriesBreakpoint
 } from '../../src/viz/scales.js'
 
@@ -415,6 +416,21 @@ describe('viewport clamping', () => {
       start: 55,
       end: 72
     })
+  })
+
+  it('keeps fractional viewport-edge points mounted until they move out', () => {
+    const model = {
+      points: Array.from({ length: 5 }, (_, index) => ({ x: index + 1 }))
+    }
+
+    expect(
+      getVisiblePoints(model, { start: 1.25, end: 3.25 }).map(
+        (point) => point.x
+      )
+    ).toEqual([1, 2, 3, 4])
+    expect(
+      getVisiblePoints(model, { start: 2, end: 4 }).map((point) => point.x)
+    ).toEqual([2, 3, 4])
   })
 })
 

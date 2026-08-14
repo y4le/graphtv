@@ -1352,6 +1352,58 @@ describe('createChart', () => {
     expect(nextViewport.start).toBeLessThan(initialViewport.start + 1)
   })
 
+  it('moves fractional viewport-edge points through the chart edge before removing them', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    const body = container.querySelector('.chart-body-shell')
+    Object.defineProperty(body, 'clientWidth', {
+      configurable: true,
+      value: 528
+    })
+    const firstPoint = getRenderedPoint(container, 'episode-1')
+    const firstX = Number(firstPoint.getAttribute('cx'))
+
+    body.dispatchEvent(
+      new WheelEvent('wheel', {
+        bubbles: true,
+        cancelable: true,
+        deltaX: 5
+      })
+    )
+
+    const pannedFirstPoint = getRenderedPoint(container, 'episode-1')
+    expect(pannedFirstPoint).not.toBeNull()
+    expect(Number(pannedFirstPoint.getAttribute('cx'))).toBeLessThan(firstX)
+
+    body.dispatchEvent(
+      new WheelEvent('wheel', {
+        bubbles: true,
+        cancelable: true,
+        deltaX: 10000
+      })
+    )
+    const lastPoint = getRenderedPoint(container, 'episode-72')
+    const lastX = Number(lastPoint.getAttribute('cx'))
+
+    body.dispatchEvent(
+      new WheelEvent('wheel', {
+        bubbles: true,
+        cancelable: true,
+        deltaX: -5
+      })
+    )
+
+    const pannedLastPoint = getRenderedPoint(container, 'episode-72')
+    expect(pannedLastPoint).not.toBeNull()
+    expect(Number(pannedLastPoint.getAttribute('cx'))).toBeGreaterThan(lastX)
+  })
+
   it('zooms at the cursor for a trackpad pinch over the main graph', () => {
     const container = document.createElement('div')
     Object.defineProperty(container, 'clientWidth', {
@@ -1953,6 +2005,12 @@ function getAxisLabels(container) {
   return Array.from(
     container.querySelectorAll('.range-tick text'),
     (node) => node.textContent
+  )
+}
+
+function getRenderedPoint(container, id) {
+  return Array.from(container.querySelectorAll('.episode-point')).find(
+    (point) => point.__data__.id === id
   )
 }
 

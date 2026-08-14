@@ -385,14 +385,20 @@ export function viewportToBrushSelection(viewport, scale) {
 }
 
 export function getVisiblePoints(model, viewport) {
+  const start = Math.floor(viewport.start)
+  const end = Math.ceil(viewport.end)
+
   return model.points.filter(
-    (point) => point.x >= viewport.start && point.x <= viewport.end
+    (point) => point.x >= start && point.x <= end
   )
 }
 
 export function getVisibleRatedPoints(model, viewport) {
+  const start = Math.floor(viewport.start)
+  const end = Math.ceil(viewport.end)
+
   return model.ratedPoints.filter(
-    (point) => point.x >= viewport.start && point.x <= viewport.end
+    (point) => point.x >= start && point.x <= end
   )
 }
 
