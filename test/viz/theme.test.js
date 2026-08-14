@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 import {
-  APP_FONT_STACK,
   EPISODE_DENSITIES,
   PALETTES,
   getChartTheme,
@@ -11,12 +12,23 @@ import {
   updateUiSettings
 } from '../../src/viz/theme.js'
 
+const stylesheet = readFileSync(
+  resolve(process.cwd(), 'css/styles.css'),
+  'utf8'
+)
+let themeStyle
+
 beforeEach(() => {
+  themeStyle = document.createElement('style')
+  themeStyle.textContent = stylesheet
+  document.head.appendChild(themeStyle)
   window.localStorage.clear()
   initializeTheme()
 })
 
 afterEach(() => {
+  themeStyle.remove()
+  delete document.documentElement.dataset.theme
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
@@ -145,26 +157,45 @@ describe('theme accents', () => {
     'uses the single house accent in the %s theme',
     (theme) => {
       updateUiSettings({ theme, palette: 'alternating' })
-      const chartTheme = getChartTheme({ theme, palette: 'alternating' })
+      const chartTheme = getChartTheme()
 
-      expect(chartTheme.spotColor).toBe('#C1432E')
-      expect(chartTheme.spotColorMuted).toBe('#C1432E')
-      expect(
-        document.documentElement.style.getPropertyValue('--publisherAccent')
-      ).toBe('#C1432E')
+      expect(chartTheme.spotColor).toBe('#c1432e')
+      expect(chartTheme.spotColorMuted).toBe('#c1432e')
+      expect(Object.values(chartTheme).join(' ')).not.toContain('var(--')
+      expect(document.documentElement.dataset.theme).toBe(theme)
     }
   )
 })
 
-describe('theme typography', () => {
-  it('maps every typography role to the publisher-signature font stack', () => {
-    updateUiSettings({ theme: 'light', palette: 'alternating' })
+describe('theme token ownership', () => {
+  it('leaves visual and responsive tokens under stylesheet ownership', () => {
     const rootStyle = document.documentElement.style
 
-    expect(rootStyle.getPropertyValue('--font-app')).toBe(APP_FONT_STACK)
-    expect(rootStyle.getPropertyValue('--font-serif')).toBe('var(--font-app)')
-    expect(rootStyle.getPropertyValue('--font-sans')).toBe('var(--font-app)')
-    expect(rootStyle.getPropertyValue('--font-mono')).toBe('var(--font-app)')
+    expect(rootStyle.getPropertyValue('--canvas')).toBe('')
+    expect(rootStyle.getPropertyValue('--font-app')).toBe('')
+    expect(rootStyle.getPropertyValue('--searchMaxWidth')).toBe('')
+  })
+
+  it('updates the browser theme color from the active CSS palette', () => {
+    const meta = document.createElement('meta')
+    meta.name = 'theme-color'
+    document.head.appendChild(meta)
+
+    updateUiSettings({ theme: 'dark' })
+
+    expect(meta.content).toBe('#0e0e0d')
+    meta.remove()
+  })
+
+  it('falls back to visible chart colors when the stylesheet is unavailable', () => {
+    themeStyle.remove()
+
+    const chartTheme = getChartTheme()
+
+    expect(chartTheme.text).toBe('currentColor')
+    expect(chartTheme.lineSoft).toBe('currentColor')
+    expect(chartTheme.background).toBe('transparent')
+    expect(chartTheme.seasonColor(0, 1)).toBe('currentColor')
   })
 })
 
@@ -172,27 +203,30 @@ describe('season palettes', () => {
   it('alternates between the foreground and a desaturated house accent', () => {
     expect(
       Array.from({ length: 4 }, (_, index) =>
-        seasonColor('alternating', index, 4, 'light')
+        seasonColor('alternating', index, 4)
       )
-    ).toEqual(['#1A1A1A', '#B36D61', '#1A1A1A', '#B36D61'])
+    ).toEqual(['#1a1a1a', '#b36d61', '#1a1a1a', '#b36d61'])
 
-    expect(seasonColor('alternating', 1, 2, 'dark')).toBe('#B38780')
+    updateUiSettings({ theme: 'dark' })
+    expect(seasonColor('alternating', 1, 2)).toBe('#b38780')
   })
 
   it('preserves the former vivid palette as rainbow', () => {
-    expect(seasonColor('rainbow', 0, 1, 'light')).toBe('hsl(150 68% 42%)')
-    expect(seasonColor('rainbow', 0, 1, 'dark')).toBe('hsl(150 76% 66%)')
-    expect(seasonColor('vivid', 0, 1, 'light')).toBe(
-      seasonColor('rainbow', 0, 1, 'light')
-    )
+    expect(seasonColor('rainbow', 0, 1)).toBe('hsl(150 68% 42%)')
+    expect(seasonColor('vivid', 0, 1)).toBe(seasonColor('rainbow', 0, 1))
+
+    updateUiSettings({ theme: 'dark' })
+    expect(seasonColor('rainbow', 0, 1)).toBe('hsl(150 76% 66%)')
   })
 
   it('zigzags between opposite hues before rotating', () => {
+    updateUiSettings({ theme: 'dark' })
     const darkColors = Array.from({ length: 4 }, (_, index) =>
-      seasonColor('zigzag', index, 4, 'dark')
+      seasonColor('zigzag', index, 4)
     )
+    updateUiSettings({ theme: 'light' })
     const lightColors = Array.from({ length: 4 }, (_, index) =>
-      seasonColor('zigzag', index, 4, 'light')
+      seasonColor('zigzag', index, 4)
     )
 
     expect(darkColors).toEqual([
@@ -212,14 +246,15 @@ describe('season palettes', () => {
   it.each(['light', 'dark'])(
     'builds a stable, unique maximin prefix in %s mode',
     (theme) => {
+      updateUiSettings({ theme })
       const colors = Array.from({ length: 12 }, (_, index) =>
-        seasonColor('maximin', index, 12, theme)
+        seasonColor('maximin', index, 12)
       )
 
       expect(new Set(colors)).toHaveLength(colors.length)
       expect(
         Array.from({ length: 12 }, (_, index) =>
-          seasonColor('maximin', index, 12, theme)
+          seasonColor('maximin', index, 12)
         )
       ).toEqual(colors)
     }

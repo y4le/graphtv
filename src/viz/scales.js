@@ -525,18 +525,6 @@ export function createMainScales(model, viewport, dimensions, options = {}) {
   }
 }
 
-export function createFullSeriesScales(model, dimensions, options = {}) {
-  const domain = resolveRatingDomain(model.ratedPoints, options)
-
-  return {
-    xScale: scaleLinear()
-      .domain([1, model.xMax])
-      .range(resolveXRange(dimensions.width)),
-    yScale: scaleLinear().domain(domain).range([dimensions.height, 0]),
-    yDomain: domain
-  }
-}
-
 function resolveXRange(width) {
   if (width <= X_EDGE_INSET * 2) {
     return [0, width]

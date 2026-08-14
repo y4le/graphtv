@@ -4,7 +4,6 @@ import {
   buildChartModel,
   clampViewport,
   createDefaultViewport,
-  createFullSeriesScales,
   createMainScales,
   createSparklineScales,
   getMacroTrendline,
@@ -29,7 +28,6 @@ const MOBILE_QUERY = '(max-width: 767px)'
 const MOBILE_LANDSCAPE_QUERY = '(max-width: 767px) and (orientation: landscape)'
 const FINE_POINTER_QUERY = '(hover: hover) and (pointer: fine)'
 const COARSE_POINTER_QUERY = '(pointer: coarse)'
-const MOBILE_POINT_SPACING = 18
 const DETAIL_LOAD_DELAY_MS = 250
 const TREND_HOVER_DELAY_MS = 100
 const MAX_DETAIL_ERRORS = 25
@@ -98,8 +96,6 @@ export function createChart(container, seasons, options = {}) {
   let hoverTrendId = null
   let hasUserInteracted = false
   let sparkline = null
-  let suppressScrollSync = false
-  let suppressScrollSyncFrame = null
   let viewportAnnouncementTimer = null
   let selectionAnnouncementTimer = null
   let trendHoverTimer = null
@@ -111,20 +107,6 @@ export function createChart(container, seasons, options = {}) {
   const detailErrors = []
   const failedDetailPointIds = new Set()
   const loadingDetailPointIds = new Set()
-
-  function setScrollLeftSuppressed(scrollLeft) {
-    suppressScrollSync = true
-    bodyShell.scrollLeft = scrollLeft
-    if (suppressScrollSyncFrame) {
-      cancelAnimationFrame(suppressScrollSyncFrame)
-    }
-    suppressScrollSyncFrame = requestAnimationFrame(() => {
-      suppressScrollSyncFrame = requestAnimationFrame(() => {
-        suppressScrollSyncFrame = null
-        suppressScrollSync = false
-      })
-    })
-  }
 
   const sidenote = createSidenote({
     root: options.detailRoot ?? readingPane,
@@ -147,10 +129,6 @@ export function createChart(container, seasons, options = {}) {
 
   function isMobile() {
     return mediaQuery.matches
-  }
-
-  function usesScrollableBody() {
-    return false
   }
 
   function isMobileLandscape() {
@@ -591,9 +569,7 @@ export function createChart(container, seasons, options = {}) {
     updateDetail(point, { load: true })
     announceSelection({ point })
 
-    if (usesScrollableBody()) {
-      syncScrollableViewportToPoint(point, source === 'keyboard')
-    } else if (source === 'keyboard') {
+    if (source === 'keyboard') {
       followViewportToX(point.x)
     } else if (point.x < viewport.start || point.x > viewport.end) {
       const width = viewport.end - viewport.start + 1
@@ -646,10 +622,6 @@ export function createChart(container, seasons, options = {}) {
 
     followViewportToX(seasonSpan.end)
     followViewportToX(seasonSpan.start)
-
-    if (usesScrollableBody()) {
-      syncScrollableBodyToViewport()
-    }
   }
 
   function setSelectedTrend(id) {
@@ -863,53 +835,6 @@ export function createChart(container, seasons, options = {}) {
     return anchors
   }
 
-  function syncScrollableViewportToPoint(point, shouldScroll) {
-    const width = Math.max(bodyShell.clientWidth, 240)
-    const visibleEpisodes = Math.max(
-      1,
-      Math.round(width / MOBILE_POINT_SPACING)
-    )
-    viewport = clampViewport(
-      {
-        start: point.x - Math.floor(visibleEpisodes / 2),
-        end: point.x - Math.floor(visibleEpisodes / 2) + visibleEpisodes - 1
-      },
-      model
-    )
-
-    if (!shouldScroll) {
-      return
-    }
-
-    const contentWidth = getScrollableBodyWidth(width)
-    const maxScrollLeft = Math.max(contentWidth - width, 0)
-    const ratio = model.xMax > 1 ? (point.x - 1) / (model.xMax - 1) : 0
-    setScrollLeftSuppressed(ratio * maxScrollLeft)
-  }
-
-  function updateViewportFromScroll() {
-    const width = Math.max(bodyShell.clientWidth, 240)
-    const contentWidth = getScrollableBodyWidth(width)
-    const maxScrollLeft = Math.max(contentWidth - width, 0)
-    const ratio = maxScrollLeft > 0 ? bodyShell.scrollLeft / maxScrollLeft : 0
-    const currentWidth = viewport
-      ? viewport.end - viewport.start + 1
-      : Math.max(1, Math.round(width / MOBILE_POINT_SPACING))
-    const maxStart = Math.max(1, model.xMax - currentWidth + 1)
-    const start = 1 + ratio * (maxStart - 1)
-    viewport = clampViewport(
-      {
-        start,
-        end: start + currentWidth - 1
-      },
-      model
-    )
-  }
-
-  function getScrollableBodyWidth(width) {
-    return Math.max(width, (model.xMax - 1) * MOBILE_POINT_SPACING + 40)
-  }
-
   function panViewport(deltaEpisodes) {
     if (!viewport || deltaEpisodes === 0) {
       return
@@ -935,21 +860,7 @@ export function createChart(container, seasons, options = {}) {
     const span = viewport.end - viewport.start
     panViewport((Math.sign(direction) * span) / 2)
 
-    if (usesScrollableBody()) {
-      syncScrollableBodyToViewport()
-    }
-
     announceViewport()
-  }
-
-  function syncScrollableBodyToViewport() {
-    const width = Math.max(bodyShell.clientWidth, 240)
-    const contentWidth = getScrollableBodyWidth(width)
-    const maxScrollLeft = Math.max(contentWidth - width, 0)
-    const viewportWidth = viewport.end - viewport.start + 1
-    const maxStart = Math.max(1, model.xMax - viewportWidth + 1)
-    const ratio = maxStart > 1 ? (viewport.start - 1) / (maxStart - 1) : 0
-    setScrollLeftSuppressed(ratio * maxScrollLeft)
   }
 
   function zoomViewport(scale, anchorRatio) {
@@ -1015,11 +926,7 @@ export function createChart(container, seasons, options = {}) {
 
   function resetZoom() {
     hasUserInteracted = true
-    resetViewportWidth(
-      getCurrentChartWidth(),
-      usesScrollableBody(),
-      getKeyboardViewportAnchor()
-    )
+    resetViewportWidth(getCurrentChartWidth(), getKeyboardViewportAnchor())
     announceViewport()
   }
 
@@ -1189,11 +1096,7 @@ export function createChart(container, seasons, options = {}) {
     render()
   }
 
-  function resetViewportWidth(
-    chartWidth,
-    isScrollable,
-    center = getViewportCenter()
-  ) {
+  function resetViewportWidth(chartWidth, center = getViewportCenter()) {
     const defaultViewport = getDefaultViewport(chartWidth)
     const defaultWidth = defaultViewport.end - defaultViewport.start + 1
     const centeredStart = center - (defaultWidth - 1) / 2
@@ -1205,14 +1108,6 @@ export function createChart(container, seasons, options = {}) {
       },
       model
     )
-
-    if (isScrollable) {
-      const contentWidth = getScrollableBodyWidth(chartWidth)
-      const maxScrollLeft = Math.max(contentWidth - chartWidth, 0)
-      const maxStart = Math.max(1, model.xMax - defaultWidth + 1)
-      const ratio = maxStart > 1 ? (viewport.start - 1) / (maxStart - 1) : 0
-      setScrollLeftSuppressed(ratio * maxScrollLeft)
-    }
 
     render()
   }
@@ -1269,7 +1164,7 @@ export function createChart(container, seasons, options = {}) {
     }
   }
 
-  function renderDesktopChart(
+  function renderChart(
     chartTheme,
     axisWidth,
     chartWidth,
@@ -1301,10 +1196,7 @@ export function createChart(container, seasons, options = {}) {
       scaleOptions
     )
 
-    shell.dataset.scrollable = 'false'
-    bodyShell.style.overflowX = 'hidden'
     bodyShell.style.touchAction = isMobile() ? 'none' : ''
-    bodyShell.scrollLeft = 0
 
     axisSvg
       .attr('viewBox', `0 0 ${axisWidth} ${chartHeight}`)
@@ -1391,158 +1283,7 @@ export function createChart(container, seasons, options = {}) {
       },
       () => {
         hasUserInteracted = true
-        resetViewportWidth(chartWidth, false)
-      }
-    )
-  }
-
-  function renderScrollableMobileChart(
-    chartTheme,
-    axisWidth,
-    chartWidth,
-    chartHeight,
-    sparklineHeight
-  ) {
-    const uiSettings = getUiSettings()
-    const scaleOptions = {
-      absoluteYAxis: uiSettings.absoluteYAxis,
-      showSourceSpread: uiSettings.showSourceSpread
-    }
-    const contentWidth = getScrollableBodyWidth(chartWidth)
-    const fullScales = createFullSeriesScales(
-      model,
-      {
-        width: contentWidth,
-        height: chartHeight
-      },
-      scaleOptions
-    )
-    updateViewportFromScroll()
-    const sparklineScales = createSparklineScales(
-      model,
-      {
-        width: chartWidth,
-        height: sparklineHeight
-      },
-      scaleOptions
-    )
-
-    shell.dataset.scrollable = 'true'
-    bodyShell.style.overflowX = 'auto'
-
-    axisSvg
-      .attr('viewBox', `0 0 ${axisWidth} ${chartHeight}`)
-      .attr('width', axisWidth)
-      .attr('height', chartHeight)
-    mainSvg
-      .attr('viewBox', `0 0 ${contentWidth} ${chartHeight}`)
-      .attr('width', contentWidth)
-      .attr('height', chartHeight)
-    mainSvg.style('width', `${contentWidth}px`)
-
-    axisSvg.selectAll('*').remove()
-    renderRangeFrame(
-      axisSvg,
-      fullScales,
-      { width: axisWidth, height: chartHeight },
-      chartTheme
-    )
-    renderTrendlines(
-      mainSvg,
-      uiSettings.seasonTrendlines
-        ? model.seasonTrendlines.map((trendline) => ({
-            ...trendline,
-            visibleStartX: trendline.startX,
-            visibleEndX: trendline.endX,
-            points: [
-              {
-                x: trendline.startX,
-                y:
-                  trendline.regression.slope * trendline.startX +
-                  trendline.regression.intercept
-              },
-              {
-                x: trendline.endX,
-                y:
-                  trendline.regression.slope * trendline.endX +
-                  trendline.regression.intercept
-              }
-            ]
-          }))
-        : [],
-      uiSettings.fullShowTrendline
-        ? getMacroTrendline(model, { start: 1, end: model.xMax })
-        : null,
-      fullScales,
-      { width: contentWidth, height: chartHeight },
-      chartTheme,
-      getTrendInteractions()
-    )
-    renderSourceSpreads(
-      mainSvg,
-      model.points,
-      fullScales,
-      { width: contentWidth, height: chartHeight },
-      chartTheme,
-      {
-        visible: uiSettings.showSourceSpread,
-        activePointId: getActivePoint()?.id ?? null
-      }
-    )
-    renderCrosshair(
-      mainSvg,
-      getActivePoint(),
-      fullScales,
-      { width: contentWidth, height: chartHeight },
-      chartTheme,
-      uiSettings.showSourceSpread
-    )
-    renderPoints(
-      mainSvg,
-      model.points,
-      fullScales,
-      chartTheme,
-      getPointInteractions()
-    )
-    renderSeriesBreakpoint(
-      mainSvg,
-      selectedTrendId === model.seriesBreakpoint?.id
-        ? getVisibleSeriesBreakpoint(model, { start: 1, end: model.xMax })
-        : null,
-      fullScales,
-      { width: contentWidth, height: chartHeight },
-      chartTheme
-    )
-    renderSeasonAxis(
-      mainSvg,
-      model.seasonSpans,
-      { start: 1, end: model.xMax },
-      fullScales,
-      { width: contentWidth, height: chartHeight },
-      chartTheme,
-      getSeasonAxisInteractions()
-    )
-
-    renderSparkline(
-      chartTheme,
-      sparklineScales,
-      chartWidth,
-      sparklineHeight,
-      (nextViewport) => {
-        hasUserInteracted = true
-        viewport = clampViewport(nextViewport, model)
-        const maxScrollLeft = Math.max(contentWidth - chartWidth, 0)
-        const maxStart = Math.max(
-          1,
-          model.xMax - (viewport.end - viewport.start + 1) + 1
-        )
-        const ratio = maxStart > 1 ? (viewport.start - 1) / (maxStart - 1) : 0
-        setScrollLeftSuppressed(ratio * maxScrollLeft)
-        render()
-      },
-      () => {
-        hasUserInteracted = true
-        resetViewportWidth(chartWidth, true)
+        resetViewportWidth(chartWidth)
       }
     )
   }
@@ -1591,35 +1332,14 @@ export function createChart(container, seasons, options = {}) {
     shell.style.setProperty('--chart-height', `${chartHeight}px`)
     renderSourceStatus(sourceStatus, model, defaultViewport)
 
-    if (usesScrollableBody()) {
-      renderScrollableMobileChart(
-        chartTheme,
-        axisWidth,
-        chartWidth,
-        chartHeight,
-        sparklineHeight
-      )
-    } else {
-      renderDesktopChart(
-        chartTheme,
-        axisWidth,
-        chartWidth,
-        chartHeight,
-        sparklineHeight
-      )
-    }
+    renderChart(chartTheme, axisWidth, chartWidth, chartHeight, sparklineHeight)
 
     const activePoint = getActivePoint()
     if (activePoint) {
-      const scale = usesScrollableBody()
-        ? createFullSeriesScales(model, {
-            width: getScrollableBodyWidth(chartWidth),
-            height: chartHeight
-          }).xScale
-        : createMainScales(model, viewport, {
-            width: chartWidth,
-            height: chartHeight
-          }).xScale
+      const scale = createMainScales(model, viewport, {
+        width: chartWidth,
+        height: chartHeight
+      }).xScale
       shell.style.setProperty(
         '--reading-pane-marker',
         `${scale(activePoint.x)}px`
@@ -1627,43 +1347,6 @@ export function createChart(container, seasons, options = {}) {
     }
     updateActiveDetail()
   }
-
-  bodyShell.addEventListener('scroll', () => {
-    if (!usesScrollableBody() || suppressScrollSync) {
-      return
-    }
-
-    hasUserInteracted = true
-    updateViewportFromScroll()
-    const chartTheme = getChartTheme()
-    const axisWidth = isMobile() ? 40 : 56
-    const chartWidth = Math.max(container.clientWidth - axisWidth - 16, 240)
-    const { sparklineHeight } = getChartDimensions()
-    const sparklineScales = createSparklineScales(
-      model,
-      {
-        width: chartWidth,
-        height: sparklineHeight
-      },
-      {
-        absoluteYAxis: getUiSettings().absoluteYAxis,
-        showSourceSpread: getUiSettings().showSourceSpread
-      }
-    )
-
-    sparkline?.render({
-      model,
-      viewport,
-      theme: chartTheme,
-      dimensions: { width: chartWidth, height: sparklineHeight },
-      scales: sparklineScales,
-      onViewportChange(nextViewport) {
-        hasUserInteracted = true
-        viewport = clampViewport(nextViewport, model)
-        render()
-      }
-    })
-  })
 
   function handleTrackpadPinch(event, surface) {
     if (!event.ctrlKey) {
@@ -1699,10 +1382,6 @@ export function createChart(container, seasons, options = {}) {
       hasUserInteracted = true
       return
     }
-    if (usesScrollableBody()) {
-      return
-    }
-
     const horizontalDelta =
       Math.abs(event.deltaX) > 0
         ? event.deltaX
@@ -1985,11 +1664,7 @@ export function createChart(container, seasons, options = {}) {
     }
 
     if (densityChanged) {
-      resetViewportWidth(
-        getCurrentChartWidth(),
-        usesScrollableBody(),
-        getKeyboardViewportAnchor()
-      )
+      resetViewportWidth(getCurrentChartWidth(), getKeyboardViewportAnchor())
       return
     }
     render()
@@ -2030,7 +1705,6 @@ export function createChart(container, seasons, options = {}) {
         hasUserInteracted,
         navigator: getNavigatorViewModel(),
         viewport,
-        mobileScrollable: usesScrollableBody(),
         ratings: {
           primarySource: model.primaryRatingSource,
           minimumCoverage: model.minimumPrimaryCoverage,
@@ -2055,10 +1729,6 @@ export function createChart(container, seasons, options = {}) {
     destroy() {
       destroyed = true
       stopFling()
-      if (suppressScrollSyncFrame) {
-        cancelAnimationFrame(suppressScrollSyncFrame)
-        suppressScrollSyncFrame = null
-      }
       cancelScheduledDetailLoad()
       cancelTrendHover()
       if (viewportAnnouncementTimer) {

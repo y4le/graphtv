@@ -4,7 +4,6 @@ import {
   buildChartModel,
   clampViewport,
   createDefaultViewport,
-  createFullSeriesScales,
   createMainScales,
   createSparklineScales,
   getMacroTrendline,
@@ -297,9 +296,6 @@ describe('rating scale domains', () => {
     expect(
       createMainScales(model, { start: 1, end: 4 }, dimensions, options).yDomain
     ).toEqual([0, 10])
-    expect(createFullSeriesScales(model, dimensions, options).yDomain).toEqual([
-      0, 10
-    ])
     expect(createSparklineScales(model, dimensions, options).yDomain).toEqual([
       0, 10
     ])

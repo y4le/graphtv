@@ -11,8 +11,6 @@ export const PALETTES = [
   'zigzag',
   'maximin'
 ]
-export const APP_FONT_STACK =
-  '"Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace'
 
 const LEGACY_PALETTE_IDS = {
   mono: 'monotone',
@@ -34,39 +32,6 @@ const MAXIMIN_CONFIG = {
   }
 }
 
-const THEME_TOKENS = {
-  light: {
-    canvas: '#FDFCF8',
-    canvasSubtle: '#F5F3EE',
-    textPrimary: '#1A1A1A',
-    textSecondary: '#737373',
-    textMuted: '#9A948A',
-    lineSoft: 'rgba(26, 26, 26, 0.12)',
-    lineStrong: 'rgba(26, 26, 26, 0.24)',
-    trendMacro: '#D1D1D1',
-    trendMicro: '#A3A3A3',
-    spotColor: '#C1432E',
-    spotColorMuted: '#C1432E',
-    seasonAccentMuted: '#B36D61',
-    publisherAccent: '#C1432E'
-  },
-  dark: {
-    canvas: '#0E0E0D',
-    canvasSubtle: '#181816',
-    textPrimary: '#E8E3D5',
-    textSecondary: '#8A857A',
-    textMuted: '#66625A',
-    lineSoft: '#2A2926',
-    lineStrong: '#403E39',
-    trendMacro: '#56534D',
-    trendMicro: '#777269',
-    spotColor: '#C1432E',
-    spotColorMuted: '#C1432E',
-    seasonAccentMuted: '#B38780',
-    publisherAccent: '#C1432E'
-  }
-}
-
 const SETTINGS_DEFAULTS = {
   theme: 'light',
   themeSource: 'system',
@@ -76,28 +41,6 @@ const SETTINGS_DEFAULTS = {
   showSourceSpread: true,
   absoluteYAxis: false,
   episodeDensity: 'balanced'
-}
-
-const TYPOGRAPHY_TOKENS = {
-  app: APP_FONT_STACK,
-  serif: 'var(--font-app)',
-  sans: 'var(--font-app)',
-  mono: 'var(--font-app)'
-}
-
-const SPACING_TOKENS = {
-  pageMaxWidth: '75rem',
-  searchMaxWidth: '39rem',
-  columnGap: 'clamp(2rem, 4vw, 4rem)',
-  rhythm: '1.5rem',
-  tight: '0.75rem'
-}
-
-const CHART_TOKENS = {
-  chartDesktopHeight: '25rem',
-  chartMobileHeight: '16rem',
-  sparklineDesktopHeight: '2.5rem',
-  sparklineMobileHeight: '1.875rem'
 }
 
 function getSystemTheme() {
@@ -182,33 +125,39 @@ function writeStoredSettings(settings) {
   }
 }
 
-function setCssVar(root, token, value) {
-  root.style.setProperty(`--${token}`, value)
+function readThemeTokens() {
+  const styles = getComputedStyle(document.documentElement)
+  const read = (token, fallback = 'currentColor') =>
+    styles.getPropertyValue(`--${token}`).trim() || fallback
+
+  return {
+    canvas: read('canvas', 'transparent'),
+    canvasSubtle: read('canvasSubtle', 'transparent'),
+    textPrimary: read('textPrimary'),
+    textSecondary: read('textSecondary'),
+    lineSoft: read('lineSoft'),
+    lineStrong: read('lineStrong'),
+    trendMacro: read('trendMacro'),
+    trendMicro: read('trendMicro'),
+    spotColor: read('spotColor'),
+    spotColorMuted: read('spotColorMuted'),
+    seasonAccentMuted: read('seasonAccentMuted')
+  }
 }
 
-function applyCssTokens(settings) {
+function applyThemeState(settings) {
   const root = document.documentElement
-  const themeTokens = THEME_TOKENS[settings.theme]
 
   root.dataset.theme = settings.theme
   root.dataset.palette = settings.palette
   root.dataset.episodeDensity = settings.episodeDensity
 
-  Object.entries(themeTokens).forEach(([token, value]) =>
-    setCssVar(root, token, value)
-  )
-  Object.entries(TYPOGRAPHY_TOKENS).forEach(([token, value]) =>
-    setCssVar(root, `font-${token}`, value)
-  )
-  Object.entries(SPACING_TOKENS).forEach(([token, value]) =>
-    setCssVar(root, token, value)
-  )
-  Object.entries(CHART_TOKENS).forEach(([token, value]) =>
-    setCssVar(root, token, value)
-  )
-  document
-    .querySelector('meta[name="theme-color"]')
-    ?.setAttribute('content', themeTokens.canvas)
+  const canvas = getComputedStyle(root).getPropertyValue('--canvas').trim()
+  if (canvas) {
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', canvas)
+  }
 }
 
 let uiSettings = SETTINGS_DEFAULTS
@@ -217,7 +166,7 @@ let systemThemeListener = null
 
 export function initializeTheme() {
   uiSettings = readStoredSettings()
-  applyCssTokens(uiSettings)
+  applyThemeState(uiSettings)
 
   systemThemeQuery?.removeEventListener?.('change', systemThemeListener)
   systemThemeQuery = null
@@ -231,7 +180,7 @@ export function initializeTheme() {
     systemThemeListener = () => {
       if (uiSettings.themeSource === 'system') {
         uiSettings = sanitizeSettings({ ...uiSettings, themeSource: 'system' })
-        applyCssTokens(uiSettings)
+        applyThemeState(uiSettings)
         emitSettingsChange()
       }
     }
@@ -261,7 +210,7 @@ export function updateUiSettings(nextPartial) {
   }
   uiSettings = sanitizeSettings(candidate)
   writeStoredSettings(uiSettings)
-  applyCssTokens(uiSettings)
+  applyThemeState(uiSettings)
   emitSettingsChange()
   return uiSettings
 }
@@ -274,18 +223,27 @@ export function cyclePalette() {
   })
 }
 
-export function seasonColor(
+export function seasonColor(paletteId, seasonIndex, totalSeasons) {
+  return resolveSeasonColor(
+    paletteId,
+    seasonIndex,
+    totalSeasons,
+    uiSettings.theme,
+    readThemeTokens()
+  )
+}
+
+function resolveSeasonColor(
   paletteId,
   seasonIndex,
   totalSeasons,
-  themeId = uiSettings.theme
+  themeId,
+  themeTokens
 ) {
   const normalizedPaletteId = normalizePaletteId(paletteId)
   const safeTotal = Math.max(totalSeasons, 1)
   const safeIndex = Math.max(0, Math.trunc(seasonIndex))
   const position = safeTotal === 1 ? 0.5 : safeIndex / safeTotal
-  const themeTokens = THEME_TOKENS[themeId]
-
   if (normalizedPaletteId === 'monotone') {
     return themeTokens.textPrimary
   }
@@ -453,8 +411,9 @@ function formatOklch({ lightness, chroma, hue }) {
   return `oklch(${lightness * 100}% ${chroma} ${hue})`
 }
 
-export function getChartTheme(settings = uiSettings) {
-  const themeTokens = THEME_TOKENS[settings.theme]
+export function getChartTheme() {
+  const settings = uiSettings
+  const themeTokens = readThemeTokens()
 
   return {
     themeId: settings.theme,
@@ -470,6 +429,12 @@ export function getChartTheme(settings = uiSettings) {
     spotColorMuted: themeTokens.spotColorMuted,
     canvasSubtle: themeTokens.canvasSubtle,
     seasonColor: (seasonIndex, totalSeasons) =>
-      seasonColor(settings.palette, seasonIndex, totalSeasons, settings.theme)
+      resolveSeasonColor(
+        settings.palette,
+        seasonIndex,
+        totalSeasons,
+        settings.theme,
+        themeTokens
+      )
   }
 }

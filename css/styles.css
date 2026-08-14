@@ -1,5 +1,5 @@
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   --canvas: #fdfcf8;
   --canvasSubtle: #f5f3ee;
   --textPrimary: #1a1a1a;
@@ -11,6 +11,7 @@
   --trendMicro: #a3a3a3;
   --spotColor: #c1432e;
   --spotColorMuted: #c1432e;
+  --seasonAccentMuted: #b36d61;
   --publisherAccent: #c1432e;
   --font-app:
     'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas,
@@ -28,14 +29,45 @@
   --searchCollectionMaxWidth: clamp(39rem, calc(18rem + 24vw), 75rem);
   --columnGap: clamp(2rem, 4vw, 4rem);
   --chartColumnGap: 0.9rem;
-  --rhythm: 1.5rem;
   --tight: 0.75rem;
-  --chartDesktopHeight: 25rem;
-  --chartMobileHeight: 16rem;
-  --sparklineDesktopHeight: 2.5rem;
-  --sparklineMobileHeight: 1.875rem;
   --transition-fast: 140ms ease;
   --transition-medium: 220ms ease;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --canvas: #0e0e0d;
+  --canvasSubtle: #181816;
+  --textPrimary: #e8e3d5;
+  --textSecondary: #8a857a;
+  --textMuted: #66625a;
+  --lineSoft: #2a2926;
+  --lineStrong: #403e39;
+  --trendMacro: #56534d;
+  --trendMicro: #777269;
+  --spotColor: #c1432e;
+  --spotColorMuted: #c1432e;
+  --seasonAccentMuted: #b38780;
+  --publisherAccent: #c1432e;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --canvas: #0e0e0d;
+    --canvasSubtle: #181816;
+    --textPrimary: #e8e3d5;
+    --textSecondary: #8a857a;
+    --textMuted: #66625a;
+    --lineSoft: #2a2926;
+    --lineStrong: #403e39;
+    --trendMacro: #56534d;
+    --trendMicro: #777269;
+    --spotColor: #c1432e;
+    --spotColorMuted: #c1432e;
+    --seasonAccentMuted: #b38780;
+    --publisherAccent: #c1432e;
+  }
 }
 
 *,
@@ -1484,18 +1516,6 @@ button {
 .point-layer .episode-point,
 .point-layer .episode-point-hit {
   cursor: pointer;
-}
-
-.chart-shell[data-scrollable='true'] .chart-body-shell::after {
-  content: '';
-  position: sticky;
-  right: 0;
-  display: block;
-  width: 1.5rem;
-  height: 100%;
-  margin-left: auto;
-  background: linear-gradient(90deg, transparent, var(--canvas));
-  pointer-events: none;
 }
 
 .viewport-brush {

@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 import { createChart } from '../../src/viz/ratingsChart.js'
 import { updateUiSettings } from '../../src/viz/theme.js'
@@ -39,9 +41,48 @@ afterEach(() => {
   vi.useRealTimers()
   vi.unstubAllGlobals()
   document.body.replaceChildren()
+  document.head
+    .querySelectorAll('[data-chart-theme-test]')
+    .forEach((style) => style.remove())
 })
 
 describe('createChart', () => {
+  it('emits concrete SVG colors from the active CSS theme', () => {
+    const style = document.createElement('style')
+    style.dataset.chartThemeTest = ''
+    style.textContent = readFileSync(
+      resolve(process.cwd(), 'css/styles.css'),
+      'utf8'
+    )
+    document.head.appendChild(style)
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    expect(container.querySelector('.episode-point').getAttribute('fill')).toBe(
+      '#1a1a1a'
+    )
+
+    updateUiSettings({ theme: 'dark' })
+
+    expect(container.querySelector('.episode-point').getAttribute('fill')).toBe(
+      '#e8e3d5'
+    )
+    const colorAttributes = Array.from(
+      container.querySelectorAll('[fill], [stroke]'),
+      (element) => [
+        element.getAttribute('fill'),
+        element.getAttribute('stroke')
+      ]
+    ).flat()
+    expect(colorAttributes.filter(Boolean).join(' ')).not.toContain('var(--')
+    style.remove()
+  })
+
   it('aligns the sparkline viewBox with the main plot rather than the axis gutter', () => {
     const container = document.createElement('div')
     Object.defineProperty(container, 'clientWidth', {
