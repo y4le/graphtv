@@ -1118,7 +1118,7 @@ describe('createChart', () => {
     expect(fallback.getAttribute('stroke-opacity')).toBe('1')
   })
 
-  it('subtly enlarges points when few ratings occupy the available width', () => {
+  it('enlarges points and trendlines when few ratings occupy the available width', () => {
     const container = document.createElement('div')
     Object.defineProperty(container, 'clientWidth', {
       configurable: true,
@@ -1133,7 +1133,14 @@ describe('createChart', () => {
     const restingRadius = Number(
       container.querySelector('.episode-point').getAttribute('r')
     )
-    expect(restingRadius).toBe(5)
+    expect(restingRadius).toBe(6)
+
+    chart.toggleSeriesTrend()
+    expect(
+      Number(
+        container.querySelector('.macro-trendline').getAttribute('stroke-width')
+      )
+    ).toBe(2.5)
 
     chart.moveEpisode(1)
     const activeRadius = Number(

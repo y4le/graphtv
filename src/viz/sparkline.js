@@ -1,7 +1,10 @@
 import { brushX, line, select } from 'd3'
 
 import { createSparklineScales, viewportToBrushSelection } from './scales.js'
-import { scalePointRadiusForDensity } from './pointSize.js'
+import {
+  scaleLineWidthForDensity,
+  scalePointRadiusForDensity
+} from './pointSize.js'
 
 const DOUBLE_TAP_DELAY = 320
 const TAP_MOVE_TOLERANCE = 10
@@ -99,6 +102,16 @@ export function createSparkline(svgNode, config) {
       config.model.ratedPoints.length,
       config.scales.xScale
     )
+    const inactiveLineWidth = scaleLineWidthForDensity(
+      1,
+      config.model.ratedPoints.length,
+      config.scales.xScale
+    )
+    const activeLineWidth = scaleLineWidthForDensity(
+      1.5,
+      config.model.ratedPoints.length,
+      config.scales.xScale
+    )
 
     windowClipRect
       .attr('x', windowX1)
@@ -114,7 +127,7 @@ export function createSparkline(svgNode, config) {
       .attr('fill', 'none')
       .attr('stroke', config.theme.text)
       .attr('stroke-opacity', INACTIVE_INK_OPACITY)
-      .attr('stroke-width', 1)
+      .attr('stroke-width', inactiveLineWidth)
       .attr('stroke-linejoin', 'round')
       .attr('d', (path) => path)
 
@@ -126,7 +139,7 @@ export function createSparkline(svgNode, config) {
       .attr('fill', 'none')
       .attr('stroke', config.theme.text)
       .attr('stroke-opacity', 1)
-      .attr('stroke-width', 1.5)
+      .attr('stroke-width', activeLineWidth)
       .attr('stroke-linejoin', 'round')
       .attr('stroke-linecap', 'round')
       .attr('clip-path', `url(#${clipId})`)

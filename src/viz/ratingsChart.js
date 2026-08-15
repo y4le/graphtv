@@ -8,6 +8,7 @@ import {
   createSparklineScales,
   getMacroTrendline,
   getVisiblePoints,
+  getVisibleRatedPoints,
   getVisibleSeriesBreakpoint,
   getVisibleSeasonTrendlines
 } from './scales.js'
@@ -1116,10 +1117,11 @@ export function createChart(container, seasons, options = {}) {
     render()
   }
 
-  function getTrendInteractions() {
+  function getTrendInteractions(densityPointCount) {
     const activeTrendId = getActiveTrendId()
     return {
       activeTrendId,
+      densityPointCount,
       hoverEnabled: finePointerQuery.matches,
       hitTolerance: coarsePointerQuery.matches ? 14 : 7,
       onHover: previewTrend,
@@ -1199,6 +1201,8 @@ export function createChart(container, seasons, options = {}) {
       },
       scaleOptions
     )
+    const visiblePoints = getVisiblePoints(model, viewport)
+    const visibleRatedPoints = getVisibleRatedPoints(model, viewport)
 
     bodyShell.style.touchAction = isMobile() ? 'none' : ''
 
@@ -1228,11 +1232,11 @@ export function createChart(container, seasons, options = {}) {
       mainScales,
       { width: chartWidth, height: chartHeight },
       chartTheme,
-      getTrendInteractions()
+      getTrendInteractions(visibleRatedPoints.length)
     )
     renderSourceSpreads(
       mainSvg,
-      getVisiblePoints(model, viewport),
+      visiblePoints,
       mainScales,
       { width: chartWidth, height: chartHeight },
       chartTheme,
@@ -1251,7 +1255,7 @@ export function createChart(container, seasons, options = {}) {
     )
     renderPoints(
       mainSvg,
-      getVisiblePoints(model, viewport),
+      visiblePoints,
       mainScales,
       chartTheme,
       getPointInteractions()

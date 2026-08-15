@@ -72,7 +72,7 @@ describe('createSparkline', () => {
     )
   })
 
-  it('proportionally enlarges sparse points while keeping them smaller than chart points', () => {
+  it('proportionally enlarges sparse points and line widths', () => {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
     document.body.appendChild(svg)
     const model = {
@@ -89,14 +89,21 @@ describe('createSparkline', () => {
     const points = Array.from(svg.querySelectorAll('.sparkline-point'))
     const inactiveRadius = Number(points[0].getAttribute('r'))
     const activeRadius = Number(points[1].getAttribute('r'))
+    const inactiveLineWidth = Number(
+      svg.querySelector('.sparkline-path').getAttribute('stroke-width')
+    )
+    const activeLineWidth = Number(
+      svg.querySelector('.sparkline-path-active').getAttribute('stroke-width')
+    )
 
-    expect(inactiveRadius).toBeGreaterThan(INACTIVE_POINT_RADIUS_FOR_TEST)
-    expect(activeRadius).toBeGreaterThan(ACTIVE_POINT_RADIUS_FOR_TEST)
-    expect(activeRadius).toBeLessThan(3)
+    expect(inactiveRadius).toBe(2.4)
+    expect(activeRadius).toBe(3.4)
     expect(activeRadius / inactiveRadius).toBeCloseTo(
       ACTIVE_POINT_RADIUS_FOR_TEST / INACTIVE_POINT_RADIUS_FOR_TEST,
       2
     )
+    expect(inactiveLineWidth).toBe(1.25)
+    expect(activeLineWidth).toBe(1.88)
   })
 
   it('keeps data marks out of the brush hit path and enlarges desktop handles', () => {

@@ -1,7 +1,10 @@
 import { format, line, pointer as d3Pointer } from 'd3'
 
 import { isUsableProviderRating, isUsableRating } from '../data/stats.js'
-import { scalePointRadiusForDensity } from './pointSize.js'
+import {
+  scaleLineWidthForDensity,
+  scalePointRadiusForDensity
+} from './pointSize.js'
 
 const formatRating = format('.1f')
 const Y_LABEL_INSET = 8
@@ -353,6 +356,14 @@ export function renderTrendlines(
     .y((point) => scales.yScale(point.y))
   const segments = [macroTrendline, ...trendlines].filter(Boolean)
   const activeTrendId = interactions.activeTrendId ?? null
+  const lineWidth = (baseWidth) =>
+    interactions.densityPointCount == null
+      ? baseWidth
+      : scaleLineWidthForDensity(
+          baseWidth,
+          interactions.densityPointCount,
+          scales.xScale
+        )
 
   const hitSurface = trendlineLayer
     .selectAll('.chart-hit-surface')
@@ -416,7 +427,7 @@ export function renderTrendlines(
       trendline.id === activeTrendId ? theme.spotColor : theme.trendMacro
     )
     .attr('stroke-width', (trendline) =>
-      trendline.id === activeTrendId ? 2 : 1
+      lineWidth(trendline.id === activeTrendId ? 2 : 1)
     )
     .attr('stroke-dasharray', '5 5')
     .attr('pointer-events', 'none')
@@ -436,7 +447,7 @@ export function renderTrendlines(
       trendline.id === activeTrendId ? theme.spotColor : theme.trendMicro
     )
     .attr('stroke-width', (trendline) =>
-      trendline.id === activeTrendId ? 1.75 : 1
+      lineWidth(trendline.id === activeTrendId ? 1.75 : 1)
     )
     .attr('pointer-events', 'none')
     .attr('d', (trendline) => generator(trendline.points))
