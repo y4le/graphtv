@@ -1,20 +1,24 @@
 <svg
   xmlns="http://www.w3.org/2000/svg"
+  id="graphtv-card"
   viewBox="0 0 1618 1000"
   role="img"
   aria-labelledby="graphtv-card-title graphtv-card-description"
 >
   <title id="graphtv-card-title">graphtv</title>
   <desc id="graphtv-card-description">
-    The graphtv wordmark over scrolling episode-rating dots, source-spread hairlines,
-    and season trendlines.
+    The graphtv wordmark over a scrolling episode-rating series: seasons marked
+    off on an axis and carrying their own trendlines, hairlines where providers
+    disagree, and one selected episode marked on the plot and the season axis.
   </desc>
   <style>
     :root {
       color-scheme: light dark;
       --card-ink: light-dark(#1a1814, #e8e3d5);
       --card-muted: light-dark(#6f6a5e, #8a857a);
-      --card-accent: #c1432e;
+      /* The app's monotone palette: every season in ink, trendlines beneath. */
+      --card-trend-micro: light-dark(#a3a3a3, #777269);
+      --card-spot: light-dark(#c1432e, #d9644d);
     }
 
     :root[data-color-scheme="light"] {
@@ -25,7 +29,7 @@
       color-scheme: only dark;
     }
 
-    .word {
+    #graphtv-card .gtv-wordmark {
       fill: var(--card-ink);
       font-family: Geist, Inter, 'Helvetica Neue', Arial, sans-serif;
       font-size: 236px;
@@ -33,74 +37,146 @@
       letter-spacing: -0.06em;
     }
 
-    .season-trendline {
-      stroke: var(--card-muted);
-      stroke-width: 4;
+    #graphtv-card .gtv-scroll {
+      animation: gtv-scroll 12s linear infinite;
     }
 
-    .source-hairline {
-      stroke: var(--card-muted);
-      stroke-opacity: 0.42;
-      stroke-width: 2;
-    }
-
-    .episode-point {
-      fill: var(--card-ink);
-    }
-
-    .episode-point-active {
-      fill: var(--card-accent);
-    }
-
-    .rolling-trend {
-      animation: roll 10s linear infinite;
-    }
-
-    @keyframes roll {
+    @keyframes gtv-scroll {
       to {
-        transform: translateX(-1370px);
+        transform: translateX(-3200px);
       }
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .rolling-trend {
+      #graphtv-card .gtv-scroll {
         animation: none;
       }
     }
   </style>
   <defs>
-    <g id="trend-segment">
-      <line class="season-trendline" x1="0" y1="510" x2="1370" y2="430" />
-      <g class="source-hairlines">
-        <line class="source-hairline" x1="112" y1="445" x2="112" y2="499" />
-        <line class="source-hairline" x1="328" y1="351" x2="328" y2="416" />
-        <line class="source-hairline" x1="550" y1="321" x2="550" y2="374" />
-        <line class="source-hairline" x1="766" y1="432" x2="766" y2="493" />
-        <line class="source-hairline" x1="988" y1="461" x2="988" y2="516" />
-        <line class="source-hairline" x1="1208" y1="368" x2="1208" y2="433" />
+    <clipPath id="graphtv-card-frame">
+      <rect width="1618" height="1000" />
+    </clipPath>
+
+    <!--
+      One scroll period, 3200 wide: four seasons of episodes on a 120 pitch,
+      separated by a 200 season gap. The period is wider than the 1618 viewBox,
+      so the single selected episode and its season can never appear twice in
+      the card at once. Four seasons keep the ink/accent alternation even
+      across the wrap. Marks stay above y=400 to clear the wordmark.
+
+      Referenced content is painted with presentation attributes: document CSS
+      rules do not reach into a <use> shadow tree, but custom properties
+      inherit into it.
+    -->
+    <g id="graphtv-card-period">
+      <!-- Season axis: rail, season boundary ticks, and the selected season. -->
+      <g stroke="var(--card-muted)" stroke-width="3">
+        <line x1="0" y1="790" x2="3200" y2="790" stroke-opacity="0.45" />
+        <line x1="700" y1="790" x2="700" y2="764" stroke-opacity="0.7" />
+        <line x1="1620" y1="790" x2="1620" y2="764" stroke-opacity="0.7" />
+        <line x1="2300" y1="790" x2="2300" y2="764" stroke-opacity="0.7" />
+        <line x1="3100" y1="790" x2="3100" y2="764" stroke-opacity="0.7" />
       </g>
-      <g class="episode-points">
-        <circle class="episode-point" cx="0" cy="508" r="9" />
-        <circle class="episode-point" cx="112" cy="472" r="9" />
-        <circle class="episode-point" cx="220" cy="533" r="9" />
-        <circle class="episode-point" cx="328" cy="382" r="9" />
-        <circle class="episode-point" cx="442" cy="427" r="9" />
-        <circle class="episode-point" cx="550" cy="346" r="9" />
-        <circle class="episode-point-active" cx="660" cy="501" r="11" />
-        <circle class="episode-point" cx="766" cy="462" r="9" />
-        <circle class="episode-point" cx="878" cy="560" r="9" />
-        <circle class="episode-point" cx="988" cy="486" r="9" />
-        <circle class="episode-point" cx="1098" cy="526" r="9" />
-        <circle class="episode-point" cx="1208" cy="399" r="9" />
-        <circle class="episode-point" cx="1310" cy="438" r="9" />
+      <line
+        x1="740"
+        y1="790"
+        x2="1580"
+        y2="790"
+        stroke="var(--card-spot)"
+        stroke-width="6"
+      />
+
+      <g
+        font-family="Geist, Inter, 'Helvetica Neue', Arial, sans-serif"
+        font-size="52"
+        font-weight="600"
+        letter-spacing="0.06em"
+        text-anchor="middle"
+      >
+        <text x="300" y="864" fill="var(--card-ink)" fill-opacity="0.72">S1</text>
+        <text x="1160" y="864" fill="var(--card-spot)">S2</text>
+        <text x="1960" y="864" fill="var(--card-ink)" fill-opacity="0.72">S3</text>
+        <text x="2700" y="864" fill="var(--card-ink)" fill-opacity="0.72">S4</text>
       </g>
+
+      <!-- Season trendlines, fitted to each season's own episodes. -->
+      <g
+        stroke="var(--card-trend-micro)"
+        stroke-width="7"
+        stroke-linecap="round"
+      >
+        <line x1="0" y1="328.1" x2="600" y2="259.2" />
+        <line x1="800" y1="252.7" x2="1520" y2="135.2" />
+        <line x1="1720" y1="207.4" x2="2200" y2="317" />
+        <line x1="2400" y1="292.1" x2="3000" y2="141.8" />
+      </g>
+
+      <!-- Provider disagreement, drawn as a spread hairline through the point. -->
+      <g
+        stroke="var(--card-muted)"
+        stroke-opacity="0.5"
+        stroke-width="5"
+        stroke-linecap="round"
+      >
+        <line x1="120" y1="248.3" x2="120" y2="324.3" />
+        <line x1="480" y1="267.3" x2="480" y2="327.3" />
+        <line x1="920" y1="152.7" x2="920" y2="244.7" />
+        <line x1="1720" y1="153.7" x2="1720" y2="221.7" />
+        <line x1="2080" y1="198.5" x2="2080" y2="286.5" />
+        <line x1="2520" y1="203.5" x2="2520" y2="259.5" />
+        <line x1="2880" y1="136.7" x2="2880" y2="216.7" />
+      </g>
+
+      <!-- The selected episode's spread is emphasized and capped, as in the app. -->
+      <g stroke="var(--card-muted)" stroke-opacity="0.9" stroke-width="5">
+        <line x1="1160" y1="113.8" x2="1160" y2="217.8" />
+        <line x1="1132" y1="113.8" x2="1188" y2="113.8" />
+        <line x1="1132" y1="217.8" x2="1188" y2="217.8" />
+      </g>
+
+      <!-- Episodes, one group per season. -->
+      <g fill="var(--card-ink)">
+        <circle cx="0" cy="330.2" r="21" />
+        <circle cx="120" cy="286.3" r="21" />
+        <circle cx="240" cy="341.2" r="21" />
+        <circle cx="360" cy="264.4" r="21" />
+        <circle cx="480" cy="297.3" r="21" />
+        <circle cx="600" cy="242.5" r="21" />
+
+        <circle cx="800" cy="264.4" r="21" />
+        <circle cx="920" cy="198.7" r="21" />
+        <circle cx="1040" cy="242.5" r="21" />
+        <circle cx="1280" cy="209.6" r="21" />
+        <circle cx="1400" cy="154.8" r="21" />
+        <circle cx="1520" cy="121.9" r="21" />
+
+        <circle cx="1720" cy="187.7" r="21" />
+        <circle cx="1840" cy="253.5" r="21" />
+        <circle cx="1960" cy="297.3" r="21" />
+        <circle cx="2080" cy="242.5" r="21" />
+        <circle cx="2200" cy="330.2" r="21" />
+
+        <circle cx="2400" cy="297.3" r="21" />
+        <circle cx="2520" cy="231.5" r="21" />
+        <circle cx="2640" cy="264.4" r="21" />
+        <circle cx="2760" cy="198.7" r="21" />
+        <circle cx="2880" cy="176.7" r="21" />
+        <circle cx="3000" cy="132.9" r="21" />
+      </g>
+
+      <!-- Exactly one selected episode per period. -->
+      <circle cx="1160" cy="165.8" r="29" fill="var(--card-spot)" />
     </g>
   </defs>
-  <g class="rolling-trend">
-    <use href="#trend-segment" x="-1370" />
-    <use href="#trend-segment" x="0" />
-    <use href="#trend-segment" x="1370" />
-    <use href="#trend-segment" x="2740" />
+
+  <g clip-path="url(#graphtv-card-frame)" aria-hidden="true">
+    <g class="gtv-scroll">
+      <use href="#graphtv-card-period" x="-3200" />
+      <use href="#graphtv-card-period" />
+      <use href="#graphtv-card-period" x="3200" />
+    </g>
   </g>
-  <text class="word" x="809" y="585" text-anchor="middle">graphtv</text>
+
+  <text class="gtv-wordmark" x="809" y="585" text-anchor="middle">graphtv</text>
 </svg>
