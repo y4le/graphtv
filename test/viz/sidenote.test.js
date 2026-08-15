@@ -176,7 +176,7 @@ describe('createSidenote', () => {
     )
     expect(
       ratings.querySelector('.sidenote-rating-primary-value').textContent
-    ).toBe('8.2')
+    ).toBe('8.2 (4k votes)')
     expect(root.querySelector('.sidenote-caption').textContent).not.toContain(
       '8.2'
     )
@@ -194,6 +194,104 @@ describe('createSidenote', () => {
       'https://www.tvmaze.com/episodes/1002',
       'https://www.themoviedb.org/tv/1438/season/1/episode/2'
     ])
+  })
+
+  it('previews and selects provider ratings through their numeric buttons', () => {
+    const root = document.createElement('section')
+    const onInteract = vi.fn()
+    const onPreviewRating = vi.fn()
+    const onSelectRating = vi.fn()
+    const sidenote = createSidenote({
+      root,
+      onInteract,
+      onPreviewRating,
+      onSelectRating
+    })
+    const point = {
+      id: 'episode-1',
+      title: 'A Great Episode',
+      season: 1,
+      episode: 2,
+      rating: 8.2,
+      ratingSource: 'omdb',
+      ratings: [
+        { source: 'omdb', rating: 8.2, votes: 4000 },
+        { source: 'tmdb', rating: 7.8, votes: 47 }
+      ]
+    }
+
+    sidenote.renderPoint(point)
+    const primary = root.querySelector('[data-rating-source="omdb"]')
+    const secondary = root.querySelector('[data-rating-source="tmdb"]')
+
+    expect(primary.tagName).toBe('BUTTON')
+    expect(primary.getAttribute('aria-label')).toBe(
+      'IMDb rating 8.2, 4k votes, plotted rating'
+    )
+    expect(secondary.textContent).toBe('7.8 (47 votes)')
+    expect(secondary.getAttribute('aria-pressed')).toBe('false')
+
+    secondary.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+    expect(onPreviewRating).toHaveBeenLastCalledWith({
+      pointId: 'episode-1',
+      source: 'tmdb'
+    })
+
+    secondary.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }))
+    expect(onPreviewRating).toHaveBeenLastCalledWith(null)
+
+    secondary.click()
+    expect(onInteract).toHaveBeenCalledOnce()
+    expect(onSelectRating).toHaveBeenLastCalledWith({
+      pointId: 'episode-1',
+      source: 'tmdb'
+    })
+
+    sidenote.renderPoint(point, { selectedRatingSource: 'tmdb' })
+    expect(secondary.getAttribute('aria-pressed')).toBe('true')
+    expect(secondary.classList).toContain('is-selected')
+    expect(primary.getAttribute('aria-pressed')).toBe('false')
+    expect(primary.classList).toContain('is-superseded')
+
+    sidenote.renderPoint(point)
+    expect(primary.classList).not.toContain('is-superseded')
+  })
+
+  it('releases rating-button focus after pointer activation', () => {
+    const root = document.createElement('section')
+    document.body.appendChild(root)
+    const onSelectRating = vi.fn()
+    const sidenote = createSidenote({ root, onSelectRating })
+
+    sidenote.renderPoint({
+      id: 'episode-1',
+      title: 'A Great Episode',
+      season: 1,
+      episode: 2,
+      rating: 8.2,
+      ratingSource: 'omdb',
+      ratings: [
+        { source: 'omdb', rating: 8.2, votes: 4000 },
+        { source: 'tmdb', rating: 7.8, votes: 47 }
+      ]
+    })
+    const secondary = root.querySelector('[data-rating-source="tmdb"]')
+
+    secondary.focus()
+    secondary.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, detail: 1 })
+    )
+
+    expect(onSelectRating).toHaveBeenCalledOnce()
+    expect(document.activeElement).not.toBe(secondary)
+
+    secondary.focus()
+    secondary.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, detail: 0 })
+    )
+
+    expect(onSelectRating).toHaveBeenCalledTimes(2)
+    expect(document.activeElement).toBe(secondary)
   })
 
   it('does not present a TMDB rating below the vote minimum as usable', () => {

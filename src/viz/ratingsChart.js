@@ -15,6 +15,7 @@ import {
 import {
   renderCrosshair,
   renderPoints,
+  renderProviderRatingPreview,
   renderRangeFrame,
   renderSeasonAxis,
   renderSourceSpreads,
@@ -24,7 +25,11 @@ import {
 import { createSidenote } from './sidenote.js'
 import { createSparkline } from './sparkline.js'
 import { getChartTheme, getUiSettings, updateUiSettings } from './theme.js'
-import { createCachedSeriesBreakpointDetector } from '../data/stats.js'
+import {
+  RATING_SOURCE_PRIORITY,
+  createCachedSeriesBreakpointDetector,
+  isUsableProviderRating
+} from '../data/stats.js'
 
 const MOBILE_QUERY = '(max-width: 767px)'
 const MOBILE_LANDSCAPE_QUERY = '(max-width: 767px) and (orientation: landscape)'
@@ -91,7 +96,13 @@ export function createChart(container, seasons, options = {}) {
 
   const breakpointDetector =
     options.breakpointDetector ?? createCachedSeriesBreakpointDetector()
-  let model = buildChartModel(seasons, { breakpointDetector })
+  let currentSeasons = seasons
+  let preferredPrimaryRatingSource = options.primaryRatingSource ?? null
+  let notifiedPrimaryRatingSource = Symbol('unreported-primary-rating-source')
+  let model = buildChartModel(currentSeasons, {
+    breakpointDetector,
+    primaryRatingSource: preferredPrimaryRatingSource
+  })
   let show = options.show ?? null
   let viewport = null
   let episodeDensity = getUiSettings().episodeDensity
@@ -99,6 +110,8 @@ export function createChart(container, seasons, options = {}) {
   let hoverPointId = null
   let selectedTrendId = null
   let hoverTrendId = null
+  let hoveredProviderRating = null
+  let selectedProviderRating = null
   let hasUserInteracted = false
   let sparkline = null
   let viewportAnnouncementTimer = null
@@ -120,6 +133,12 @@ export function createChart(container, seasons, options = {}) {
     },
     onNavigate(delta) {
       navigateDetail(delta)
+    },
+    onPreviewRating(target) {
+      previewProviderRating(target)
+    },
+    onSelectRating(target) {
+      selectProviderRating(target)
     },
     onSelectPoint(pointId) {
       setSelectedPoint(getPointById(pointId), 'pointer')
@@ -183,6 +202,90 @@ export function createChart(container, seasons, options = {}) {
       getPointById(hoverPointId) ||
       (selectedTrendId ? null : getPointById(selectedPointId))
     )
+  }
+
+  function resolveProviderRating(target) {
+    if (!target?.pointId || !target.source) {
+      return null
+    }
+
+    const point =
+      detailCache.get(target.pointId) ?? getPointById(target.pointId)
+    const rating = point?.ratings?.find(
+      (candidate) =>
+        candidate.source === target.source && isUsableProviderRating(candidate)
+    )
+
+    return rating
+      ? {
+          ...rating,
+          pointId: target.pointId,
+          source: rating.source
+        }
+      : null
+  }
+
+  function getActiveProviderRating() {
+    const activePoint = getActivePoint()
+    if (!activePoint) {
+      return null
+    }
+
+    const target =
+      hoveredProviderRating?.pointId === activePoint.id
+        ? hoveredProviderRating
+        : selectedProviderRating?.pointId === activePoint.id
+          ? selectedProviderRating
+          : null
+
+    return resolveProviderRating(target)
+  }
+
+  function getSelectedRatingSource(point) {
+    return selectedProviderRating?.pointId === point?.id
+      ? selectedProviderRating.source
+      : null
+  }
+
+  function clearProviderRatingState() {
+    hoveredProviderRating = null
+    selectedProviderRating = null
+  }
+
+  function notifyPrimaryRatingSource() {
+    if (model.primaryRatingSource === notifiedPrimaryRatingSource) {
+      return
+    }
+
+    notifiedPrimaryRatingSource = model.primaryRatingSource
+    options.onPrimaryRatingSourceChange?.(model.primaryRatingSource)
+  }
+
+  function previewProviderRating(target) {
+    const nextTarget = resolveProviderRating(target)
+    if (
+      nextTarget?.pointId === hoveredProviderRating?.pointId &&
+      nextTarget?.source === hoveredProviderRating?.source
+    ) {
+      return
+    }
+
+    hoveredProviderRating = nextTarget
+    render()
+  }
+
+  function selectProviderRating(target) {
+    const rating = resolveProviderRating(target)
+    const point = getPointById(rating?.pointId)
+    if (!rating || point?.id !== getActivePoint()?.id) {
+      return
+    }
+
+    selectedProviderRating =
+      rating.source === point.ratingSource
+        ? null
+        : { pointId: rating.pointId, source: rating.source }
+    render()
   }
 
   function getActiveTrendId() {
@@ -463,7 +566,8 @@ export function createChart(container, seasons, options = {}) {
         if (!destroyed && getActivePoint()?.id === point.id) {
           const currentPoint = getPointById(point.id)
           sidenote.renderPoint(detailCache.get(point.id) ?? currentPoint, {
-            show
+            show,
+            selectedRatingSource: getSelectedRatingSource(currentPoint)
           })
         }
       }
@@ -506,7 +610,8 @@ export function createChart(container, seasons, options = {}) {
     }
     sidenote.renderPoint(detailCache.get(point.id) ?? point, {
       loadingDetails: loadingDetailPointIds.has(point.id),
-      show
+      show,
+      selectedRatingSource: getSelectedRatingSource(point)
     })
   }
 
@@ -561,6 +666,7 @@ export function createChart(container, seasons, options = {}) {
     }
 
     hasUserInteracted = true
+    clearProviderRatingState()
 
     if (source === 'keyboard') {
       hoverPointId = null
@@ -635,6 +741,7 @@ export function createChart(container, seasons, options = {}) {
     }
 
     hasUserInteracted = true
+    clearProviderRatingState()
 
     const isTogglingOff = selectedTrendId === id
     cancelTrendHover()
@@ -963,6 +1070,7 @@ export function createChart(container, seasons, options = {}) {
 
   function clearActiveSelection({ announce = false } = {}) {
     hasUserInteracted = true
+    clearProviderRatingState()
     cancelTrendHover()
     hoverPointId = null
     selectedPointId = null
@@ -1039,11 +1147,20 @@ export function createChart(container, seasons, options = {}) {
     if (Object.hasOwn(context, 'show')) {
       show = context.show
     }
+    if (Object.hasOwn(context, 'primaryRatingSource')) {
+      preferredPrimaryRatingSource = context.primaryRatingSource
+    }
 
     const previousPoint = getPointById(selectedPointId)
     const previousTrend = getTrendSummary(selectedTrendId)
     const shouldRefreshDefaultViewport = Boolean(viewport && !hasUserInteracted)
-    model = buildChartModel(nextSeasons, { breakpointDetector })
+    currentSeasons = nextSeasons
+    model = buildChartModel(currentSeasons, {
+      breakpointDetector,
+      primaryRatingSource: preferredPrimaryRatingSource
+    })
+    notifyPrimaryRatingSource()
+    hoveredProviderRating = null
     failedDetailPointIds.clear()
     if (!getPointById(hoverPointId)) {
       hoverPointId = null
@@ -1093,12 +1210,66 @@ export function createChart(container, seasons, options = {}) {
       detailCache.set(episodeId, mergeEpisodeDetails(point, cachedPoint))
     }
 
+    if (
+      selectedProviderRating &&
+      (selectedProviderRating.pointId !== selectedPointId ||
+        !resolveProviderRating(selectedProviderRating))
+    ) {
+      selectedProviderRating = null
+    }
+
     if (shouldRefreshDefaultViewport) {
       viewport = getDefaultViewport(getCurrentChartWidth())
     } else if (viewport) {
       viewport = clampViewport(viewport, model)
     }
     render()
+  }
+
+  function setPrimaryRatingSource(source) {
+    const isAvailable = model.ratingSourceCoverage.some(
+      (entry) => entry.source === source && entry.ratedEpisodes > 0
+    )
+    if (!isAvailable) {
+      return false
+    }
+
+    hasUserInteracted = true
+    clearProviderRatingState()
+    preferredPrimaryRatingSource = source
+    if (source === model.primaryRatingSource) {
+      render()
+      return true
+    }
+
+    updateSeasons(currentSeasons, { primaryRatingSource: source })
+    return model.primaryRatingSource === source
+  }
+
+  function cyclePrimaryRatingSource() {
+    const availableSources = new Set(
+      model.ratingSourceCoverage
+        .filter((entry) => entry.ratedEpisodes > 0)
+        .map((entry) => entry.source)
+    )
+    const orderedSources = RATING_SOURCE_PRIORITY.filter((source) =>
+      availableSources.delete(source)
+    )
+
+    for (const { source } of model.ratingSourceCoverage) {
+      if (availableSources.delete(source)) {
+        orderedSources.push(source)
+      }
+    }
+
+    if (orderedSources.length < 2) {
+      return false
+    }
+
+    const currentIndex = orderedSources.indexOf(model.primaryRatingSource)
+    const nextSource =
+      orderedSources[(currentIndex + 1) % orderedSources.length]
+    return setPrimaryRatingSource(nextSource)
   }
 
   function resetViewportWidth(chartWidth, center = getViewportCenter()) {
@@ -1136,9 +1307,10 @@ export function createChart(container, seasons, options = {}) {
     }
   }
 
-  function getPointInteractions() {
+  function getPointInteractions(activeProviderRating) {
     return {
       activePointId: getActivePoint()?.id ?? null,
+      activeRatingSource: activeProviderRating?.source ?? null,
       hoverEnabled: finePointerQuery.matches,
       totalSeasons: model.totalSeasons,
       onHover(point) {
@@ -1179,6 +1351,8 @@ export function createChart(container, seasons, options = {}) {
   ) {
     ensureViewport(chartWidth)
     const uiSettings = getUiSettings()
+    const activePoint = getActivePoint()
+    const activeProviderRating = getActiveProviderRating()
 
     const scaleOptions = {
       absoluteYAxis: uiSettings.absoluteYAxis,
@@ -1191,7 +1365,12 @@ export function createChart(container, seasons, options = {}) {
         width: chartWidth,
         height: chartHeight
       },
-      scaleOptions
+      {
+        ...scaleOptions,
+        additionalRatings: activeProviderRating
+          ? [activeProviderRating.rating]
+          : []
+      }
     )
     const sparklineScales = createSparklineScales(
       model,
@@ -1242,12 +1421,12 @@ export function createChart(container, seasons, options = {}) {
       chartTheme,
       {
         visible: uiSettings.showSourceSpread,
-        activePointId: getActivePoint()?.id ?? null
+        activePointId: activePoint?.id ?? null
       }
     )
     renderCrosshair(
       mainSvg,
-      getActivePoint(),
+      activePoint,
       mainScales,
       { width: chartWidth, height: chartHeight },
       chartTheme,
@@ -1258,7 +1437,15 @@ export function createChart(container, seasons, options = {}) {
       visiblePoints,
       mainScales,
       chartTheme,
-      getPointInteractions()
+      getPointInteractions(activeProviderRating)
+    )
+    renderProviderRatingPreview(
+      mainSvg,
+      visiblePoints,
+      activePoint,
+      activeProviderRating,
+      mainScales,
+      chartTheme
     )
     renderSeriesBreakpoint(
       mainSvg,
@@ -1700,6 +1887,7 @@ export function createChart(container, seasons, options = {}) {
   ensureViewport(getCurrentChartWidth())
   resolveDefaultSelection()
   render()
+  notifyPrimaryRatingSource()
 
   return {
     moveEpisode,
@@ -1713,6 +1901,8 @@ export function createChart(container, seasons, options = {}) {
     toggleSeasonTrend,
     toggleSeriesBreakpoint,
     selectSeriesBreakpoint,
+    setPrimaryRatingSource,
+    cyclePrimaryRatingSource,
     clearSelection() {
       hasUserInteracted = true
       if (!selectedPointId && !selectedTrendId) {
@@ -1728,6 +1918,10 @@ export function createChart(container, seasons, options = {}) {
         hoverPointId,
         selectedTrendId,
         hoverTrendId,
+        providerRating: {
+          active: getActiveProviderRating(),
+          selected: selectedProviderRating
+        },
         hasUserInteracted,
         navigator: getNavigatorViewModel(),
         viewport,

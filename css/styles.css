@@ -816,14 +816,48 @@ button {
   display: contents;
 }
 
+.rating-badge.is-primary {
+  color: var(--textPrimary);
+  font-weight: 700;
+}
+
 .rating-badge-value,
 .rating-badge-votes {
   font-variant-numeric: tabular-nums;
 }
 
+.series-rating-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.series-rating-button:hover,
+.series-rating-button:focus-visible {
+  color: var(--spotColor);
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
+.series-rating-button:focus-visible {
+  outline: 2px solid var(--spotColor);
+  outline-offset: 2px;
+}
+
 .rating-badge-votes {
   color: var(--textSecondary);
   white-space: nowrap;
+}
+
+.rating-badge-votes.series-rating-button:hover,
+.rating-badge-votes.series-rating-button:focus-visible {
+  color: var(--spotColor);
 }
 
 .rating-source-link {
@@ -1037,9 +1071,37 @@ button {
   font-weight: 700;
 }
 
+.sidenote-rating-value {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  line-height: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
 .sidenote-rating-primary-value {
   color: var(--spotColor);
-  font-variant-numeric: tabular-nums;
+}
+
+.sidenote-rating-primary-value.is-superseded {
+  color: inherit;
+}
+
+.sidenote-rating-value:hover,
+.sidenote-rating-value:focus-visible,
+.sidenote-rating-value.is-selected {
+  color: var(--spotColor);
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
+.sidenote-rating-value:focus-visible {
+  outline: 2px solid var(--spotColor);
+  outline-offset: 2px;
 }
 
 .sidenote-votes-loading {

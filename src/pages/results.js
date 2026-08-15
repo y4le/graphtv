@@ -58,8 +58,37 @@ export async function renderResultsPage(container, showRef, options = {}) {
   let latestBundle = null
   let latestShow = null
   let primaryProvider = null
+  let chartPrimaryRatingSource = null
   const abortController = new AbortController()
   const stopForwardingAbort = forwardAbort(options.signal, abortController)
+  const handleSeriesRatingSelection = (event) => {
+    const button = event.target.closest?.('[data-series-rating-source]')
+    if (!button || !container.contains(button)) {
+      return
+    }
+
+    const source = button.dataset.seriesRatingSource
+    if (
+      chart?.setPrimaryRatingSource?.(source) &&
+      chartPrimaryRatingSource !== source
+    ) {
+      syncChartPrimaryRatingSource(source)
+    }
+  }
+
+  function syncChartPrimaryRatingSource(source) {
+    chartPrimaryRatingSource = source ?? null
+    if (latestBundle) {
+      updateShowContext(
+        container,
+        latestBundle.show,
+        latestBundle.alignmentIssues,
+        chartPrimaryRatingSource
+      )
+    }
+  }
+
+  container.addEventListener('click', handleSeriesRatingSelection)
 
   try {
     const debugEnabled = true
@@ -88,7 +117,7 @@ export async function renderResultsPage(container, showRef, options = {}) {
 
     latestBundle = primarySnapshot.value.bundle
     latestShow = latestBundle.show
-    updateResultsContent(container, latestBundle)
+    updateResultsContent(container, latestBundle, chartPrimaryRatingSource)
     const episodeDetailLoader = detailLoaderFactory({
       expectedSeriesId: latestBundle.show.externalIds.imdb,
       primarySource: latestBundle.primarySource
@@ -99,8 +128,13 @@ export async function renderResultsPage(container, showRef, options = {}) {
       {
         detailRoot: container.querySelector('.results-episode'),
         loadEpisodeDetails: episodeDetailLoader,
-        show: latestBundle.show
+        show: latestBundle.show,
+        onPrimaryRatingSourceChange: syncChartPrimaryRatingSource
       }
+    )
+    syncChartPrimaryRatingSource(
+      chart.getDebugState?.().ratings?.primarySource ??
+        latestBundle.primarySource
     )
     updateProgress(container, primarySnapshot.value)
 
@@ -113,7 +147,7 @@ export async function renderResultsPage(container, showRef, options = {}) {
 
         latestBundle = snapshot.bundle
         latestShow = latestBundle.show
-        updateResultsContent(container, latestBundle)
+        updateResultsContent(container, latestBundle, chartPrimaryRatingSource)
         chart.updateSeasons(latestBundle.seasons, { show: latestBundle.show })
         updateProgress(container, snapshot)
       }
@@ -174,6 +208,7 @@ export async function renderResultsPage(container, showRef, options = {}) {
         stopForwardingAbort()
         abortController.abort()
         void iterator?.return?.().catch(() => {})
+        container.removeEventListener('click', handleSeriesRatingSelection)
         chart.destroy()
       }
     }
@@ -181,6 +216,7 @@ export async function renderResultsPage(container, showRef, options = {}) {
     stopForwardingAbort()
     abortController.abort()
     void iterator?.return?.().catch(() => {})
+    container.removeEventListener('click', handleSeriesRatingSelection)
     if (!isAbortError(error)) {
       const chartRoot = container.querySelector('.chart-root')
       if (chartRoot) {
@@ -230,6 +266,7 @@ export async function renderResultsPage(container, showRef, options = {}) {
         stopForwardingAbort()
         abortController.abort()
         void iterator?.return?.().catch(() => {})
+        container.removeEventListener('click', handleSeriesRatingSelection)
       }
     }
   }
@@ -257,10 +294,15 @@ function renderResultsShell(container, show) {
   updateShowContext(container, show, [])
 }
 
-function updateResultsContent(container, bundle) {
+function updateResultsContent(container, bundle, primaryRatingSource = null) {
   document.title = `${bundle.show.title} · graphtv`
   updateHeading(container, bundle.show)
-  updateShowContext(container, bundle.show, bundle.alignmentIssues)
+  updateShowContext(
+    container,
+    bundle.show,
+    bundle.alignmentIssues,
+    primaryRatingSource
+  )
 }
 
 function updateHeading(container, show) {
@@ -270,7 +312,12 @@ function updateHeading(container, show) {
   `
 }
 
-function updateShowContext(container, show, alignmentIssues) {
+function updateShowContext(
+  container,
+  show,
+  alignmentIssues,
+  primaryRatingSource = null
+) {
   container.querySelector('.results-context').innerHTML = `
     <div class="show-header">
       <div class="show-poster-shell">
@@ -284,10 +331,17 @@ function updateShowContext(container, show, alignmentIssues) {
         <p class="show-meta">${escapeHtml(show.genres.join(' · '))}</p>
         <ul class="show-metrics">
           ${orderVisibleRatings(show.ratings)
-            .map(
-              (rating) =>
-                `<li class="rating-badge">${formatRatingBadge(rating, { show })}</li>`
-            )
+            .map((rating) => {
+              const isPrimary = rating.source === primaryRatingSource
+              return `<li class="rating-badge${isPrimary ? ' is-primary' : ''}" data-rating-provider="${escapeHtml(rating.source)}">${formatRatingBadge(
+                rating,
+                {
+                  show,
+                  selectable: true,
+                  isPrimary
+                }
+              )}</li>`
+            })
             .join('')}
         </ul>
       </div>

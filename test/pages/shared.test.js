@@ -83,6 +83,35 @@ describe('formatRatingBadge', () => {
       'https://www.themoviedb.org/tv/1438'
     )
   })
+
+  it('renders a usable series rating as a primary-source selector', () => {
+    const root = document.createElement('li')
+    root.innerHTML = formatRatingBadge(
+      { source: 'tmdb', rating: 8.1, votes: 8300 },
+      { selectable: true, isPrimary: true }
+    )
+    const button = root.querySelector('.series-rating-button')
+    const voteButton = root.querySelector(
+      '.rating-badge-votes.series-rating-button'
+    )
+
+    expect(button.textContent).toBe('8.1')
+    expect(button.dataset.seriesRatingSource).toBe('tmdb')
+    expect(button.getAttribute('aria-label')).toBe(
+      'Plot episodes using TMDB rating 8.1'
+    )
+    expect(button.getAttribute('aria-pressed')).toBe('true')
+    expect(voteButton.textContent).toBe('8.3k votes')
+    expect(voteButton.dataset.seriesRatingSource).toBe('tmdb')
+    expect(voteButton.getAttribute('aria-pressed')).toBe('true')
+    expect(root.querySelectorAll('.series-rating-button')).toHaveLength(2)
+
+    root.innerHTML = formatRatingBadge(
+      { source: 'tmdb', rating: 1, votes: 2 },
+      { selectable: true }
+    )
+    expect(root.querySelector('.series-rating-button')).toBeNull()
+  })
 })
 
 function renderBadge(rating, show = null) {

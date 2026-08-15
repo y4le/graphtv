@@ -29,15 +29,23 @@ export function renderError(message) {
   return `<p class="state-copy error-state">${escapeHtml(message)}</p>`
 }
 
-export function formatRatingBadge(rating, { show = null } = {}) {
-  const label = escapeHtml(getRatingSourceLabel(rating.source))
+export function formatRatingBadge(
+  rating,
+  { show = null, selectable = false, isPrimary = false } = {}
+) {
+  const sourceLabel = getRatingSourceLabel(rating.source)
+  const label = escapeHtml(sourceLabel)
   const sourceUrl = getRatingSourceUrl(rating.source, { show })
   const source = sourceUrl
     ? `<a class="rating-badge-source rating-source-link" href="${escapeHtml(sourceUrl)}">${label}</a>`
     : `<span class="rating-badge-source">${label}</span>`
 
   if (!isUsableProviderRating(rating)) {
-    return renderRatingBadgeColumns(source, 'n/a', '')
+    return renderRatingBadgeColumns(
+      source,
+      '<span class="rating-badge-value">n/a</span>',
+      '<span class="rating-badge-votes"></span>'
+    )
   }
 
   const votes =
@@ -45,9 +53,19 @@ export function formatRatingBadge(rating, { show = null } = {}) {
       ? `${formatCompactNumber(rating.votes)} ${rating.votes === 1 ? 'vote' : 'votes'}`
       : ''
 
-  return renderRatingBadgeColumns(source, rating.rating.toFixed(1), votes)
+  const formattedRating = rating.rating.toFixed(1)
+  const selectorAttributes = `data-series-rating-source="${escapeHtml(rating.source)}" aria-pressed="${String(isPrimary)}"`
+  const ratingValue = selectable
+    ? `<button type="button" class="rating-badge-value series-rating-button" ${selectorAttributes} aria-label="${escapeHtml(`Plot episodes using ${sourceLabel} rating ${formattedRating}`)}">${formattedRating}</button>`
+    : `<span class="rating-badge-value">${formattedRating}</span>`
+  const votesValue =
+    selectable && votes
+      ? `<button type="button" class="rating-badge-votes series-rating-button" ${selectorAttributes} aria-label="${escapeHtml(`Plot episodes using ${sourceLabel} ratings, ${votes}`)}">${votes}</button>`
+      : `<span class="rating-badge-votes">${votes}</span>`
+
+  return renderRatingBadgeColumns(source, ratingValue, votesValue)
 }
 
-function renderRatingBadgeColumns(source, rating, votes) {
-  return `${source}<span class="rating-badge-value">${rating}</span><span class="rating-badge-votes">${votes}</span>`
+function renderRatingBadgeColumns(source, ratingValue, votesValue) {
+  return `${source}${ratingValue}${votesValue}`
 }

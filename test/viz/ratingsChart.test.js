@@ -1078,6 +1078,220 @@ describe('createChart', () => {
     ).not.toContain('source spread shows TMDB')
   })
 
+  it('previews and pins a provider rating as the graph accent', () => {
+    const style = document.createElement('style')
+    style.dataset.chartThemeTest = ''
+    style.textContent = readFileSync(
+      resolve(process.cwd(), 'css/styles.css'),
+      'utf8'
+    )
+    document.head.appendChild(style)
+    updateUiSettings({ showSourceSpread: false })
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+    const seasons = createSeasons()
+    seasons[0].episodes[0].ratings.push({
+      source: 'tmdb',
+      rating: 1,
+      votes: 5
+    })
+
+    chart = createChart(container, seasons)
+    chart.moveEpisode(1)
+
+    const mainPoint = getRenderedPoint(container, 'episode-1')
+    const mainRating = container.querySelector(
+      '[data-provider-rating][data-rating-source="test"]'
+    )
+    const providerRating = container.querySelector(
+      '[data-provider-rating][data-rating-source="tmdb"]'
+    )
+    const accentColor = mainPoint.getAttribute('fill')
+
+    providerRating.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+
+    let preview = container.querySelector('.provider-rating-preview')
+    expect(preview.getAttribute('data-rating-source')).toBe('tmdb')
+    expect(preview.getAttribute('fill')).toBe(accentColor)
+    expect(Number(preview.getAttribute('cy'))).toBeGreaterThanOrEqual(0)
+    expect(Number(preview.getAttribute('cy'))).toBeLessThanOrEqual(410)
+    expect(mainPoint.getAttribute('fill')).not.toBe(accentColor)
+    expect(container.querySelectorAll('.source-rating-point')).toHaveLength(0)
+    expect(chart.getDebugState().providerRating.active).toMatchObject({
+      pointId: 'episode-1',
+      source: 'tmdb',
+      rating: 1
+    })
+
+    providerRating.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }))
+    expect(container.querySelector('.provider-rating-preview')).toBeNull()
+    expect(mainPoint.getAttribute('fill')).toBe(accentColor)
+
+    providerRating.click()
+    preview = container.querySelector('.provider-rating-preview')
+    expect(preview).not.toBeNull()
+    expect(providerRating.getAttribute('aria-pressed')).toBe('true')
+    expect(mainRating.classList).toContain('is-superseded')
+    expect(chart.getDebugState().providerRating.selected).toEqual({
+      pointId: 'episode-1',
+      source: 'tmdb'
+    })
+
+    mainRating.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+    expect(container.querySelector('.provider-rating-preview')).toBeNull()
+    expect(mainPoint.getAttribute('fill')).toBe(accentColor)
+    mainRating.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }))
+    expect(container.querySelector('.provider-rating-preview')).not.toBeNull()
+
+    mainRating.click()
+    expect(container.querySelector('.provider-rating-preview')).toBeNull()
+    expect(mainRating.classList).not.toContain('is-superseded')
+    expect(chart.getDebugState().providerRating.selected).toBeNull()
+
+    providerRating.click()
+    expect(container.querySelector('.provider-rating-preview')).not.toBeNull()
+    chart.clearSelection()
+    getRenderedPoint(container, 'episode-1').dispatchEvent(
+      new MouseEvent('click', { bubbles: true })
+    )
+    expect(container.querySelector('.provider-rating-preview')).toBeNull()
+    expect(chart.getDebugState().providerRating.selected).toBeNull()
+  })
+
+  it('pins a provider rating when its number is tapped on mobile', () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query) => ({
+        matches:
+          query === '(max-width: 767px)' || query === '(pointer: coarse)',
+        media: query,
+        addEventListener() {},
+        removeEventListener() {}
+      }))
+    )
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 390
+    })
+    document.body.appendChild(container)
+    const seasons = createSeasons()
+    seasons[0].episodes[0].ratings.push({
+      source: 'tmdb',
+      rating: 7.2,
+      votes: 5
+    })
+
+    chart = createChart(container, seasons)
+    chart.moveEpisode(1)
+    const providerRating = container.querySelector(
+      '[data-provider-rating][data-rating-source="tmdb"]'
+    )
+    providerRating.focus()
+    providerRating.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, detail: 1 })
+    )
+
+    expect(chart.getDebugState().providerRating.selected).toEqual({
+      pointId: 'episode-1',
+      source: 'tmdb'
+    })
+    expect(document.activeElement).not.toBe(providerRating)
+    expect(container.querySelector('.provider-rating-preview')).not.toBeNull()
+  })
+
+  it('switches and preserves an explicitly selected primary rating source', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+    const seasons = createSeasons()
+    seasons[0].episodes.forEach((episode, index) => {
+      episode.ratings = [
+        { source: 'omdb', rating: 8 + (index % 3) / 10 },
+        {
+          source: 'tmdb',
+          rating: 7 + (index % 3) / 10,
+          votes: 5
+        }
+      ]
+    })
+    const onPrimaryRatingSourceChange = vi.fn()
+
+    chart = createChart(container, seasons, {
+      onPrimaryRatingSourceChange
+    })
+    chart.moveEpisode(1)
+
+    expect(chart.getDebugState().ratings.primarySource).toBe('omdb')
+    expect(onPrimaryRatingSourceChange).toHaveBeenLastCalledWith('omdb')
+    expect(chart.setPrimaryRatingSource('tmdb')).toBe(true)
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId: 'episode-1',
+      ratings: { primarySource: 'tmdb' }
+    })
+    expect(
+      getRenderedPoint(container, 'episode-1').getAttribute(
+        'data-rating-source'
+      )
+    ).toBe('tmdb')
+    expect(
+      container.querySelector('.sidenote-rating-primary').textContent
+    ).toContain('TMDB 7.0')
+    expect(onPrimaryRatingSourceChange).toHaveBeenLastCalledWith('tmdb')
+
+    chart.updateSeasons(seasons)
+    expect(chart.getDebugState().ratings.primarySource).toBe('tmdb')
+    expect(chart.setPrimaryRatingSource('missing')).toBe(false)
+    expect(chart.getDebugState().ratings.primarySource).toBe('tmdb')
+  })
+
+  it('cycles available primary rating sources in provider order', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+    const seasons = createSeasons()
+    seasons[0].episodes.forEach((episode, index) => {
+      episode.ratings = [
+        { source: 'tmdb', rating: 7 + (index % 3) / 10, votes: 5 },
+        { source: 'omdb', rating: 8 + (index % 3) / 10 },
+        { source: 'tvmaze', rating: 6 + (index % 3) / 10 }
+      ]
+    })
+    const onPrimaryRatingSourceChange = vi.fn()
+
+    chart = createChart(container, seasons, {
+      onPrimaryRatingSourceChange
+    })
+    chart.moveEpisode(1)
+
+    expect(chart.getDebugState().ratings.primarySource).toBe('omdb')
+    expect(chart.cyclePrimaryRatingSource()).toBe(true)
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId: 'episode-1',
+      ratings: { primarySource: 'tvmaze' }
+    })
+    expect(chart.cyclePrimaryRatingSource()).toBe(true)
+    expect(chart.getDebugState().ratings.primarySource).toBe('tmdb')
+    expect(chart.cyclePrimaryRatingSource()).toBe(true)
+    expect(chart.getDebugState().ratings.primarySource).toBe('omdb')
+    expect(onPrimaryRatingSourceChange.mock.calls).toEqual([
+      ['omdb'],
+      ['tvmaze'],
+      ['tmdb'],
+      ['omdb']
+    ])
+  })
+
   it('renders a borrowed provider rating as a deemphasized palette-colored point', () => {
     const container = document.createElement('div')
     Object.defineProperty(container, 'clientWidth', {

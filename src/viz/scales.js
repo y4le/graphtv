@@ -35,7 +35,17 @@ export function buildChartModel(seasons, options = {}) {
   const breakpointDetector =
     options.breakpointDetector ?? detectSeriesBreakpoint
   const episodes = seasons.flatMap((season) => season.episodes)
-  const primaryRating = selectPrimaryRatingSource(episodes)
+  const automaticPrimaryRating = selectPrimaryRatingSource(episodes)
+  const requestedPrimarySource = options.primaryRatingSource
+  const primaryRating = {
+    ...automaticPrimaryRating,
+    source: automaticPrimaryRating.coverage.some(
+      (entry) =>
+        entry.source === requestedPrimarySource && entry.ratedEpisodes > 0
+    )
+      ? requestedPrimarySource
+      : automaticPrimaryRating.source
+  }
   const points = []
   const seasonSpans = []
   const seasonTrendlines = []
@@ -559,7 +569,11 @@ function resolveXRange(width) {
 
 function resolveRatingDomain(
   points,
-  { absoluteYAxis = false, showSourceSpread = false } = {}
+  {
+    absoluteYAxis = false,
+    showSourceSpread = false,
+    additionalRatings = []
+  } = {}
 ) {
   if (absoluteYAxis) {
     return [MIN_RATING, MAX_RATING]
@@ -572,6 +586,7 @@ function resolveRatingDomain(
         ? [point.ratingSpread.min, point.ratingSpread.max]
         : [])
     ])
+    .concat(additionalRatings)
     .filter(isUsableRating)
 
   if (ratings.length === 0) {

@@ -154,6 +154,44 @@ describe('rating scale domains', () => {
     })
   })
 
+  it('honors an available explicit primary source before falling back per episode', () => {
+    const seasons = [
+      {
+        number: 1,
+        episodes: Array.from({ length: 5 }, (_, index) =>
+          createEpisode(`episode-${index}`, [
+            { source: 'omdb', rating: 9 + index / 10 },
+            ...(index < 3
+              ? [
+                  {
+                    source: 'tmdb',
+                    rating: 7 + index / 10,
+                    votes: 5
+                  }
+                ]
+              : [])
+          ])
+        )
+      }
+    ]
+
+    const model = buildChartModel(seasons, {
+      primaryRatingSource: 'tmdb'
+    })
+
+    expect(model.primaryRatingSource).toBe('tmdb')
+    expect(model.points.map((point) => point.rating)).toEqual([
+      7, 7.1, 7.2, 9.3, 9.4
+    ])
+    expect(model.points.map((point) => point.isFallbackRating)).toEqual([
+      false,
+      false,
+      false,
+      true,
+      true
+    ])
+  })
+
   it('does not let fallback values influence trendline regression', () => {
     const model = buildChartModel([
       {

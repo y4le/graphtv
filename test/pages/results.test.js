@@ -131,6 +131,7 @@ describe('renderResultsPage', () => {
     }
     const chart = {
       updateSeasons: vi.fn(),
+      setPrimaryRatingSource: vi.fn(() => true),
       destroy: vi.fn(),
       getDebugState: vi.fn(() => ({}))
     }
@@ -205,6 +206,29 @@ describe('renderResultsPage', () => {
       'https://www.tvmaze.com/shows/1',
       'https://www.themoviedb.org/tv/1438'
     ])
+    expect(
+      container.querySelector('.rating-badge.is-primary').dataset.ratingProvider
+    ).toBe('tvmaze')
+
+    container.querySelector('[data-series-rating-source="tmdb"]').click()
+
+    expect(chart.setPrimaryRatingSource).toHaveBeenCalledWith('tmdb')
+    expect(
+      container.querySelector('.rating-badge.is-primary').dataset.ratingProvider
+    ).toBe('tmdb')
+    expect(
+      container
+        .querySelector('[data-series-rating-source="tmdb"]')
+        .getAttribute('aria-pressed')
+    ).toBe('true')
+
+    container
+      .querySelector('.rating-badge-votes[data-series-rating-source="omdb"]')
+      .click()
+    expect(chart.setPrimaryRatingSource).toHaveBeenLastCalledWith('omdb')
+    expect(
+      container.querySelector('.rating-badge.is-primary').dataset.ratingProvider
+    ).toBe('omdb')
     expect(container.querySelector('.results-progress').hidden).toBe(true)
     expect(
       container.querySelector('.results-data').getAttribute('aria-busy')

@@ -49,23 +49,35 @@ function formatRatingList(point, { loadingDetails = false, show = null } = {}) {
   return orderVisibleRatings(point.ratings.filter(isTrustedRating))
     .map((rating, index) => {
       const isPrimary = rating.source === point.ratingSource
+      const formattedRating = isUsableProviderRating(rating)
+        ? rating.rating.toFixed(1)
+        : null
       const votes =
         typeof rating.votes === 'number'
           ? ` (${formatCompactNumber(rating.votes)} ${rating.votes === 1 ? 'vote' : 'votes'})`
           : loadingDetails && rating.source === 'omdb'
             ? ` (${renderVotesLoading()})`
             : ''
+      const votesLabel =
+        typeof rating.votes === 'number'
+          ? `${formatCompactNumber(rating.votes)} ${rating.votes === 1 ? 'vote' : 'votes'}`
+          : loadingDetails && rating.source === 'omdb'
+            ? 'vote count loading'
+            : null
       const source = formatRatingSource(rating.source, {
         show,
         episode: point,
         className: 'sidenote-rating-source'
       })
-      const value = isUsableProviderRating(rating)
-        ? `${
+      const value = formattedRating
+        ? renderProviderRatingButton(
+            point,
+            rating,
+            formattedRating,
+            votes,
+            votesLabel,
             isPrimary
-              ? `<span class="sidenote-rating-primary-value">${rating.rating.toFixed(1)}</span>`
-              : rating.rating.toFixed(1)
-          }${votes}`
+          )
         : `n/a${votes}`
       const content = `${source} ${value}`
       const entry = isPrimary
@@ -79,6 +91,47 @@ function formatRatingList(point, { loadingDetails = false, show = null } = {}) {
       return `${separator}${entry}`
     })
     .join('')
+}
+
+function renderProviderRatingButton(
+  point,
+  rating,
+  formattedRating,
+  votes,
+  votesLabel,
+  isPrimary
+) {
+  const sourceLabel = getEpisodeRatingSourceLabel(rating.source)
+  const classes = [
+    'sidenote-rating-value',
+    isPrimary ? 'sidenote-rating-primary-value' : null
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  return `<button type="button" class="${classes}" data-provider-rating data-rating-point-id="${escapeHtml(point.id ?? '')}" data-rating-source="${escapeHtml(rating.source)}" aria-label="${escapeHtml(`${sourceLabel} rating ${formattedRating}${votesLabel ? `, ${votesLabel}` : ''}${isPrimary ? ', plotted rating' : ''}`)}" aria-pressed="false">${formattedRating}${votes}</button>`
+}
+
+function getProviderRatingTarget(button) {
+  return {
+    pointId: button.dataset.ratingPointId,
+    source: button.dataset.ratingSource
+  }
+}
+
+function syncSelectedProviderRating(root, pointId, selectedRatingSource) {
+  root.querySelectorAll('[data-provider-rating]').forEach((button) => {
+    const isSelected =
+      button.dataset.ratingPointId === pointId &&
+      button.dataset.ratingSource === selectedRatingSource
+    const isSupersededPrimary =
+      selectedRatingSource != null &&
+      button.classList.contains('sidenote-rating-primary-value') &&
+      button.dataset.ratingSource !== selectedRatingSource
+    button.classList.toggle('is-selected', isSelected)
+    button.classList.toggle('is-superseded', isSupersededPrimary)
+    button.setAttribute('aria-pressed', String(isSelected))
+  })
 }
 
 function renderVotesLoading() {
@@ -128,6 +181,8 @@ export function createSidenote({
   root,
   onInteract,
   onNavigate,
+  onPreviewRating,
+  onSelectRating,
   onSelectPoint,
   onSelectSeasonTrend,
   onSelectSeriesBreakpoint
@@ -224,7 +279,10 @@ export function createSidenote({
     )
   }
 
-  function renderPoint(point, { loadingDetails = false, show = null } = {}) {
+  function renderPoint(
+    point,
+    { loadingDetails = false, show = null, selectedRatingSource = null } = {}
+  ) {
     const markup = point
       ? `
           <div class="sidenote-card">
@@ -245,6 +303,7 @@ export function createSidenote({
       : ''
 
     setMarkup(markup)
+    syncSelectedProviderRating(contentRoot, point?.id, selectedRatingSource)
   }
 
   function renderTrendSummary(summary, { show = null } = {}) {
@@ -353,6 +412,16 @@ export function createSidenote({
   }
 
   listen('click', (event) => {
+    const ratingButton = event.target.closest?.('[data-provider-rating]')
+    if (ratingButton) {
+      onInteract?.()
+      onSelectRating?.(getProviderRatingTarget(ratingButton))
+      if (event.detail > 0 && ratingButton === document.activeElement) {
+        ratingButton.blur()
+      }
+      return
+    }
+
     const navigatorButton = event.target.closest?.('[data-sidenote-nav]')
     if (navigatorButton) {
       onInteract?.()
@@ -402,6 +471,11 @@ export function createSidenote({
   })
 
   listen('mouseover', (event) => {
+    const ratingButton = event.target.closest?.('[data-provider-rating]')
+    if (ratingButton && !ratingButton.contains(event.relatedTarget)) {
+      onPreviewRating?.(getProviderRatingTarget(ratingButton))
+    }
+
     const control = event.target.closest?.('.trend-info-control')
     if (!control || control.contains(event.relatedTarget)) {
       return
@@ -413,6 +487,11 @@ export function createSidenote({
   })
 
   listen('mouseout', (event) => {
+    const ratingButton = event.target.closest?.('[data-provider-rating]')
+    if (ratingButton && !ratingButton.contains(event.relatedTarget)) {
+      onPreviewRating?.(null)
+    }
+
     const control = event.target.closest?.('.trend-info-control')
     if (!control || control.contains(event.relatedTarget)) {
       return
@@ -423,6 +502,11 @@ export function createSidenote({
   })
 
   listen('focusin', (event) => {
+    const ratingButton = event.target.closest?.('[data-provider-rating]')
+    if (ratingButton) {
+      onPreviewRating?.(getProviderRatingTarget(ratingButton))
+    }
+
     const control = event.target.closest?.('.trend-info-control')
     if (!control) {
       return
@@ -434,6 +518,11 @@ export function createSidenote({
   })
 
   listen('focusout', (event) => {
+    const ratingButton = event.target.closest?.('[data-provider-rating]')
+    if (ratingButton && !ratingButton.contains(event.relatedTarget)) {
+      onPreviewRating?.(null)
+    }
+
     const control = event.target.closest?.('.trend-info-control')
     if (!control || control.contains(event.relatedTarget)) {
       return

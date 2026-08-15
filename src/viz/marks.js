@@ -774,6 +774,9 @@ export function renderPoints(svg, points, scales, theme, interactions) {
     )
     .attr('fill', (point) => {
       if (point.id === interactions.activePointId) {
+        if (isSecondaryRatingActive(point, interactions)) {
+          return theme.textSecondary
+        }
         return theme.spotColor
       }
       return pointColor(point)
@@ -783,9 +786,14 @@ export function renderPoints(svg, points, scales, theme, interactions) {
         ? FALLBACK_POINT_FILL_OPACITY
         : 1
     )
-    .attr('stroke', (point) =>
-      point.isFallbackRating ? pointColor(point) : 'none'
-    )
+    .attr('stroke', (point) => {
+      if (!point.isFallbackRating) {
+        return 'none'
+      }
+      return isSecondaryRatingActive(point, interactions)
+        ? theme.textSecondary
+        : pointColor(point)
+    })
     .attr('stroke-width', (point) => (point.isFallbackRating ? 1.25 : 0))
     .attr('stroke-opacity', 1)
     .attr('data-rating-source', (point) => point.ratingSource)
@@ -793,6 +801,65 @@ export function renderPoints(svg, points, scales, theme, interactions) {
 
   bindPointInteractions(hitPoints, interactions)
   bindPointInteractions(visiblePoints, interactions)
+}
+
+export function renderProviderRatingPreview(
+  svg,
+  points,
+  activePoint,
+  providerRating,
+  scales,
+  theme
+) {
+  const layer = svg
+    .selectAll('.provider-rating-preview-layer')
+    .data([null])
+    .join('g')
+    .attr('class', 'provider-rating-preview-layer')
+    .attr('pointer-events', 'none')
+    .raise()
+  const plottedPointCount = points.filter((point) =>
+    isUsableRating(point.rating)
+  ).length
+  const pointRadius = scalePointRadiusForDensity(
+    DEFAULT_POINT_RADIUS,
+    plottedPointCount,
+    scales.xScale
+  )
+  const preview =
+    activePoint &&
+    providerRating?.source !== activePoint.ratingSource &&
+    isUsableProviderRating(providerRating)
+      ? [
+          {
+            pointId: activePoint.id,
+            source: providerRating.source,
+            x: scales.xScale(activePoint.x),
+            y: scales.yScale(providerRating.rating)
+          }
+        ]
+      : []
+
+  layer
+    .selectAll('.provider-rating-preview')
+    .data(preview, (rating) => `${rating.pointId}:${rating.source}`)
+    .join('circle')
+    .attr('class', 'provider-rating-preview')
+    .attr('cx', (rating) => rating.x)
+    .attr('cy', (rating) => rating.y)
+    .attr('r', pointRadius + ACTIVE_POINT_RADIUS_OFFSET)
+    .attr('fill', theme.spotColor)
+    .attr('data-point-id', (rating) => rating.pointId)
+    .attr('data-rating-source', (rating) => rating.source)
+    .attr('aria-hidden', 'true')
+}
+
+function isSecondaryRatingActive(point, interactions) {
+  return (
+    point.id === interactions.activePointId &&
+    interactions.activeRatingSource != null &&
+    interactions.activeRatingSource !== point.ratingSource
+  )
 }
 
 function bindPointInteractions(points, interactions) {
