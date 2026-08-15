@@ -238,6 +238,7 @@ describe('createKeyboardController', () => {
       panHalfViewport: vi.fn(),
       resetZoom: vi.fn(),
       clearSelection: vi.fn(),
+      cyclePrimaryRatingSource: vi.fn(),
       toggleSeasonTrend: vi.fn(),
       toggleSeriesBreakpoint: vi.fn(),
       toggleSeriesTrend: vi.fn(),
@@ -258,6 +259,7 @@ describe('createKeyboardController', () => {
     const halfForward = pressKey('d', { ctrlKey: true })
     pressKey('f')
     pressKey('r')
+    pressKey('p')
     pressKey('-')
     pressKey('=')
     pressKey('+', { shiftKey: true })
@@ -274,6 +276,7 @@ describe('createKeyboardController', () => {
     expect(halfForward.defaultPrevented).toBe(true)
     expect(chart.fitSeries).toHaveBeenCalledOnce()
     expect(chart.resetZoom).toHaveBeenCalledOnce()
+    expect(chart.cyclePrimaryRatingSource).toHaveBeenCalledOnce()
     expect(chart.zoomBy.mock.calls).toEqual([[1.5], [1 / 1.5], [1 / 1.5]])
     expect(chart.toggleSeriesTrend).toHaveBeenCalledOnce()
     expect(chart.toggleSeriesBreakpoint).toHaveBeenCalledOnce()

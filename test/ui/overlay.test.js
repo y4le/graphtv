@@ -372,6 +372,7 @@ describe('keyboard help overlay', () => {
         '-',
         '=',
         '+',
+        'p',
         't',
         'b',
         'T',
@@ -383,6 +384,9 @@ describe('keyboard help overlay', () => {
     )
     expect(document.querySelector('.help-sections').textContent).toContain(
       'Select best breakpoint (ignores confidence threshold)'
+    )
+    expect(document.querySelector('.help-sections').textContent).toContain(
+      'Cycle primary rating provider'
     )
     expect(document.querySelector('[data-help-action="debug"]')).toMatchObject({
       tagName: 'BUTTON'

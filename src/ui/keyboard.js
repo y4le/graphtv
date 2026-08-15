@@ -281,6 +281,12 @@ export function createKeyboardController({ page, overlayController }) {
       return
     }
 
+    if (key === 'p') {
+      event.preventDefault()
+      page.chart.cyclePrimaryRatingSource()
+      return
+    }
+
     if (key === 't') {
       event.preventDefault()
       page.chart.toggleSeriesTrend()

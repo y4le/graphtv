@@ -1115,6 +1115,10 @@ function resultsHelpSections() {
         },
         { keys: ['Escape'], action: 'Clear chart selection' }
       ]
+    },
+    {
+      title: 'Ratings',
+      items: [{ keys: ['p'], action: 'Cycle primary rating provider' }]
     }
   ]
 }

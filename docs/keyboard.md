@@ -83,6 +83,7 @@ The vim spatial metaphor: episodes within a season are characters within a line 
 | Pan forward half viewport | `Ctrl-D`   | —            | Preserves the selected episode                                               |
 | Fit entire series         | `f`        | —            | Preserves the selected episode                                               |
 | Reset zoom                | `r`        | —            | Restores default density without losing the current location                 |
+| Cycle primary provider    | `p`        | —            | Uses providers with usable episode ratings and preserves the chart selection |
 | Zoom out                  | `-`        | —            | Anchors on the visible selected episode, otherwise the viewport center       |
 | Zoom in                   | `=` or `+` | —            | Anchors on the visible selected episode, otherwise the viewport center       |
 
