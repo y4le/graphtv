@@ -4,6 +4,7 @@ import {
   createSparklineScales,
   viewportToBrushSelection
 } from '../../src/viz/scales.js'
+import { MARK_DENSITY_CONFIG } from '../../src/viz/pointSize.js'
 import { createSparkline } from '../../src/viz/sparkline.js'
 
 const DIMENSIONS = { width: 200, height: 40 }
@@ -96,14 +97,20 @@ describe('createSparkline', () => {
       svg.querySelector('.sparkline-path-active').getAttribute('stroke-width')
     )
 
-    expect(inactiveRadius).toBe(2.4)
-    expect(activeRadius).toBe(3.4)
+    expect(inactiveRadius).toBe(
+      INACTIVE_POINT_RADIUS_FOR_TEST * MARK_DENSITY_CONFIG.pointRadius.maxScale
+    )
+    expect(activeRadius).toBe(
+      ACTIVE_POINT_RADIUS_FOR_TEST * MARK_DENSITY_CONFIG.pointRadius.maxScale
+    )
     expect(activeRadius / inactiveRadius).toBeCloseTo(
       ACTIVE_POINT_RADIUS_FOR_TEST / INACTIVE_POINT_RADIUS_FOR_TEST,
       2
     )
-    expect(inactiveLineWidth).toBe(1.25)
-    expect(activeLineWidth).toBe(1.88)
+    expect(inactiveLineWidth).toBe(MARK_DENSITY_CONFIG.lineWidth.maxScale)
+    expect(activeLineWidth).toBe(
+      Math.round(1.5 * MARK_DENSITY_CONFIG.lineWidth.maxScale * 100) / 100
+    )
   })
 
   it('keeps data marks out of the brush hit path and enlarges desktop handles', () => {

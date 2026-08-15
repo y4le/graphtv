@@ -146,6 +146,7 @@ Required settings:
 - Theme: `light`, `dark`. Default follows `prefers-color-scheme`. User choice persisted in `localStorage`.
 - Season palette: `monotone`, `alternating`, `rainbow`, `zigzag`, `maximin`. User choice persisted in `localStorage`.
 - Episode density: `roomy`, `balanced`, `dense`, `all`. Default is `balanced`; user choice persisted in `localStorage`.
+- Point-radius and line-width density scaling is tuned centrally in `MARK_DENSITY_CONFIG` (`src/viz/pointSize.js`): the shared slot-width ramp sets where scaling begins and ends, while each mark type defines its minimum scale, maximum scale, and curve exponent.
 
 ### Layout
 

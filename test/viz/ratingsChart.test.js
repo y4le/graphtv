@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import { createChart } from '../../src/viz/ratingsChart.js'
+import { MARK_DENSITY_CONFIG } from '../../src/viz/pointSize.js'
 import { updateUiSettings } from '../../src/viz/theme.js'
 
 let chart
@@ -1347,14 +1348,14 @@ describe('createChart', () => {
     const restingRadius = Number(
       container.querySelector('.episode-point').getAttribute('r')
     )
-    expect(restingRadius).toBe(6)
+    expect(restingRadius).toBe(3 * MARK_DENSITY_CONFIG.pointRadius.maxScale)
 
     chart.toggleSeriesTrend()
     expect(
       Number(
         container.querySelector('.macro-trendline').getAttribute('stroke-width')
       )
-    ).toBe(2.5)
+    ).toBe(2 * MARK_DENSITY_CONFIG.lineWidth.maxScale)
 
     chart.moveEpisode(1)
     const activeRadius = Number(
