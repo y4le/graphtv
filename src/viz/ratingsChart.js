@@ -319,11 +319,6 @@ export function createChart(container, seasons, options = {}) {
     return getScopeRatedPoints(summary)[0] ?? model.ratedPoints[0] ?? null
   }
 
-  function getSeriesNavigationStop() {
-    const summary = getTrendSummary('series')
-    return summary && isTrendEnabled('series') ? summary : null
-  }
-
   function getSeasonTrendSummaries() {
     return model.seasonTrendlines
       .map((trendline) => getTrendSummary(trendline.id))
@@ -367,26 +362,16 @@ export function createChart(container, seasons, options = {}) {
     const activePoint = getActivePoint()
     if (activePoint) {
       const index = model.ratedPointIndexById.get(activePoint.id) ?? -1
-      const hasSeriesStop = Boolean(getSeriesNavigationStop())
-      const canNavigate = points.length > 1 || hasSeriesStop
+      const canNavigate = points.length > 1
       return {
         mode: 'point',
         label: formatEpisodeCode(activePoint),
         meta: `${index + 1} of ${points.length} rated ${points.length === 1 ? 'episode' : 'episodes'}`,
         previousAvailable: canNavigate,
         nextAvailable: canNavigate,
-        previousLabel:
-          index === 0
-            ? hasSeriesStop
-              ? 'Full series trend'
-              : 'Last rated episode'
-            : 'Previous episode',
+        previousLabel: index === 0 ? 'Last rated episode' : 'Previous episode',
         nextLabel:
-          index === points.length - 1
-            ? hasSeriesStop
-              ? 'Full series trend'
-              : 'First rated episode'
-            : 'Next episode'
+          index === points.length - 1 ? 'First rated episode' : 'Next episode'
       }
     }
 
@@ -436,12 +421,13 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function isTrendEnabled(id, settings = getUiSettings()) {
-    if (getTrendSummary(id)?.kind === 'breakpoint') {
+    // The full-series trend is always selectable: its summary is the resting
+    // view of the chart even when the drawn line is switched off.
+    const kind = getTrendSummary(id)?.kind
+    if (kind === 'breakpoint' || kind === 'series') {
       return true
     }
-    return id === 'series'
-      ? settings.fullShowTrendline
-      : settings.seasonTrendlines
+    return settings.seasonTrendlines
   }
 
   function cancelTrendHover() {
@@ -749,19 +735,26 @@ export function createChart(container, seasons, options = {}) {
     }
 
     hasUserInteracted = true
-    clearProviderRatingState()
+    if (selectedTrendId === id && !selectedPointId) {
+      // Re-selecting the current trend returns to the full-series trend; the
+      // series trend itself is the resting state and stays put.
+      if (id !== 'series') {
+        selectSeriesTrend({ announce: true })
+      }
+      return
+    }
 
-    const isTogglingOff = selectedTrendId === id
+    clearProviderRatingState()
     cancelTrendHover()
     hoverTrendId = null
     hoverPointId = null
     selectedPointId = null
-    selectedTrendId = isTogglingOff ? null : id
-    if (!isTogglingOff && summary.kind === 'season') {
+    selectedTrendId = id
+    if (summary.kind === 'season') {
       followSeasonSelection(summary)
     }
     cancelScheduledDetailLoad()
-    announceSelection(isTogglingOff ? null : { summary })
+    announceSelection({ summary })
     render()
   }
 
@@ -857,20 +850,7 @@ export function createChart(container, seasons, options = {}) {
     }
 
     const currentIndex = model.ratedPointIndexById.get(selectedPoint.id) ?? -1
-    const seriesStop = getSeriesNavigationStop()
-    const sequenceLength = points.length + (seriesStop ? 1 : 0)
-    const currentSequenceIndex = currentIndex + (seriesStop ? 1 : 0)
-    const nextSequenceIndex = modulo(
-      currentSequenceIndex + delta,
-      sequenceLength
-    )
-
-    if (seriesStop && nextSequenceIndex === 0) {
-      setSelectedTrend('series')
-      return
-    }
-
-    const nextPoint = points[nextSequenceIndex - (seriesStop ? 1 : 0)]
+    const nextPoint = points[modulo(currentIndex + delta, points.length)]
     if (nextPoint?.id !== selectedPoint.id) {
       setSelectedPoint(nextPoint)
     }
@@ -1152,24 +1132,35 @@ export function createChart(container, seasons, options = {}) {
     }, VIEWPORT_ANNOUNCEMENT_DELAY_MS)
   }
 
-  function clearActiveSelection({ announce = false } = {}) {
+  function getRestingTrendId() {
+    return getTrendSummary('series') ? 'series' : null
+  }
+
+  function isAtRestingSelection() {
+    return !selectedPointId && selectedTrendId === getRestingTrendId()
+  }
+
+  // The chart has no deselected state: leaving an episode or trend returns to
+  // the full-series trend summary (or, without one, an unselected browse view).
+  function selectSeriesTrend({ announce = false } = {}) {
     hasUserInteracted = true
     clearProviderRatingState()
     cancelTrendHover()
     hoverPointId = null
     selectedPointId = null
     hoverTrendId = null
-    selectedTrendId = null
+    selectedTrendId = getRestingTrendId()
+    cancelScheduledDetailLoad()
     if (announce) {
-      announceSelection(null)
+      const summary = getTrendSummary(selectedTrendId)
+      announceSelection(summary ? { summary } : null)
     }
     render()
   }
 
   function toggleSeriesTrend() {
     hasUserInteracted = true
-    if (selectedTrendId === 'series') {
-      setSelectedTrend('series')
+    if (selectedTrendId === 'series' && !selectedPointId) {
       return true
     }
     if (!getMacroTrendline(model, viewport)) {
@@ -1384,7 +1375,7 @@ export function createChart(container, seasons, options = {}) {
         if (trendline) {
           setSelectedTrend(trendline.id)
         } else {
-          clearActiveSelection()
+          selectSeriesTrend()
         }
       },
       shouldSuppressClick
@@ -1960,7 +1951,7 @@ export function createChart(container, seasons, options = {}) {
       return
     }
 
-    clearActiveSelection()
+    selectSeriesTrend()
   })
 
   const resizeObserver = new ResizeObserver(() => {
@@ -2017,10 +2008,10 @@ export function createChart(container, seasons, options = {}) {
     cyclePrimaryRatingSource,
     clearSelection() {
       hasUserInteracted = true
-      if (!selectedPointId && !selectedTrendId) {
+      if (isAtRestingSelection()) {
         return false
       }
-      clearActiveSelection({ announce: true })
+      selectSeriesTrend({ announce: true })
       return true
     },
     updateSeasons,

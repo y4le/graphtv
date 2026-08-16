@@ -1155,7 +1155,7 @@ function resultsHelpSections() {
           keys: ['T'],
           action: 'Select current season / reset to first available'
         },
-        { keys: ['Escape'], action: 'Clear chart selection' }
+        { keys: ['Escape'], action: 'Return to full-series trend' }
       ]
     },
     {

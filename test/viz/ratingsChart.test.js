@@ -262,7 +262,7 @@ describe('createChart', () => {
     )
 
     expect(chart.toggleSeriesBreakpoint()).toBe(true)
-    expect(chart.getDebugState().selectedTrendId).toBeNull()
+    expect(chart.getDebugState().selectedTrendId).toBe('series')
     expect(container.querySelector('.series-breakpoint-trend')).toBeNull()
   })
 
@@ -303,9 +303,45 @@ describe('createChart', () => {
     expect(loadEpisodeDetails.mock.calls[0][0].id).toBe('episode-2')
 
     chart.clearSelection()
+    expect(chart.getDebugState()).toMatchObject({
+      selectedTrendId: 'series',
+      selectedPointId: null,
+      uiSettings: { fullShowTrendline: false }
+    })
+    expect(container.querySelector('.macro-trendline')).toBeNull()
+    expect(detailRoot.querySelector('.sidenote-nav-label').textContent).toBe(
+      'Full Series'
+    )
+    expect(detailRoot.querySelector('.trend-summary-provenance')).not.toBeNull()
+  })
+
+  it('offers the browse view only when no full-series trend exists', () => {
+    updateUiSettings({ seasonTrendlines: false, fullShowTrendline: false })
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+    const seasons = createSeasons()
+    seasons[0].episodes = seasons[0].episodes.slice(0, 2)
+
+    chart = createChart(container, seasons, { detailRoot })
+    expect(chart.getDebugState().selectedPointId).toBe('episode-1')
+
+    expect(chart.clearSelection()).toBe(true)
+    expect(chart.getDebugState()).toMatchObject({
+      selectedTrendId: null,
+      selectedPointId: null
+    })
+    expect(detailRoot.querySelector('.sidenote-nav-label').textContent).toBe(
+      'Browse episodes'
+    )
     expect(detailRoot.textContent).toContain(
       'Browse the rated episodes with the arrow buttons.'
     )
+    expect(chart.clearSelection()).toBe(false)
   })
 
   it('wraps rated episodes through the same buttons and shortcut handler while hover only previews detail', () => {
@@ -924,7 +960,7 @@ describe('createChart', () => {
     })
   })
 
-  it('keeps the detail region open after clearing and enters browsing forward', () => {
+  it('returns to the full-series trend after clearing and enters browsing forward', () => {
     const container = document.createElement('div')
     const detailRoot = document.createElement('section')
     Object.defineProperty(container, 'clientWidth', {
@@ -934,16 +970,21 @@ describe('createChart', () => {
     document.body.append(container, detailRoot)
 
     chart = createChart(container, createSeasons(), { detailRoot })
-    chart.clearSelection()
+    expect(chart.getDebugState().selectedTrendId).toBe('season:1')
+    expect(chart.clearSelection()).toBe(true)
 
+    expect(chart.getDebugState()).toMatchObject({
+      selectedTrendId: 'series',
+      selectedPointId: null
+    })
     expect(detailRoot.querySelector('.sidenote-nav-label').textContent).toBe(
-      'Browse episodes'
+      'Full Series'
     )
-    expect(detailRoot.textContent).toContain(
-      'Choose a trendline or browse the rated episodes.'
-    )
+    expect(chart.clearSelection()).toBe(false)
     detailRoot.querySelector('[data-sidenote-nav="next"]').click()
     expect(chart.getDebugState().selectedPointId).toBe('episode-1')
+    expect(chart.clearSelection()).toBe(true)
+    expect(chart.getDebugState().selectedTrendId).toBe('series')
   })
 
   it('upgrades the untouched fallback selection when richer data arrives', () => {
@@ -1596,7 +1637,7 @@ describe('createChart', () => {
     expect(detailRoot.textContent).toContain('Episode 1')
   })
 
-  it('toggles a selected trendline off when it is clicked again', () => {
+  it('returns to the full-series trend when a selected trendline is clicked again', () => {
     const container = document.createElement('div')
     Object.defineProperty(container, 'clientWidth', {
       configurable: true,
@@ -1615,7 +1656,7 @@ describe('createChart', () => {
     expect(chart.getDebugState().selectedTrendId).toBe('season:1')
     dispatchSurfaceClick(surface, trendPoint)
 
-    expect(chart.getDebugState().selectedTrendId).toBeNull()
+    expect(chart.getDebugState().selectedTrendId).toBe('series')
     expect(container.querySelector('.micro-trendline.is-active')).toBeNull()
   })
 
@@ -1731,21 +1772,28 @@ describe('createChart', () => {
     expect(container.querySelector('.macro-trendline.is-active')).not.toBeNull()
     expect(container.querySelector('.trend-label')).toBeNull()
 
+    expect(chart.toggleSeriesTrend()).toBe(true)
+    expect(chart.getDebugState().selectedTrendId).toBe('series')
+
     const previous = container.querySelector('[data-sidenote-nav="previous"]')
     const next = container.querySelector('[data-sidenote-nav="next"]')
     previous.click()
     expect(chart.getDebugState().selectedPointId).toBe('episode-72')
+    expect(next.getAttribute('aria-label')).toBe('First rated episode')
     next.click()
-    expect(chart.getDebugState().selectedTrendId).toBe('series')
-    next.click()
-    expect(chart.getDebugState().selectedPointId).toBe('episode-1')
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId: 'episode-1',
+      selectedTrendId: null
+    })
+    expect(previous.getAttribute('aria-label')).toBe('Last rated episode')
     previous.click()
-    expect(chart.getDebugState().selectedTrendId).toBe('series')
+    expect(chart.getDebugState().selectedPointId).toBe('episode-72')
 
+    chart.moveEpisode(1)
+    expect(chart.getDebugState().selectedPointId).toBe('episode-1')
     chart.moveEpisode(-1)
     expect(chart.getDebugState().selectedPointId).toBe('episode-72')
-    chart.moveEpisode(1)
-    expect(chart.getDebugState().selectedTrendId).toBe('series')
+    expect(chart.getDebugState().selectedTrendId).toBeNull()
   })
 
   it('does not enable keyboard trend settings when no trend is available', () => {
@@ -1799,9 +1847,9 @@ describe('createChart', () => {
 
     expect(chart.clearSelection()).toBe(true)
     await vi.advanceTimersByTimeAsync(120)
-    expect(container.querySelector('.chart-selection-status').textContent).toBe(
-      'Chart selection cleared.'
-    )
+    expect(
+      container.querySelector('.chart-selection-status').textContent
+    ).toContain('Full series trend selected. Mean')
     expect(chart.clearSelection()).toBe(false)
   })
 

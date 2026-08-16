@@ -76,8 +76,8 @@ The vim spatial metaphor: episodes within a season are characters within a line 
 
 | Action                    | Vim        | Conventional | Notes                                                                        |
 | ------------------------- | ---------- | ------------ | ---------------------------------------------------------------------------- |
-| Previous episode          | `h`        | `ArrowLeft`  | Wraps across season boundaries and the enabled full-series trend             |
-| Next episode              | `l`        | `ArrowRight` | Wraps across season boundaries and the enabled full-series trend             |
+| Previous episode          | `h`        | `ArrowLeft`  | Wraps across season boundaries                                               |
+| Next episode              | `l`        | `ArrowRight` | Wraps across season boundaries                                               |
 | Previous season           | `k`        | `ArrowUp`    | Cycles season trendlines when one is selected; otherwise jumps to the season |
 | Next season               | `j`        | `ArrowDown`  | Cycles season trendlines when one is selected; otherwise jumps to the season |
 | First episode (series)    | `gg`       | `Home`       |                                                                              |
@@ -96,6 +96,7 @@ The vim spatial metaphor: episodes within a season are characters within a line 
 - **Viewport follows focus.** When focus enters the outer 10% of the visible viewport, the viewport pans smoothly to preserve that edge buffer. The sparkline brush position updates to match. Keyboard users never need to separately control the sparkline.
 - **Viewport commands preserve context.** Fitting and zooming never clear the selected episode. Reset zoom centers the default-width viewport on the selected episode when it is visible; if the selection is offscreen, it preserves the viewport center.
 - **Season jump behavior.** With an episode selected, jumping to the next/previous season lands on the first episode of that season. Selecting a season trendline moves its last episode inside the 10% viewport buffer, then does the same for its first episode so the whole season is shown when it fits and the start takes priority when it does not. With a season trendline selected, `j`/`k` cycle only the available season trendlines and wrap at either end. The inline arrow buttons do the same when multiple season trendlines are available; with only one, they enter that season's episodes instead of becoming inert.
+- **No deselected state.** `Escape`, clicking empty chart space, or re-selecting the current trendline returns to the full-series trend summary. Its sidenote details stay available even when the drawn full-series line is switched off in view options; only a series too short for a trend falls back to an unselected browse view.
 - **Native-control suspension.** If focus is on a native interactive control such as a link, button, select, summary, or any editable field, page-level single-letter shortcuts are suspended. Only the focused control's own behavior and explicit overlay shortcuts apply.
 
 ### View options panel (overlay mode)
