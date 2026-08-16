@@ -20,7 +20,7 @@ export const MARK_DENSITY_CONFIG = Object.freeze({
   // (already density-scaled) size.
   selection: Object.freeze({
     pointScale: 1.5,
-    lineScale: 1.5
+    lineScale: 1.1
   })
 })
 
