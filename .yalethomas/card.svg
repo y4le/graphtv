@@ -7,18 +7,26 @@
 >
   <title id="graphtv-card-title">graphtv</title>
   <desc id="graphtv-card-description">
-    The graphtv wordmark over a scrolling episode-rating series: seasons marked
-    off on an axis and carrying their own trendlines, hairlines where providers
-    disagree, and one selected episode marked on the plot and the season axis.
+    The graphtv wordmark over a scrolling episode-rating series: seasons in
+    their own colors, marked off on an axis and carrying their own trendlines,
+    hairlines where providers disagree, and one selected episode marked on the
+    plot and the season axis.
   </desc>
   <style>
     :root {
       color-scheme: light dark;
       --card-ink: light-dark(#1a1814, #e8e3d5);
       --card-muted: light-dark(#6f6a5e, #8a857a);
-      /* The app's monotone palette: every season in ink, trendlines beneath. */
       --card-trend-micro: light-dark(#a3a3a3, #777269);
       --card-spot: light-dark(#c1432e, #d9644d);
+      /*
+        The app's default maximin palette: the first four season colors it
+        picks in each theme, greedily spread apart in OKLab.
+      */
+      --card-season-1: light-dark(oklch(52% 0.15 255), oklch(72% 0.15 240));
+      --card-season-2: light-dark(oklch(62% 0.15 135), oklch(82% 0.15 75));
+      --card-season-3: light-dark(oklch(62% 0.21 345), oklch(62% 0.21 345));
+      --card-season-4: light-dark(oklch(42% 0.09 45), oklch(62% 0.15 135));
     }
 
     :root[data-color-scheme="light"] {
@@ -62,8 +70,10 @@
       One scroll period, 3200 wide: four seasons of episodes on a 120 pitch,
       separated by a 200 season gap. The period is wider than the 1618 viewBox,
       so the single selected episode and its season can never appear twice in
-      the card at once. Four seasons keep the ink/accent alternation even
-      across the wrap. Marks stay above y=400 to clear the wordmark.
+      the card at once. Each season takes its own maximin color, as in the
+      app's default palette. Marks stay above y=400 to clear the wordmark.
+      Points sit at the sparse end of the app's mark scaling (large points
+      over thin trendlines) and the selected episode grows by 1.5x.
 
       Referenced content is painted with presentation attributes: document CSS
       rules do not reach into a <use> shadow tree, but custom properties
@@ -135,38 +145,41 @@
         <line x1="1132" y1="217.8" x2="1188" y2="217.8" />
       </g>
 
-      <!-- Episodes, one group per season. -->
-      <g fill="var(--card-ink)">
-        <circle cx="0" cy="330.2" r="21" />
-        <circle cx="120" cy="286.3" r="21" />
-        <circle cx="240" cy="341.2" r="21" />
-        <circle cx="360" cy="264.4" r="21" />
-        <circle cx="480" cy="297.3" r="21" />
-        <circle cx="600" cy="242.5" r="21" />
-
-        <circle cx="800" cy="264.4" r="21" />
-        <circle cx="920" cy="198.7" r="21" />
-        <circle cx="1040" cy="242.5" r="21" />
-        <circle cx="1280" cy="209.6" r="21" />
-        <circle cx="1400" cy="154.8" r="21" />
-        <circle cx="1520" cy="121.9" r="21" />
-
-        <circle cx="1720" cy="187.7" r="21" />
-        <circle cx="1840" cy="253.5" r="21" />
-        <circle cx="1960" cy="297.3" r="21" />
-        <circle cx="2080" cy="242.5" r="21" />
-        <circle cx="2200" cy="330.2" r="21" />
-
-        <circle cx="2400" cy="297.3" r="21" />
-        <circle cx="2520" cy="231.5" r="21" />
-        <circle cx="2640" cy="264.4" r="21" />
-        <circle cx="2760" cy="198.7" r="21" />
-        <circle cx="2880" cy="176.7" r="21" />
-        <circle cx="3000" cy="132.9" r="21" />
+      <!-- Episodes, one group per season in that season's palette color. -->
+      <g fill="var(--card-season-1)">
+        <circle cx="0" cy="330.2" r="24" />
+        <circle cx="120" cy="286.3" r="24" />
+        <circle cx="240" cy="341.2" r="24" />
+        <circle cx="360" cy="264.4" r="24" />
+        <circle cx="480" cy="297.3" r="24" />
+        <circle cx="600" cy="242.5" r="24" />
+      </g>
+      <g fill="var(--card-season-2)">
+        <circle cx="800" cy="264.4" r="24" />
+        <circle cx="920" cy="198.7" r="24" />
+        <circle cx="1040" cy="242.5" r="24" />
+        <circle cx="1280" cy="209.6" r="24" />
+        <circle cx="1400" cy="154.8" r="24" />
+        <circle cx="1520" cy="121.9" r="24" />
+      </g>
+      <g fill="var(--card-season-3)">
+        <circle cx="1720" cy="187.7" r="24" />
+        <circle cx="1840" cy="253.5" r="24" />
+        <circle cx="1960" cy="297.3" r="24" />
+        <circle cx="2080" cy="242.5" r="24" />
+        <circle cx="2200" cy="330.2" r="24" />
+      </g>
+      <g fill="var(--card-season-4)">
+        <circle cx="2400" cy="297.3" r="24" />
+        <circle cx="2520" cy="231.5" r="24" />
+        <circle cx="2640" cy="264.4" r="24" />
+        <circle cx="2760" cy="198.7" r="24" />
+        <circle cx="2880" cy="176.7" r="24" />
+        <circle cx="3000" cy="132.9" r="24" />
       </g>
 
-      <!-- Exactly one selected episode per period. -->
-      <circle cx="1160" cy="165.8" r="29" fill="var(--card-spot)" />
+      <!-- Exactly one selected episode per period, 1.5x its resting size. -->
+      <circle cx="1160" cy="165.8" r="36" fill="var(--card-spot)" />
     </g>
   </defs>
 
