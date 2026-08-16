@@ -72,11 +72,11 @@ describe('mark scaling settings', () => {
 })
 
 describe('theme defaults', () => {
-  it('starts with the mono palette when no preference is stored', () => {
+  it('starts with the maximin palette when no preference is stored', () => {
     const settings = initializeTheme()
 
-    expect(settings.palette).toBe('monotone')
-    expect(document.documentElement.dataset.palette).toBe('monotone')
+    expect(settings.palette).toBe('maximin')
+    expect(document.documentElement.dataset.palette).toBe('maximin')
   })
 
   it('follows live system theme changes until the user chooses a theme', () => {
@@ -230,6 +230,7 @@ describe('theme token ownership', () => {
 
   it('falls back to visible chart colors when the stylesheet is unavailable', () => {
     themeStyle.remove()
+    updateUiSettings({ palette: 'monotone' })
 
     const chartTheme = getChartTheme()
 
@@ -298,6 +299,33 @@ describe('season palettes', () => {
           seasonColor('maximin', index, 12)
         )
       ).toEqual(colors)
+    }
+  )
+
+  it.each([
+    ['light', 'oklch(52% 0.15 255)'],
+    ['dark', 'oklch(72% 0.15 240)']
+  ])(
+    'keeps maximin seasons clear of the %s spot color and seeds from blue',
+    (theme, seed) => {
+      updateUiSettings({ theme })
+      const colors = Array.from({ length: 24 }, (_, index) =>
+        seasonColor('maximin', index, 24)
+      )
+
+      expect(colors[0]).toBe(seed)
+      // Nothing near the red-orange selection accent at a similar lightness.
+      colors.forEach((color) => {
+        const [, lightness, , hue] = color.match(
+          /oklch\((\d+)% ([\d.]+) (\d+)\)/
+        )
+        const nearSpotHue = Number(hue) <= 60 || Number(hue) >= 350
+        const nearSpotLightness =
+          Math.abs(
+            Number(lightness) / 100 - (theme === 'light' ? 0.556 : 0.646)
+          ) < 0.11
+        expect(nearSpotHue && nearSpotLightness).toBe(false)
+      })
     }
   )
 })

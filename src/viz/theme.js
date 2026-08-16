@@ -21,23 +21,30 @@ const LEGACY_PALETTE_IDS = {
 }
 
 const MAXIMIN_PALETTE_STATE = new Map()
+// Season colors keep clear of the spot (selection) color so a selected
+// episode never blends into its own season. `avoid` is each theme's
+// --spotColor in OKLCH; candidates within `avoidDistance` (OKLab) are dropped.
 const MAXIMIN_CONFIG = {
   light: {
     lightnesses: [0.42, 0.52, 0.62],
     chromas: [0.09, 0.15, 0.21],
-    seed: { lightness: 0.52, chroma: 0.15, hue: 30 }
+    seed: { lightness: 0.52, chroma: 0.15, hue: 255 },
+    avoid: { lightness: 0.556, chroma: 0.176, hue: 32 },
+    avoidDistance: 0.15
   },
   dark: {
     lightnesses: [0.62, 0.72, 0.82],
     chromas: [0.09, 0.15, 0.21],
-    seed: { lightness: 0.72, chroma: 0.15, hue: 30 }
+    seed: { lightness: 0.72, chroma: 0.15, hue: 255 },
+    avoid: { lightness: 0.646, chroma: 0.156, hue: 33 },
+    avoidDistance: 0.15
   }
 }
 
 const SETTINGS_DEFAULTS = {
   theme: 'light',
   themeSource: 'system',
-  palette: 'monotone',
+  palette: 'maximin',
   seasonTrendlines: true,
   fullShowTrendline: true,
   showSourceSpread: true,
@@ -336,6 +343,18 @@ function getMaximinPaletteState(themeId) {
       )
     )
     .filter(isInSrgbGamut)
+    .filter(
+      (candidate) =>
+        oklabDistanceSquared(
+          candidate,
+          createOklchCandidate(
+            config.avoid.lightness,
+            config.avoid.chroma,
+            config.avoid.hue
+          )
+        ) >=
+        config.avoidDistance ** 2
+    )
   const seedIndex = candidates.reduce((bestIndex, candidate, index) => {
     const bestDistance = oklchParameterDistance(
       candidates[bestIndex],
