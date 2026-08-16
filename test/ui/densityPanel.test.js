@@ -146,10 +146,10 @@ describe('mark scaling panel', () => {
 
     slide(thumb('pointRadius', 'low'), 3)
     expect(getUiSettings().markDensity.pointRadius).toMatchObject({
-      minScale: 2.75,
-      maxScale: 2.75
+      minScale: 2.25,
+      maxScale: 2.25
     })
-    expect(Number(thumb('pointRadius', 'low').value)).toBe(2.75)
+    expect(Number(thumb('pointRadius', 'low').value)).toBe(2.25)
 
     slide(thumb('ramp', 'high'), 4)
     expect(getUiSettings().markDensity.ramp).toEqual({

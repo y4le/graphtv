@@ -8,7 +8,7 @@ export const MARK_DENSITY_CONFIG = Object.freeze({
   }),
   pointRadius: Object.freeze({
     minScale: 0.8,
-    maxScale: 2.75,
+    maxScale: 2.25,
     curveExponent: 0.5
   }),
   lineWidth: Object.freeze({
