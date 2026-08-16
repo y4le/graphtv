@@ -46,6 +46,9 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    include: ['test/**/*.test.js']
+    include: ['test/**/*.test.js'],
+    // Node 25 ships a native `localStorage` stub that shadows jsdom's Web
+    // Storage in the test globals; keep the browser one for our tests.
+    execArgv: ['--no-experimental-webstorage']
   }
 })
