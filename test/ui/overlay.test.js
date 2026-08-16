@@ -99,6 +99,26 @@ describe('view options overlay', () => {
     expect(getUiSettings().absoluteYAxis).toBe(false)
   })
 
+  it('only lists the mark scaling row when a panel opener is available', () => {
+    const overlayController = createOverlayController()
+    openViewOptionsOverlay(overlayController)
+    expect(document.querySelector('[data-option="mark-density"]')).toBeNull()
+    overlayController.close()
+
+    const onOpenMarkDensity = vi.fn()
+    openViewOptionsOverlay(overlayController, { onOpenMarkDensity })
+    const row = document.querySelector('[data-option="mark-density"]')
+    expect(row.textContent).toContain('Mark scaling')
+    row.querySelector('[data-view-mark-density]').click()
+    expect(onOpenMarkDensity).toHaveBeenCalledTimes(1)
+
+    row.focus()
+    row.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
+    )
+    expect(onOpenMarkDensity).toHaveBeenCalledTimes(2)
+  })
+
   it('offers a default-on source spread control', () => {
     const overlayController = createOverlayController()
     openViewOptionsOverlay(overlayController)

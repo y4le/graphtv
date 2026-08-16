@@ -3,6 +3,7 @@ import { renderSearchPage } from './pages/search.js'
 import { getUrlParams, normalizeLegacyParams } from './lib/url.js'
 import { createKeyboardController } from './ui/keyboard.js'
 import { createOverlayController } from './ui/overlay.js'
+import { createDockController } from './ui/dock.js'
 import { initializeTheme } from './viz/theme.js'
 import { renderError, renderPublisherBrand } from './pages/shared.js'
 
@@ -23,6 +24,7 @@ async function bootstrap() {
   const params = getUrlParams()
   const showRef = params.get('show')
   const overlayController = createOverlayController()
+  const dockController = createDockController()
   let pageController
 
   if (showRef) {
@@ -33,7 +35,8 @@ async function bootstrap() {
 
   const keyboardController = createKeyboardController({
     page: pageController,
-    overlayController
+    overlayController,
+    dockController
   })
   pageController.focusInitial?.()
 
@@ -44,6 +47,7 @@ async function bootstrap() {
     }
     destroyed = true
     keyboardController.destroy()
+    dockController.destroy()
     overlayController.destroy()
     pageController.destroy?.()
   }

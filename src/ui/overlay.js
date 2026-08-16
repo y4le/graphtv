@@ -17,6 +17,7 @@ const VIEW_OPTION_SHORTCUTS = {
   c: 'palette',
   d: 'episode-density',
   f: 'full-show-trendline',
+  m: 'mark-density',
   r: 'source-spread',
   s: 'season-trendlines',
   t: 'theme',
@@ -647,14 +648,25 @@ function formatJsonValue(value) {
   return String(value)
 }
 
-export function openViewOptionsOverlay(overlayController) {
+export function openViewOptionsOverlay(overlayController, options = {}) {
+  const { onOpenMarkDensity = null } = options
+  const activate = (option) => {
+    if (option === 'mark-density') {
+      onOpenMarkDensity?.()
+      return
+    }
+    activateViewOption(option)
+  }
+
   overlayController.open({
     id: 'view-options',
     title: 'View options',
     className: 'overlay-view-options',
-    content: renderViewOptionsContent(),
+    content: renderViewOptionsContent({
+      markDensity: Boolean(onOpenMarkDensity)
+    }),
     onMount({ content }) {
-      bindViewOptions(content)
+      bindViewOptions(content, { onOpenMarkDensity })
       syncViewOptions(content)
       content.querySelector('.view-option-row')?.focus()
     },
@@ -696,27 +708,33 @@ export function openViewOptionsOverlay(overlayController) {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault()
         if (!event.repeat) {
-          activateViewOption(rows[currentIndex]?.dataset.option)
+          activate(rows[currentIndex]?.dataset.option)
         }
-        syncViewOptions(content)
+        if (overlayController.getActiveId() === 'view-options') {
+          syncViewOptions(content)
+        }
         return
       }
 
       const option = VIEW_OPTION_SHORTCUTS[event.key]
-      if (option) {
+      const row = option
+        ? content.querySelector(`[data-option="${option}"]`)
+        : null
+      if (row) {
         event.preventDefault()
-        const row = content.querySelector(`[data-option="${option}"]`)
-        row?.focus()
+        row.focus()
         if (!event.repeat) {
-          activateViewOption(option)
-          syncViewOptions(content)
+          activate(option)
+          if (overlayController.getActiveId() === 'view-options') {
+            syncViewOptions(content)
+          }
         }
       }
     }
   })
 }
 
-function renderViewOptionsContent() {
+function renderViewOptionsContent({ markDensity = false } = {}) {
   const settings = getUiSettings()
 
   return `
@@ -778,12 +796,35 @@ function renderViewOptionsContent() {
         </span>
         <kbd class="view-option-hint keycap">y</kbd>
       </div>
+      ${
+        markDensity
+          ? `
+      <div class="view-option-row" data-option="mark-density" tabindex="0">
+        ${renderViewOptionLabel(
+          'Mark scaling',
+          'Opens a panel below the chart for tuning how point size and line width scale with episode spacing. The chart stays interactive while it is open.',
+          'view-option-mark-density-info'
+        )}
+        <span class="view-option-values">
+          <button type="button" class="view-value" data-view-mark-density>Open panel</button>
+        </span>
+        <kbd class="view-option-hint keycap">m</kbd>
+      </div>`
+          : ''
+      }
     </div>
   `
 }
 
-function bindViewOptions(content) {
+function bindViewOptions(content, { onOpenMarkDensity = null } = {}) {
   bindViewOptionInfo(content)
+
+  content
+    .querySelector('[data-view-mark-density]')
+    ?.addEventListener('click', (event) => {
+      event.stopPropagation()
+      onOpenMarkDensity?.()
+    })
 
   content.querySelectorAll('[data-view-theme]').forEach((button) => {
     button.addEventListener('click', (event) => {
@@ -1071,6 +1112,7 @@ function resultsHelpSections() {
       items: [
         { keys: ['/', 'q'], action: 'Return to search' },
         { keys: ['o'], action: 'Open view options' },
+        { keys: ['m'], action: 'Toggle mark scaling panel' },
         { keys: ['?', 'F1'], action: 'Open help' },
         {
           keys: ['D'],

@@ -12,6 +12,8 @@ GraphTV uses a mode system inspired by vim:
 
 **Overlay mode** — active when the help, credits, view options, or debug panel is open. The overlay traps focus. The toggle key, `Escape`, `q`, or clicking outside closes it. Scrollable content is navigable with `j`/`k`/`ArrowUp`/`ArrowDown`.
 
+**Docks** — non-modal panels pinned to the bottom of the viewport (currently the mark scaling panel). A dock does not change mode: focus can move freely between the dock and the page, so chart shortcuts keep working while it is open. Inside the dock, `Escape` or the dock's toggle key closes it and returns focus to where it came from; range sliders use their native `ArrowLeft`/`ArrowRight`, `Home`/`End`, and `PageUp`/`PageDown`.
+
 ## Chord handling
 
 Some vim bindings use multi-key sequences (e.g., `gg`). The implementation should:
@@ -24,13 +26,14 @@ Some vim bindings use multi-key sequences (e.g., `gg`). The implementation shoul
 
 ### Global (normal mode)
 
-| Action                  | Vim | Conventional | Notes                                |
-| ----------------------- | --- | ------------ | ------------------------------------ |
-| Open/close help         | `?` | `F1`         | Shows context-sensitive bindings     |
-| Focus search            | `/` | —            | Enters insert mode                   |
-| Open/close view options | `o` | —            | Theme, palette settings              |
-| Toggle debug panel      | `D` | —            | Shift+D to avoid accidental triggers |
-| Return to search        | `q` | —            | From results page                    |
+| Action                  | Vim | Conventional | Notes                                  |
+| ----------------------- | --- | ------------ | -------------------------------------- |
+| Open/close help         | `?` | `F1`         | Shows context-sensitive bindings       |
+| Focus search            | `/` | —            | Enters insert mode                     |
+| Open/close view options | `o` | —            | Theme, palette settings                |
+| Toggle mark scaling     | `m` | —            | Results page only; opens a bottom dock |
+| Toggle debug panel      | `D` | —            | Shift+D to avoid accidental triggers   |
+| Return to search        | `q` | —            | From results page                      |
 
 ### Search input (insert mode)
 

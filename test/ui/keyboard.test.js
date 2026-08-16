@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createKeyboardController } from '../../src/ui/keyboard.js'
 import { createOverlayController } from '../../src/ui/overlay.js'
+import { createDockController } from '../../src/ui/dock.js'
 import { getUiSettings } from '../../src/viz/theme.js'
 
 let keyboardController
@@ -339,6 +340,102 @@ function createClosedOverlayController() {
     getActiveId: () => null
   }
 }
+
+describe('mark scaling dock shortcuts', () => {
+  let dockController
+
+  afterEach(() => {
+    dockController?.destroy()
+    dockController = undefined
+  })
+
+  it('toggles the mark scaling dock with m on the results page only', () => {
+    document.body.innerHTML = `
+      <main id="app"><button type="button" data-ui-action="mark-density">m</button></main>
+    `
+    const overlayController = createOverlayController()
+    dockController = createDockController()
+    const chart = { getDensityMetrics: () => null }
+    keyboardController = createKeyboardController({
+      page: { kind: 'results', chart, goBack: vi.fn() },
+      overlayController,
+      dockController
+    })
+
+    expect(pressKey('m').defaultPrevented).toBe(true)
+    expect(dockController.getActiveId()).toBe('mark-density')
+    expect(document.querySelector('#app').hasAttribute('inert')).toBe(false)
+
+    // Chart shortcuts keep working while the dock is open and focus is
+    // back on the page.
+    document.activeElement.blur()
+    expect(document.activeElement).toBe(document.body)
+    expect(dockController.isOpen()).toBe(true)
+
+    pressKey('m')
+    expect(dockController.isOpen()).toBe(false)
+
+    document.querySelector('[data-ui-action="mark-density"]').click()
+    expect(dockController.isOpen()).toBe(true)
+
+    // Pressing m while a dock slider has focus closes it without reopening.
+    document.querySelector('[data-density-thumb]').focus()
+    document.activeElement.dispatchEvent(
+      new window.KeyboardEvent('keydown', {
+        key: 'm',
+        bubbles: true,
+        cancelable: true
+      })
+    )
+    expect(dockController.isOpen()).toBe(false)
+  })
+
+  it('ignores m on the search page and without a dock controller', () => {
+    dockController = createDockController()
+    keyboardController = createKeyboardController({
+      page: { kind: 'search' },
+      overlayController: createOverlayController(),
+      dockController
+    })
+    expect(pressKey('m').defaultPrevented).toBe(false)
+    expect(dockController.isOpen()).toBe(false)
+    keyboardController.destroy()
+
+    keyboardController = createKeyboardController({
+      page: { kind: 'results', chart: null, goBack: vi.fn() },
+      overlayController: createOverlayController()
+    })
+    expect(pressKey('m').defaultPrevented).toBe(false)
+  })
+
+  it('opens the dock from the view options row and closes the overlay', () => {
+    document.body.innerHTML = '<main id="app"></main>'
+    const overlayController = createOverlayController()
+    dockController = createDockController()
+    keyboardController = createKeyboardController({
+      page: { kind: 'results', chart: null, goBack: vi.fn() },
+      overlayController,
+      dockController
+    })
+
+    pressKey('o')
+    expect(overlayController.getActiveId()).toBe('view-options')
+    const row = document.querySelector('[data-option="mark-density"]')
+    expect(row).not.toBeNull()
+
+    row.focus()
+    row.dispatchEvent(
+      new window.KeyboardEvent('keydown', {
+        key: 'm',
+        bubbles: true,
+        cancelable: true
+      })
+    )
+    expect(overlayController.isOpen()).toBe(false)
+    expect(dockController.getActiveId()).toBe('mark-density')
+    expect(document.querySelector('#app').hasAttribute('inert')).toBe(false)
+  })
+})
 
 function pressKey(key, options = {}) {
   const event = new window.KeyboardEvent('keydown', {

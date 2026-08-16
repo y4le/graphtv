@@ -90,6 +90,30 @@ test('searches, navigates the chart, and isolates modal interaction', async ({
   await expect(page.locator('#app')).not.toHaveAttribute('inert', '')
   await expect(optionsButton).toBeFocused()
 
+  await page.keyboard.press('m')
+  const dock = page.getByRole('region', { name: 'Mark scaling' })
+  await expect(dock).toBeVisible()
+  await expect(page.locator('#app')).not.toHaveAttribute('inert', '')
+  const sparseRamp = page.getByRole('slider', {
+    name: 'Pixels per episode where sparse sizing applies'
+  })
+  await sparseRamp.focus()
+  await sparseRamp.press('ArrowRight')
+  await expect(sparseRamp).toHaveValue('81')
+  await expect(page.locator('.dock-panel')).toContainText('81px')
+  await expectNoAccessibilityViolations(page, '.dock-root')
+
+  // The chart stays interactive while the dock is open.
+  await page.locator('.episode-point').nth(2).click()
+  await expect(dock).toBeVisible()
+
+  await page.getByRole('button', { name: 'Reset' }).click()
+  await expect(sparseRamp).toHaveValue('80')
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('region', { name: 'Mark scaling' })).toHaveCount(
+    0
+  )
+
   await expectNoAccessibilityViolations(page)
 })
 

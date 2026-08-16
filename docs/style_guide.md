@@ -146,7 +146,8 @@ Required settings:
 - Theme: `light`, `dark`. Default follows `prefers-color-scheme`. User choice persisted in `localStorage`.
 - Season palette: `monotone`, `alternating`, `rainbow`, `zigzag`, `maximin`. User choice persisted in `localStorage`.
 - Episode density: `roomy`, `balanced`, `dense`, `all`. Default is `balanced`; user choice persisted in `localStorage`.
-- Point-radius and line-width density scaling is tuned centrally in `MARK_DENSITY_CONFIG` (`src/viz/pointSize.js`): the shared slot-width ramp sets where scaling begins and ends, while each mark type defines its minimum scale, maximum scale, and curve exponent.
+- Point-radius and line-width density scaling is tuned centrally in `MARK_DENSITY_CONFIG` (`src/viz/pointSize.js`): the shared slot-width ramp sets where scaling begins and ends, while each mark type defines its minimum scale, maximum scale, and curve exponent. The ramp endpoints and the min/max scales are user-editable from the mark scaling dock (`m` on the results page, or the "Mark scaling" row in view options) and persist in `localStorage` as `markDensity`; the curve exponents stay code-only.
+- Docks (`src/ui/dock.js`) are non-modal panels pinned to the bottom edge. They never make the page inert or trap focus, so the chart stays readable and interactive while a panel is open; `#app` grows by `--dock-height` so content can still scroll clear of the panel. Prefer a dock over an overlay whenever the reader needs to see the effect of a control on the chart while adjusting it.
 
 ### Layout
 

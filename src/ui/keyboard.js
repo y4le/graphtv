@@ -9,10 +9,15 @@ import {
   openHelpOverlay,
   openViewOptionsOverlay
 } from './overlay.js'
+import { MARK_DENSITY_TOGGLE_KEY, openMarkDensityDock } from './densityPanel.js'
 
 const KEYBOARD_ZOOM_STEP = 1.5
 
-export function createKeyboardController({ page, overlayController }) {
+export function createKeyboardController({
+  page,
+  overlayController,
+  dockController = null
+}) {
   const chordTracker = createChordTracker()
 
   function onKeyDown(event) {
@@ -99,7 +104,16 @@ export function createKeyboardController({ page, overlayController }) {
   }
 
   function keyWorksFromInteractiveControl(key) {
-    return ['/', '?', 'F1', 'Escape', 'q', 'o', 'D'].includes(key)
+    return [
+      '/',
+      '?',
+      'F1',
+      'Escape',
+      'q',
+      'o',
+      'D',
+      MARK_DENSITY_TOGGLE_KEY
+    ].includes(key)
   }
 
   function isChartHalfViewportShortcut(event) {
@@ -132,7 +146,22 @@ export function createKeyboardController({ page, overlayController }) {
     }
 
     if (action === 'view-options') {
-      openViewOptionsOverlay(overlayController)
+      openViewOptionsOverlay(overlayController, {
+        onOpenMarkDensity: canOpenMarkDensity()
+          ? () => {
+              overlayController.close()
+              openMarkDensityDock(dockController, page)
+            }
+          : null
+      })
+      return true
+    }
+
+    if (action === 'mark-density') {
+      if (!canOpenMarkDensity()) {
+        return false
+      }
+      openMarkDensityDock(dockController, page)
       return true
     }
 
@@ -142,6 +171,10 @@ export function createKeyboardController({ page, overlayController }) {
     }
 
     return false
+  }
+
+  function canOpenMarkDensity() {
+    return Boolean(dockController) && page.kind === 'results'
   }
 
   function handleGlobalAction(key, event) {
@@ -213,6 +246,13 @@ export function createKeyboardController({ page, overlayController }) {
     if (key === 'q') {
       event.preventDefault()
       runUiAction('return-search')
+      return
+    }
+
+    if (key === MARK_DENSITY_TOGGLE_KEY) {
+      if (runUiAction('mark-density')) {
+        event.preventDefault()
+      }
       return
     }
 
