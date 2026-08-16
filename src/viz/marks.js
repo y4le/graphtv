@@ -3,7 +3,9 @@ import { format, line, pointer as d3Pointer } from 'd3'
 import { isUsableProviderRating, isUsableRating } from '../data/stats.js'
 import {
   scaleLineWidthForDensity,
-  scalePointRadiusForDensity
+  scalePointRadiusForDensity,
+  scaleSelectedLineWidth,
+  scaleSelectedPointRadius
 } from './pointSize.js'
 
 const formatRating = format('.1f')
@@ -16,7 +18,6 @@ const SOURCE_SPREAD_WHISKER_WIDTH = 7
 const SOURCE_RATING_OPACITY = 0.68
 const FALLBACK_POINT_FILL_OPACITY = 0.2
 const DEFAULT_POINT_RADIUS = 3
-const ACTIVE_POINT_RADIUS_OFFSET = 1.5
 const SEASON_AXIS_FONT_SIZE = 12
 const SEASON_AXIS_FULL_LABEL_PADDING = 12
 const SEASON_AXIS_LEFT_EXTENSION = 15
@@ -362,7 +363,8 @@ export function renderTrendlines(
       : scaleLineWidthForDensity(
           baseWidth,
           interactions.densityPointCount,
-          scales.xScale
+          scales.xScale,
+          theme.markDensity
         )
 
   const hitSurface = trendlineLayer
@@ -427,7 +429,9 @@ export function renderTrendlines(
       trendline.id === activeTrendId ? theme.spotColor : theme.trendMacro
     )
     .attr('stroke-width', (trendline) =>
-      lineWidth(trendline.id === activeTrendId ? 2 : 1)
+      trendline.id === activeTrendId
+        ? scaleSelectedLineWidth(lineWidth(2.2), theme.markDensity)
+        : lineWidth(2.2)
     )
     .attr('stroke-dasharray', '5 5')
     .attr('pointer-events', 'none')
@@ -447,7 +451,9 @@ export function renderTrendlines(
       trendline.id === activeTrendId ? theme.spotColor : theme.trendMicro
     )
     .attr('stroke-width', (trendline) =>
-      lineWidth(trendline.id === activeTrendId ? 1.75 : 1)
+      trendline.id === activeTrendId
+        ? scaleSelectedLineWidth(lineWidth(2.2), theme.markDensity)
+        : lineWidth(2.2)
     )
     .attr('pointer-events', 'none')
     .attr('d', (trendline) => generator(trendline.points))
@@ -744,7 +750,8 @@ export function renderPoints(svg, points, scales, theme, interactions) {
   const pointRadius = scalePointRadiusForDensity(
     DEFAULT_POINT_RADIUS,
     plottedPoints.length,
-    scales.xScale
+    scales.xScale,
+    theme.markDensity
   )
   const hitRadius = getPointHitRadius(pointRadius, scales.xScale)
 
@@ -769,7 +776,7 @@ export function renderPoints(svg, points, scales, theme, interactions) {
     .attr('cy', (point) => scales.yScale(point.rating))
     .attr('r', (point) =>
       point.id === interactions.activePointId
-        ? pointRadius + ACTIVE_POINT_RADIUS_OFFSET
+        ? scaleSelectedPointRadius(pointRadius, theme.markDensity)
         : pointRadius
     )
     .attr('fill', (point) => {
@@ -824,7 +831,8 @@ export function renderProviderRatingPreview(
   const pointRadius = scalePointRadiusForDensity(
     DEFAULT_POINT_RADIUS,
     plottedPointCount,
-    scales.xScale
+    scales.xScale,
+    theme.markDensity
   )
   const preview =
     activePoint &&
@@ -847,7 +855,7 @@ export function renderProviderRatingPreview(
     .attr('class', 'provider-rating-preview')
     .attr('cx', (rating) => rating.x)
     .attr('cy', (rating) => rating.y)
-    .attr('r', pointRadius + ACTIVE_POINT_RADIUS_OFFSET)
+    .attr('r', scaleSelectedPointRadius(pointRadius, theme.markDensity))
     .attr('fill', theme.spotColor)
     .attr('data-point-id', (rating) => rating.pointId)
     .attr('data-rating-source', (rating) => rating.source)

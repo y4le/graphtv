@@ -98,18 +98,25 @@ describe('createSparkline', () => {
     )
 
     expect(inactiveRadius).toBe(
-      INACTIVE_POINT_RADIUS_FOR_TEST * MARK_DENSITY_CONFIG.pointRadius.maxScale
+      roundMarkSize(
+        INACTIVE_POINT_RADIUS_FOR_TEST *
+          MARK_DENSITY_CONFIG.pointRadius.maxScale
+      )
     )
     expect(activeRadius).toBe(
-      ACTIVE_POINT_RADIUS_FOR_TEST * MARK_DENSITY_CONFIG.pointRadius.maxScale
+      roundMarkSize(
+        ACTIVE_POINT_RADIUS_FOR_TEST * MARK_DENSITY_CONFIG.pointRadius.maxScale
+      )
     )
     expect(activeRadius / inactiveRadius).toBeCloseTo(
       ACTIVE_POINT_RADIUS_FOR_TEST / INACTIVE_POINT_RADIUS_FOR_TEST,
       2
     )
-    expect(inactiveLineWidth).toBe(MARK_DENSITY_CONFIG.lineWidth.maxScale)
+    expect(inactiveLineWidth).toBe(
+      roundMarkSize(2.2 * MARK_DENSITY_CONFIG.lineWidth.maxScale)
+    )
     expect(activeLineWidth).toBe(
-      Math.round(1.5 * MARK_DENSITY_CONFIG.lineWidth.maxScale * 100) / 100
+      roundMarkSize(3.3 * MARK_DENSITY_CONFIG.lineWidth.maxScale)
     )
   })
 
@@ -264,4 +271,8 @@ function pointerEvent(type, clientX, pointerId) {
     clientY: { value: DIMENSIONS.height / 2 }
   })
   return event
+}
+
+function roundMarkSize(size) {
+  return Math.round(size * 100) / 100
 }

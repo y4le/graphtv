@@ -25,6 +25,7 @@ import {
 import { createSidenote } from './sidenote.js'
 import { createSparkline } from './sparkline.js'
 import { getChartTheme, getUiSettings, updateUiSettings } from './theme.js'
+import { getSlotWidth } from './pointSize.js'
 import {
   RATING_SOURCE_PRIORITY,
   createCachedSeriesBreakpointDetector,
@@ -106,6 +107,7 @@ export function createChart(container, seasons, options = {}) {
   let show = options.show ?? null
   let viewport = null
   let episodeDensity = getUiSettings().episodeDensity
+  let densityMetrics = null
   let selectedPointId = null
   let hoverPointId = null
   let selectedTrendId = null
@@ -1466,6 +1468,17 @@ export function createChart(container, seasons, options = {}) {
       getSeasonAxisInteractions()
     )
 
+    publishDensityMetrics({
+      chartSlotWidth: getSlotWidth(
+        visibleRatedPoints.length,
+        mainScales.xScale
+      ),
+      sparklineSlotWidth: getSlotWidth(
+        model.ratedPoints.length,
+        sparklineScales.xScale
+      )
+    })
+
     renderSparkline(
       chartTheme,
       sparklineScales,
@@ -1480,6 +1493,22 @@ export function createChart(container, seasons, options = {}) {
         hasUserInteracted = true
         resetViewportWidth(chartWidth)
       }
+    )
+  }
+
+  // Lets the mark scaling panel show where the current view sits on the ramp.
+  function publishDensityMetrics(nextMetrics) {
+    if (
+      densityMetrics &&
+      densityMetrics.chartSlotWidth === nextMetrics.chartSlotWidth &&
+      densityMetrics.sparklineSlotWidth === nextMetrics.sparklineSlotWidth
+    ) {
+      return
+    }
+
+    densityMetrics = nextMetrics
+    document.dispatchEvent(
+      new CustomEvent('graphtv:chart-density', { detail: densityMetrics })
     )
   }
 
@@ -1890,6 +1919,7 @@ export function createChart(container, seasons, options = {}) {
   notifyPrimaryRatingSource()
 
   return {
+    getDensityMetrics: () => densityMetrics,
     moveEpisode,
     moveSeason,
     jumpBoundary,

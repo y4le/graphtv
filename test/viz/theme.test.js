@@ -11,6 +11,10 @@ import {
   seasonColor,
   updateUiSettings
 } from '../../src/viz/theme.js'
+import {
+  MARK_DENSITY_BOUNDS,
+  MARK_DENSITY_CONFIG
+} from '../../src/viz/pointSize.js'
 
 const stylesheet = readFileSync(
   resolve(process.cwd(), 'css/styles.css'),
@@ -31,6 +35,40 @@ afterEach(() => {
   delete document.documentElement.dataset.theme
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
+})
+
+describe('mark scaling settings', () => {
+  it('starts from the shared defaults and exposes them to the chart theme', () => {
+    expect(getUiSettings().markDensity).toEqual(MARK_DENSITY_CONFIG)
+    expect(getChartTheme().markDensity).toEqual(MARK_DENSITY_CONFIG)
+  })
+
+  it('persists sanitized overrides across reloads', () => {
+    updateUiSettings({
+      markDensity: {
+        ramp: { denseSlotWidth: 12, sparseSlotWidth: 500 },
+        pointRadius: { minScale: 0.5, maxScale: 2 }
+      }
+    })
+
+    expect(getUiSettings().markDensity.ramp).toEqual({
+      denseSlotWidth: 12,
+      sparseSlotWidth: MARK_DENSITY_BOUNDS.ramp.max
+    })
+    expect(getUiSettings().markDensity.lineWidth).toEqual(
+      MARK_DENSITY_CONFIG.lineWidth
+    )
+
+    const reloaded = initializeTheme()
+    expect(reloaded.markDensity.pointRadius).toMatchObject({
+      minScale: 0.5,
+      maxScale: 2
+    })
+    expect(
+      JSON.parse(window.localStorage.getItem('graphtv-ui-settings')).markDensity
+        .ramp.denseSlotWidth
+    ).toBe(12)
+  })
 })
 
 describe('theme defaults', () => {

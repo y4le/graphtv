@@ -95,22 +95,26 @@ export function createSparkline(svgNode, config) {
     const activePointRadius = scalePointRadiusForDensity(
       ACTIVE_POINT_RADIUS,
       config.model.ratedPoints.length,
-      config.scales.xScale
+      config.scales.xScale,
+      config.theme.markDensity
     )
     const inactivePointRadius = scalePointRadiusForDensity(
       INACTIVE_POINT_RADIUS,
       config.model.ratedPoints.length,
-      config.scales.xScale
+      config.scales.xScale,
+      config.theme.markDensity
     )
     const inactiveLineWidth = scaleLineWidthForDensity(
-      1,
+      2.2,
       config.model.ratedPoints.length,
-      config.scales.xScale
+      config.scales.xScale,
+      config.theme.markDensity
     )
     const activeLineWidth = scaleLineWidthForDensity(
-      1.5,
+      3.3,
       config.model.ratedPoints.length,
-      config.scales.xScale
+      config.scales.xScale,
+      config.theme.markDensity
     )
 
     windowClipRect

@@ -1348,20 +1348,72 @@ describe('createChart', () => {
     const restingRadius = Number(
       container.querySelector('.episode-point').getAttribute('r')
     )
-    expect(restingRadius).toBe(3 * MARK_DENSITY_CONFIG.pointRadius.maxScale)
+    expect(restingRadius).toBe(
+      Math.round(3 * MARK_DENSITY_CONFIG.pointRadius.maxScale * 100) / 100
+    )
 
     chart.toggleSeriesTrend()
     expect(
       Number(
         container.querySelector('.macro-trendline').getAttribute('stroke-width')
       )
-    ).toBe(2 * MARK_DENSITY_CONFIG.lineWidth.maxScale)
+    ).toBe(
+      Math.round(
+        2.2 *
+          MARK_DENSITY_CONFIG.lineWidth.maxScale *
+          MARK_DENSITY_CONFIG.selection.lineScale *
+          100
+      ) / 100
+    )
 
     chart.moveEpisode(1)
     const activeRadius = Number(
       container.querySelector('.episode-point').getAttribute('r')
     )
-    expect(activeRadius).toBe(restingRadius + 1.5)
+    expect(activeRadius).toBe(
+      Math.round(
+        restingRadius * MARK_DENSITY_CONFIG.selection.pointScale * 100
+      ) / 100
+    )
+  })
+
+  it('re-sizes marks live from the mark scaling setting and reports slot widths', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+    const seasons = createSeasons()
+    seasons[0].episodes = seasons[0].episodes.slice(0, 5)
+    const densityEvents = []
+    const onDensity = (event) => densityEvents.push(event.detail)
+    document.addEventListener('graphtv:chart-density', onDensity)
+
+    try {
+      chart = createChart(container, seasons)
+
+      const metrics = chart.getDensityMetrics()
+      expect(metrics.chartSlotWidth).toBeGreaterThan(
+        MARK_DENSITY_CONFIG.ramp.sparseSlotWidth
+      )
+      expect(metrics.sparklineSlotWidth).toBe(metrics.chartSlotWidth)
+      expect(densityEvents.at(-1)).toEqual(metrics)
+
+      updateUiSettings({
+        markDensity: { pointRadius: { minScale: 1, maxScale: 3 } }
+      })
+
+      expect(
+        Number(container.querySelector('.episode-point').getAttribute('r'))
+      ).toBe(9)
+      expect(
+        Number(container.querySelector('.sparkline-point').getAttribute('r'))
+      ).toBe(Math.round(1.7 * 3 * 100) / 100)
+    } finally {
+      document.removeEventListener('graphtv:chart-density', onDensity)
+      updateUiSettings({ markDensity: MARK_DENSITY_CONFIG })
+    }
   })
 
   it('selects trendlines through the plot surface and gives points priority', () => {

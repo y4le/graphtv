@@ -1,3 +1,5 @@
+import { MARK_DENSITY_CONFIG, sanitizeMarkDensity } from './pointSize.js'
+
 const STORAGE_KEY = 'graphtv-ui-settings'
 const MEDIA_QUERY = '(prefers-color-scheme: dark)'
 
@@ -40,7 +42,8 @@ const SETTINGS_DEFAULTS = {
   fullShowTrendline: true,
   showSourceSpread: true,
   absoluteYAxis: false,
-  episodeDensity: 'balanced'
+  episodeDensity: 'balanced',
+  markDensity: MARK_DENSITY_CONFIG
 }
 
 function getSystemTheme() {
@@ -92,7 +95,8 @@ function sanitizeSettings(candidate = {}) {
         : SETTINGS_DEFAULTS.absoluteYAxis,
     episodeDensity: EPISODE_DENSITIES.includes(candidate.episodeDensity)
       ? candidate.episodeDensity
-      : SETTINGS_DEFAULTS.episodeDensity
+      : SETTINGS_DEFAULTS.episodeDensity,
+    markDensity: sanitizeMarkDensity(candidate.markDensity)
   }
 }
 
@@ -428,6 +432,7 @@ export function getChartTheme() {
     spotColor: themeTokens.spotColor,
     spotColorMuted: themeTokens.spotColorMuted,
     canvasSubtle: themeTokens.canvasSubtle,
+    markDensity: settings.markDensity,
     seasonColor: (seasonIndex, totalSeasons) =>
       resolveSeasonColor(
         settings.palette,
