@@ -430,7 +430,7 @@ describe('createChart', () => {
     ).toBeCloseTo(0.9)
   })
 
-  it('pans half a viewport in either direction without clearing the selection', () => {
+  it('pans half a viewport and carries the selection to the same on-screen x', () => {
     const container = document.createElement('div')
     Object.defineProperty(container, 'clientWidth', {
       configurable: true,
@@ -442,14 +442,17 @@ describe('createChart', () => {
     chart.moveEpisode(1)
     const initialViewport = chart.getDebugState().viewport
     const span = initialViewport.end - initialViewport.start
+    const travelled = Math.round(span / 2)
 
     chart.panHalfViewport(1)
 
+    // The viewport moves by the distance the selection travelled, not by the
+    // half span, so the arrival keeps the departure's on-screen x.
     expect(chart.getDebugState()).toMatchObject({
-      selectedPointId: 'episode-1',
+      selectedPointId: `episode-${1 + travelled}`,
       viewport: {
-        start: initialViewport.start + span / 2,
-        end: initialViewport.end + span / 2
+        start: initialViewport.start + travelled,
+        end: initialViewport.end + travelled
       }
     })
 
@@ -458,6 +461,137 @@ describe('createChart', () => {
     expect(chart.getDebugState()).toMatchObject({
       selectedPointId: 'episode-1',
       viewport: initialViewport
+    })
+  })
+
+  it('holds the selection at the same on-screen x across repeated half pages', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    for (let index = 0; index < 20; index += 1) {
+      chart.moveEpisode(1)
+    }
+
+    const screenRatio = () => {
+      const { selectedPointId, viewport } = chart.getDebugState()
+      const x = Number(selectedPointId.replace('episode-', ''))
+      return (x - viewport.start) / (viewport.end - viewport.start)
+    }
+
+    const departureRatio = screenRatio()
+    const departureId = chart.getDebugState().selectedPointId
+
+    for (const direction of [1, 1, 1, -1, -1, -1]) {
+      chart.panHalfViewport(direction)
+      expect(screenRatio()).toBeCloseTo(departureRatio)
+    }
+
+    // Half a page down and back lands on the departure episode again.
+    expect(chart.getDebugState().selectedPointId).toBe(departureId)
+  })
+
+  it('steps seasons to the same episode number and shifts the viewport by the distance travelled', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(
+      container,
+      createSeasonLengths([10, 10, 6, 10, 10, 10, 10, 10])
+    )
+    for (let index = 0; index < 18; index += 1) {
+      chart.moveEpisode(1)
+    }
+    expect(chart.getDebugState().selectedPointId).toBe('season-2-episode-8')
+    const departure = chart.getDebugState()
+    const departureX = departure.viewport.start
+
+    chart.moveSeason(1)
+
+    let state = chart.getDebugState()
+    expect(state.selectedPointId).toBe('season-3-episode-6')
+    // S03 only has six episodes, so the nearest rated episode is chosen and
+    // the viewport moves by the same distance the selection travelled (8).
+    expect(state.viewport.start - departureX).toBeCloseTo(8)
+
+    chart.moveSeason(1)
+
+    state = chart.getDebugState()
+    expect(state.selectedPointId).toBe('season-4-episode-6')
+    expect(state.viewport.start - departureX).toBeCloseTo(14)
+
+    chart.moveSeason(-1)
+    chart.moveSeason(-1)
+
+    state = chart.getDebugState()
+    expect(state.selectedPointId).toBe('season-2-episode-6')
+    // Travelling back 16 from +14 would land at -2, but the viewport is
+    // clamped at the start of the series.
+    expect(state.viewport.start).toBeCloseTo(departureX)
+
+    chart.moveSeason(-1)
+    chart.moveSeason(-1)
+
+    state = chart.getDebugState()
+    expect(state.selectedPointId).toBe('season-8-episode-6')
+    // Wrapping from S01 to S08 pans forward as far as the series allows and
+    // keeps the arrival episode (x = 71) on screen.
+    expect(state.viewport.start).toBeGreaterThan(departureX)
+    expect(state.viewport.start).toBeLessThanOrEqual(71)
+    expect(state.viewport.end).toBeGreaterThanOrEqual(71)
+
+    chart.moveSeason(1)
+
+    state = chart.getDebugState()
+    expect(state.selectedPointId).toBe('season-1-episode-6')
+    expect(state.viewport.start).toBeCloseTo(departureX)
+  })
+
+  it('keeps advancing the selection like Vim once the viewport is pinned at an edge', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    chart.moveEpisode(1)
+    const initialViewport = chart.getDebugState().viewport
+    const halfSpan = (initialViewport.end - initialViewport.start) / 2
+
+    chart.panHalfViewport(-1)
+
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId: 'episode-1',
+      viewport: initialViewport
+    })
+
+    chart.jumpBoundary('end')
+    chart.moveEpisode(-1)
+    const endViewport = chart.getDebugState().viewport
+    const secondToLast = chart.getDebugState().selectedPointId
+
+    chart.panHalfViewport(1)
+
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId: 'episode-72',
+      viewport: endViewport
+    })
+    expect(secondToLast).toBe('episode-71')
+
+    chart.panHalfViewport(-1)
+
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId: `episode-${72 - Math.round(halfSpan)}`
     })
   })
 

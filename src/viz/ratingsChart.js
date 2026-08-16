@@ -662,7 +662,11 @@ export function createChart(container, seasons, options = {}) {
     return createDefaultViewport(model, width, isMobile(), episodeDensity)
   }
 
-  function setSelectedPoint(point, source = 'keyboard') {
+  function setSelectedPoint(
+    point,
+    source = 'keyboard',
+    { follow = true } = {}
+  ) {
     if (!point) {
       return
     }
@@ -681,7 +685,9 @@ export function createChart(container, seasons, options = {}) {
     updateDetail(point, { load: true })
     announceSelection({ point })
 
-    if (source === 'keyboard') {
+    if (!follow) {
+      // The caller has already placed the viewport around this point.
+    } else if (source === 'keyboard') {
       followViewportToX(point.x)
     } else if (point.x < viewport.start || point.x > viewport.end) {
       const width = viewport.end - viewport.start + 1
@@ -904,8 +910,9 @@ export function createChart(container, seasons, options = {}) {
       return
     }
 
+    const departurePoint = getPointById(selectedPointId)
     const activePoint =
-      getPointById(selectedPointId) || getFirstRatedPointInScope(selectedTrend)
+      departurePoint || getFirstRatedPointInScope(selectedTrend)
     if (!activePoint) {
       return
     }
@@ -914,12 +921,47 @@ export function createChart(container, seasons, options = {}) {
     const currentSeasonIndex = seasonAnchors.findIndex(
       (point) => point.season === activePoint.season
     )
-    const nextSeasonIndex = clamp(
+    const nextSeasonIndex = modulo(
       currentSeasonIndex + delta,
-      0,
-      seasonAnchors.length - 1
+      seasonAnchors.length
     )
-    setSelectedPoint(seasonAnchors[nextSeasonIndex])
+    const arrivalPoint = getSeasonPointByEpisodeNumber(
+      seasonAnchors[nextSeasonIndex].season,
+      getEpisodeNumber(activePoint)
+    )
+    if (!arrivalPoint) {
+      return
+    }
+
+    if (!departurePoint) {
+      setSelectedPoint(arrivalPoint)
+      return
+    }
+
+    if (arrivalPoint.id === departurePoint.id) {
+      return
+    }
+
+    // Like Ctrl-D/Ctrl-U, step the viewport by the distance travelled so the
+    // arrival episode (e.g. S03E08 from S02E08) keeps the same on-screen x.
+    panViewport(arrivalPoint.x - departurePoint.x)
+    const isVisible =
+      arrivalPoint.x >= viewport.start && arrivalPoint.x <= viewport.end
+    setSelectedPoint(arrivalPoint, 'keyboard', { follow: !isVisible })
+  }
+
+  function getSeasonPointByEpisodeNumber(seasonNumber, episodeNumber) {
+    const seasonPoints = model.ratedPointsBySeason.get(seasonNumber) ?? []
+    return seasonPoints.reduce((nearest, point) => {
+      if (!nearest) {
+        return point
+      }
+      const distance = Math.abs(getEpisodeNumber(point) - episodeNumber)
+      const nearestDistance = Math.abs(
+        getEpisodeNumber(nearest) - episodeNumber
+      )
+      return distance < nearestDistance ? point : nearest
+    }, null)
   }
 
   function jumpBoundary(edge) {
@@ -968,10 +1010,50 @@ export function createChart(container, seasons, options = {}) {
       return
     }
 
+    const departurePoint = getPointById(selectedPointId)
     const span = viewport.end - viewport.start
-    panViewport((Math.sign(direction) * span) / 2)
+    const step = (Math.sign(direction) * span) / 2
+    // Mirror Vim's Ctrl-D/Ctrl-U: the selection advances half a viewport to
+    // the nearest rated episode, then the viewport follows by the distance the
+    // selection actually travelled, so the arrival holds the departure's
+    // on-screen x. Panning by the half span instead leaves behind whatever the
+    // snap rounded off, walking the selection towards the left edge a little
+    // on every press. Clamping still pins the viewport at either end of the
+    // series while the selection carries on to the first or last episode.
+    const arrivalPoint = departurePoint
+      ? getNearestRatedPointToX(departurePoint.x + step, {
+          // A half span usually falls midway between two episodes; landing on
+          // the one further along keeps a half page down and back on the
+          // departure episode.
+          preferLater: step > 0
+        })
+      : null
 
+    if (!arrivalPoint || arrivalPoint.id === departurePoint.id) {
+      panViewport(step)
+      announceViewport()
+      return
+    }
+
+    panViewport(arrivalPoint.x - departurePoint.x)
+    const isVisible =
+      arrivalPoint.x >= viewport.start && arrivalPoint.x <= viewport.end
+    setSelectedPoint(arrivalPoint, 'keyboard', { follow: !isVisible })
     announceViewport()
+  }
+
+  function getNearestRatedPointToX(x, { preferLater = false } = {}) {
+    return getRatedPoints().reduce((nearest, point) => {
+      if (!nearest) {
+        return point
+      }
+      const distance = Math.abs(point.x - x)
+      const nearestDistance = Math.abs(nearest.x - x)
+      return distance < nearestDistance ||
+        (preferLater && distance === nearestDistance)
+        ? point
+        : nearest
+    }, null)
   }
 
   function zoomViewport(scale, anchorRatio) {
@@ -2001,8 +2083,12 @@ export function createChart(container, seasons, options = {}) {
   }
 }
 
+function getEpisodeNumber(point) {
+  return point.episode ?? point.number
+}
+
 function formatEpisodeCode(point) {
-  const episodeNumber = point.episode ?? point.number
+  const episodeNumber = getEpisodeNumber(point)
   return `S${String(point.season).padStart(2, '0')}E${String(episodeNumber).padStart(2, '0')}`
 }
 
