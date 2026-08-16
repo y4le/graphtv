@@ -48,7 +48,21 @@ export function createSparkline(svgNode, config) {
         brushLayer.classed('is-brushing', false)
       }
 
-      if (suppressBrushEvents || !event.selection || !config.dimensions.width) {
+      if (suppressBrushEvents || !config.dimensions.width) {
+        return
+      }
+
+      // A click outside the window starts, then clears, a new selection.
+      // The viewport did not change, so put the handles back where they were.
+      if (!event.selection) {
+        if (event.type === 'end') {
+          suppressBrushEvents = true
+          brushLayer.call(
+            brush.move,
+            viewportToBrushSelection(config.viewport, config.scales.xScale)
+          )
+          suppressBrushEvents = false
+        }
         return
       }
 

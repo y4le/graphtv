@@ -167,6 +167,31 @@ describe('createSparkline', () => {
     expect(brush.classList.contains('is-brushing')).toBe(false)
   })
 
+  it('restores the window after a click outside it that draws nothing', () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    document.body.appendChild(svg)
+    const scales = createSparklineScales(MODEL, DIMENSIONS)
+    const onViewportChange = vi.fn()
+    sparkline = createSparkline(svg, {
+      ...createConfig(scales, { start: 2, end: 5 }),
+      onViewportChange
+    })
+    const selection = svg.querySelector('.selection')
+    const before = {
+      x: selection.getAttribute('x'),
+      width: selection.getAttribute('width')
+    }
+    expect(Number(before.width)).toBeGreaterThan(0)
+
+    svg.querySelector('.overlay').dispatchEvent(mouseEvent('mousedown', 20))
+    document.defaultView.dispatchEvent(mouseEvent('mouseup', 20))
+
+    expect(onViewportChange).not.toHaveBeenCalled()
+    expect(selection.getAttribute('x')).toBe(before.x)
+    expect(selection.getAttribute('width')).toBe(before.width)
+    expect(selection.style.display).not.toBe('none')
+  })
+
   it('leaves the handles at rest while the window body is dragged', () => {
     const { svg } = renderSparkline({ start: 2, end: 5 })
     const brush = svg.querySelector('.viewport-brush')
