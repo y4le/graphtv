@@ -119,13 +119,13 @@ export function createSparkline(svgNode, config) {
       config.theme.markDensity
     )
     const inactiveLineWidth = scaleLineWidthForDensity(
-      2.2,
+      1.65,
       config.model.ratedPoints.length,
       config.scales.xScale,
       config.theme.markDensity
     )
     const activeLineWidth = scaleLineWidthForDensity(
-      3.3,
+      2.475,
       config.model.ratedPoints.length,
       config.scales.xScale,
       config.theme.markDensity

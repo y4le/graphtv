@@ -113,10 +113,10 @@ describe('createSparkline', () => {
       2
     )
     expect(inactiveLineWidth).toBe(
-      roundMarkSize(2.2 * MARK_DENSITY_CONFIG.lineWidth.maxScale)
+      roundMarkSize(1.65 * MARK_DENSITY_CONFIG.lineWidth.maxScale)
     )
     expect(activeLineWidth).toBe(
-      roundMarkSize(3.3 * MARK_DENSITY_CONFIG.lineWidth.maxScale)
+      roundMarkSize(2.475 * MARK_DENSITY_CONFIG.lineWidth.maxScale)
     )
   })
 
