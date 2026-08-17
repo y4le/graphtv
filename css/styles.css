@@ -1581,7 +1581,8 @@ button {
 }
 
 .point-layer .episode-point,
-.point-layer .episode-point-hit {
+.point-layer .episode-point-hit,
+.point-layer .episode-point-hit-batch {
   cursor: pointer;
 }
 

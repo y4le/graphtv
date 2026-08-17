@@ -139,6 +139,35 @@ describe('createSparkline', () => {
     expect(brush.querySelector('.handle--w').getAttribute('width')).toBe('8')
   })
 
+  it('batches points in large series into a constant number of paths', () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    document.body.appendChild(svg)
+    const model = {
+      xMax: 400,
+      ratedPoints: Array.from({ length: 400 }, (_, index) => ({
+        id: `episode-${index + 1}`,
+        x: index + 1,
+        rating: 6 + (index % 4)
+      }))
+    }
+    const scales = createSparklineScales(model, DIMENSIONS)
+
+    sparkline = createSparkline(svg, {
+      ...createConfig(scales, { start: 20, end: 80 }),
+      model
+    })
+
+    expect(svg.querySelectorAll('.sparkline-point')).toHaveLength(0)
+    expect(svg.querySelectorAll('.sparkline-point-batch')).toHaveLength(2)
+    expect(
+      Array.from(svg.querySelectorAll('.sparkline-point-batch')).reduce(
+        (count, batch) =>
+          count + (batch.getAttribute('d').match(/M/g) ?? []).length,
+        0
+      )
+    ).toBe(model.ratedPoints.length)
+  })
+
   it('marks the brush throughout a handle drag and clears it on release', () => {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
     document.body.appendChild(svg)

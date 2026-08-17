@@ -1,6 +1,10 @@
 // The ramp controls where density scaling starts and reaches its maximum.
 // Each curve exponent controls how quickly it grows within that ramp:
 // 1 is linear, below 1 grows earlier, and above 1 grows later.
+// Views above the normal dense-mode ceiling use compound SVG paths to keep
+// large-series paint and hit-testing costs bounded.
+export const INDIVIDUAL_POINT_MARK_LIMIT = 160
+
 export const MARK_DENSITY_CONFIG = Object.freeze({
   ramp: Object.freeze({
     denseSlotWidth: 8,

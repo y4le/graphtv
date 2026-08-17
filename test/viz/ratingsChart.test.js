@@ -1637,6 +1637,76 @@ describe('createChart', () => {
     expect(detailRoot.textContent).toContain('Episode 1')
   })
 
+  it('batches large full-series views while preserving point selection', () => {
+    updateUiSettings({ episodeDensity: 'all' })
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 1200
+    })
+    document.body.appendChild(container)
+
+    const seasons = createSeasonLengths([400])
+    for (const episode of seasons[0].episodes) {
+      episode.ratings.push({
+        source: 'comparison',
+        rating: episode.ratings[0].rating + 0.5
+      })
+    }
+    chart = createChart(container, seasons)
+
+    expect(container.querySelectorAll('.episode-point')).toHaveLength(0)
+    expect(container.querySelectorAll('.episode-point-batch')).toHaveLength(1)
+    expect(container.querySelectorAll('.episode-point-hit')).toHaveLength(0)
+    expect(container.querySelectorAll('.episode-point-hit-batch')).toHaveLength(
+      1
+    )
+    expect(container.querySelectorAll('.sparkline-point')).toHaveLength(0)
+    expect(container.querySelectorAll('.sparkline-point-batch')).toHaveLength(1)
+    expect(container.querySelectorAll('.source-spread')).toHaveLength(0)
+    expect(container.querySelectorAll('.source-spread-batch')).toHaveLength(1)
+
+    const hitBatch = container.querySelector('.episode-point-hit-batch')
+    const firstPoint = hitBatch.__data__.points[0]
+    const firstMark = container.querySelector('.episode-point-batch')
+    const [, pathStartX, pathY] = firstMark
+      .getAttribute('d')
+      .match(/^M(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/)
+      .map(Number)
+    const pointerPosition = {
+      clientX: pathStartX + firstMark.__data__.radius,
+      clientY: pathY
+    }
+    hitBatch.dispatchEvent(
+      new MouseEvent('mouseenter', {
+        bubbles: true,
+        ...pointerPosition
+      })
+    )
+
+    expect(chart.getDebugState().hoverPointId).toBe(firstPoint.id)
+
+    hitBatch.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        ...pointerPosition
+      })
+    )
+
+    expect(chart.getDebugState().selectedPointId).toBe(firstPoint.id)
+    expect(container.querySelectorAll('.source-spread.is-active')).toHaveLength(
+      1
+    )
+    expect(
+      (
+        container
+          .querySelector('.source-spread-batch')
+          .getAttribute('d')
+          .match(/M/g) ?? []
+      ).length
+    ).toBe(seasons[0].episodes.length - 1)
+  })
+
   it('returns to the full-series trend when a selected trendline is clicked again', () => {
     const container = document.createElement('div')
     Object.defineProperty(container, 'clientWidth', {

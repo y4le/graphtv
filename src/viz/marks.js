@@ -2,11 +2,13 @@ import { format, line, pointer as d3Pointer } from 'd3'
 
 import { isUsableProviderRating, isUsableRating } from '../data/stats.js'
 import {
+  INDIVIDUAL_POINT_MARK_LIMIT,
   scaleLineWidthForDensity,
   scalePointRadiusForDensity,
   scaleSelectedLineWidth,
   scaleSelectedPointRadius
 } from './pointSize.js'
+import { createCirclePath, createLineSegmentsPath } from './svgPath.js'
 
 const formatRating = format('.1f')
 const Y_LABEL_INSET = 8
@@ -617,6 +619,10 @@ export function renderSourceSpreads(
         .map((point) => createSourceSpreadMark(point, scales))
         .filter(Boolean)
     : []
+  const shouldBatchSpreads = spreads.length > INDIVIDUAL_POINT_MARK_LIMIT
+  const individualSpreads = shouldBatchSpreads
+    ? spreads.filter((spread) => spread.id === activePointId)
+    : spreads
 
   const spreadLayer = svg
     .selectAll('.source-spread-layer')
@@ -627,7 +633,7 @@ export function renderSourceSpreads(
 
   spreadLayer
     .selectAll('.source-spread')
-    .data(spreads, (spread) => spread.id)
+    .data(individualSpreads, (spread) => spread.id)
     .join('line')
     .attr('class', (spread) =>
       spread.id === activePointId ? 'source-spread is-active' : 'source-spread'
@@ -645,6 +651,36 @@ export function renderSourceSpreads(
     .attr('stroke-width', (spread) =>
       spread.id === activePointId ? 1.5 : 1.25
     )
+    .attr('stroke-linecap', 'round')
+
+  spreadLayer
+    .selectAll('.source-spread-batch')
+    .data(
+      shouldBatchSpreads
+        ? [
+            {
+              id: 'inactive',
+              spreads: spreads.filter((spread) => spread.id !== activePointId)
+            }
+          ].filter((batch) => batch.spreads.length > 0)
+        : [],
+      (batch) => batch.id
+    )
+    .join('path')
+    .attr('class', 'source-spread-batch')
+    .attr('d', (batch) =>
+      createLineSegmentsPath(
+        batch.spreads,
+        (spread) => spread.x,
+        (spread) => spread.y1,
+        (spread) => spread.x,
+        (spread) => spread.y2
+      )
+    )
+    .attr('fill', 'none')
+    .attr('stroke', theme.textSecondary)
+    .attr('stroke-opacity', SOURCE_SPREAD_OPACITY)
+    .attr('stroke-width', 1.25)
     .attr('stroke-linecap', 'round')
 
   const activeWhiskers = spreads
@@ -772,10 +808,12 @@ export function renderPoints(svg, points, scales, theme, interactions) {
     theme.markDensity
   )
   const hitRadius = getPointHitRadius(pointRadius, scales.xScale)
+  const shouldBatchPoints = plottedPoints.length > INDIVIDUAL_POINT_MARK_LIMIT
+  const individualPoints = shouldBatchPoints ? [] : plottedPoints
 
   const hitPoints = hitLayer
     .selectAll('.episode-point-hit')
-    .data(plottedPoints, (point) => point.id)
+    .data(individualPoints, (point) => point.id)
     .join('circle')
     .attr('class', 'episode-point-hit')
     .attr('cx', (point) => scales.xScale(point.x))
@@ -787,7 +825,7 @@ export function renderPoints(svg, points, scales, theme, interactions) {
 
   const visiblePoints = markLayer
     .selectAll('.episode-point')
-    .data(plottedPoints, (point) => point.id)
+    .data(individualPoints, (point) => point.id)
     .join('circle')
     .attr('class', 'episode-point')
     .attr('cx', (point) => scales.xScale(point.x))
@@ -826,6 +864,173 @@ export function renderPoints(svg, points, scales, theme, interactions) {
 
   bindPointInteractions(hitPoints, interactions)
   bindPointInteractions(visiblePoints, interactions)
+
+  const hitBatch = hitLayer
+    .selectAll('.episode-point-hit-batch')
+    .data(
+      shouldBatchPoints ? [{ points: plottedPoints, radius: hitRadius }] : []
+    )
+    .join('path')
+    .attr('class', 'episode-point-hit-batch')
+    .attr('d', (batch) =>
+      createCirclePath(
+        batch.points,
+        (point) => scales.xScale(point.x),
+        (point) => scales.yScale(point.rating),
+        batch.radius
+      )
+    )
+    .attr('fill', 'transparent')
+    .attr('pointer-events', 'all')
+    .attr('aria-hidden', 'true')
+
+  const markBatches = shouldBatchPoints
+    ? createPointMarkBatches(
+        plottedPoints,
+        pointRadius,
+        pointColor,
+        theme,
+        interactions
+      )
+    : []
+
+  markLayer
+    .selectAll('.episode-point-batch')
+    .data(markBatches, (batch) => batch.key)
+    .join('path')
+    .attr('class', 'episode-point-batch')
+    .attr('d', (batch) =>
+      createCirclePath(
+        batch.points,
+        (point) => scales.xScale(point.x),
+        (point) => scales.yScale(point.rating),
+        batch.radius
+      )
+    )
+    .attr('fill', (batch) => batch.fill)
+    .attr('fill-opacity', (batch) => batch.fillOpacity)
+    .attr('stroke', (batch) => batch.stroke)
+    .attr('stroke-width', (batch) => batch.strokeWidth)
+    .attr('stroke-opacity', 1)
+    .attr('data-rating-source', (batch) => batch.ratingSource)
+    .attr('data-rating-fallback', (batch) => String(batch.isFallbackRating))
+    .attr('pointer-events', 'none')
+
+  bindBatchedPointInteractions(hitBatch, plottedPoints, scales, interactions)
+}
+
+function createPointMarkBatches(
+  points,
+  pointRadius,
+  pointColor,
+  theme,
+  interactions
+) {
+  const batches = new Map()
+
+  for (const point of points) {
+    const isActive = point.id === interactions.activePointId
+    const isSecondaryActive =
+      isActive && isSecondaryRatingActive(point, interactions)
+    const style = {
+      radius: isActive
+        ? scaleSelectedPointRadius(pointRadius, theme.markDensity)
+        : pointRadius,
+      fill: isActive
+        ? isSecondaryActive
+          ? theme.textSecondary
+          : theme.spotColor
+        : pointColor(point),
+      fillOpacity:
+        point.isFallbackRating && !isActive ? FALLBACK_POINT_FILL_OPACITY : 1,
+      stroke: point.isFallbackRating
+        ? isSecondaryActive
+          ? theme.textSecondary
+          : pointColor(point)
+        : 'none',
+      strokeWidth: point.isFallbackRating ? 1.25 : 0,
+      ratingSource: point.ratingSource,
+      isFallbackRating: point.isFallbackRating
+    }
+    const key = JSON.stringify(style)
+    const batch = batches.get(key) ?? { key, ...style, points: [] }
+    batch.points.push(point)
+    batches.set(key, batch)
+  }
+
+  return Array.from(batches.values())
+}
+
+function bindBatchedPointInteractions(hitBatch, points, scales, interactions) {
+  function updateHover(event) {
+    if (!interactions.hoverEnabled) {
+      return
+    }
+
+    const point = resolvePointHit(
+      d3Pointer(event, this),
+      points,
+      scales,
+      this.__data__.radius
+    )
+    const pointId = point?.id ?? null
+    if (pointId === this.__hoveredPointId) {
+      return
+    }
+
+    const hadHoveredPoint = this.__hoveredPointId != null
+    this.__hoveredPointId = pointId
+    if (point) {
+      interactions.onHover(point)
+    } else if (hadHoveredPoint) {
+      interactions.onLeave()
+    }
+  }
+
+  hitBatch
+    .on('mouseenter', updateHover)
+    .on('mousemove', updateHover)
+    .on('mouseleave', function () {
+      if (!interactions.hoverEnabled || this.__hoveredPointId == null) {
+        return
+      }
+      this.__hoveredPointId = null
+      interactions.onLeave()
+    })
+    .on('click', function (event) {
+      const point = resolvePointHit(
+        d3Pointer(event, this),
+        points,
+        scales,
+        this.__data__.radius
+      )
+      if (!point) {
+        return
+      }
+
+      event.stopPropagation()
+      if (interactions.shouldSuppressClick?.()) {
+        return
+      }
+      interactions.onSelect(point)
+    })
+}
+
+function resolvePointHit([x, y], points, scales, hitRadius) {
+  let nearestPoint = null
+  let nearestDistance = Number.POSITIVE_INFINITY
+
+  for (const point of points) {
+    const deltaX = x - scales.xScale(point.x)
+    const deltaY = y - scales.yScale(point.rating)
+    const distance = deltaX * deltaX + deltaY * deltaY
+    if (distance <= hitRadius * hitRadius && distance < nearestDistance) {
+      nearestPoint = point
+      nearestDistance = distance
+    }
+  }
+
+  return nearestPoint
 }
 
 export function renderProviderRatingPreview(

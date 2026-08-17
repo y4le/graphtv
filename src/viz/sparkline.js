@@ -2,9 +2,11 @@ import { brushX, line, select } from 'd3'
 
 import { createSparklineScales, viewportToBrushSelection } from './scales.js'
 import {
+  INDIVIDUAL_POINT_MARK_LIMIT,
   scaleLineWidthForDensity,
   scalePointRadiusForDensity
 } from './pointSize.js'
+import { createCirclePath } from './svgPath.js'
 
 const DOUBLE_TAP_DELAY = 320
 const TAP_MOVE_TOLERANCE = 10
@@ -163,9 +165,13 @@ export function createSparkline(svgNode, config) {
       .attr('clip-path', `url(#${clipId})`)
       .attr('d', (path) => path)
 
+    const shouldBatchPoints =
+      config.model.ratedPoints.length > INDIVIDUAL_POINT_MARK_LIMIT
+    const individualPoints = shouldBatchPoints ? [] : config.model.ratedPoints
+
     marks
       .selectAll('.sparkline-point')
-      .data(config.model.ratedPoints, (point) => point.id)
+      .data(individualPoints, (point) => point.id)
       .join('circle')
       .attr('class', 'sparkline-point')
       .attr('cx', (point) => config.scales.xScale(point.x))
@@ -176,6 +182,41 @@ export function createSparkline(svgNode, config) {
       .attr('fill', config.theme.text)
       .attr('opacity', (point) =>
         isInWindow(point) ? 1 : INACTIVE_INK_OPACITY
+      )
+
+    const pointBatches = shouldBatchPoints
+      ? [
+          {
+            id: 'inactive',
+            points: config.model.ratedPoints.filter(
+              (point) => !isInWindow(point)
+            ),
+            radius: inactivePointRadius,
+            opacity: INACTIVE_INK_OPACITY
+          },
+          {
+            id: 'active',
+            points: config.model.ratedPoints.filter(isInWindow),
+            radius: activePointRadius,
+            opacity: 1
+          }
+        ].filter((batch) => batch.points.length > 0)
+      : []
+
+    marks
+      .selectAll('.sparkline-point-batch')
+      .data(pointBatches, (batch) => batch.id)
+      .join('path')
+      .attr('class', (batch) => `sparkline-point-batch is-${batch.id}`)
+      .attr('fill', config.theme.text)
+      .attr('opacity', (batch) => batch.opacity)
+      .attr('d', (batch) =>
+        createCirclePath(
+          batch.points,
+          (point) => config.scales.xScale(point.x),
+          (point) => config.scales.yScale(point.rating),
+          batch.radius
+        )
       )
 
     brushLayer.style('display', null)
