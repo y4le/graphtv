@@ -306,10 +306,29 @@ function updateResultsContent(container, bundle, primaryRatingSource = null) {
 }
 
 function updateHeading(container, show) {
-  container.querySelector('.results-heading').innerHTML = `
-    <h1 tabindex="-1" class="results-title">${escapeHtml(show.title)}</h1>
-    ${show.year ? `<p class="results-year">${escapeHtml(show.year)}</p>` : ''}
-  `
+  const heading = container.querySelector('.results-heading')
+  let title = heading.querySelector('.results-title')
+
+  if (!title) {
+    title = document.createElement('h1')
+    title.className = 'results-title'
+    title.tabIndex = -1
+    heading.append(title)
+  }
+  title.textContent = show.title
+
+  let year = heading.querySelector('.results-year')
+  if (!show.year) {
+    year?.remove()
+    return
+  }
+
+  if (!year) {
+    year = document.createElement('p')
+    year.className = 'results-year'
+    heading.append(year)
+  }
+  year.textContent = show.year
 }
 
 function updateShowContext(

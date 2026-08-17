@@ -169,17 +169,17 @@ describe('renderResultsPage', () => {
     })
 
     document.body.append(container)
+    const initialTitle = container.querySelector('.results-title')
     page.focusInitial()
-    expect(document.activeElement).toBe(
-      container.querySelector('.results-title')
-    )
-    container.remove()
+    expect(document.activeElement).toBe(initialTitle)
     expect(container.querySelector('.results-progress').textContent).toBe(
       'Loading additional ratings…'
     )
 
     resolveSupplemental()
     await page.whenSettled
+    expect(container.querySelector('.results-title')).toBe(initialTitle)
+    expect(document.activeElement).toBe(initialTitle)
     expect(chart.updateSeasons).toHaveBeenCalledWith(
       supplementalBundle.seasons,
       { show: supplementalBundle.show }
@@ -239,6 +239,7 @@ describe('renderResultsPage', () => {
     })
 
     page.destroy()
+    container.remove()
     expect(chart.destroy).toHaveBeenCalledTimes(1)
   })
 
