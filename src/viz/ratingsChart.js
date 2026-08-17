@@ -450,7 +450,7 @@ export function createChart(container, seasons, options = {}) {
     }
   }
 
-  function previewTrend(trendline) {
+  function previewTrend(trendline, { immediate = false } = {}) {
     if (!finePointerQuery.matches || gesture || flingFrame) {
       clearTrendHover({ rerender: true })
       return
@@ -461,11 +461,22 @@ export function createChart(container, seasons, options = {}) {
       clearTrendHover({ rerender: true })
       return
     }
-    if (nextId === hoverTrendId || nextId === pendingTrendHoverId) {
+    if (nextId === hoverTrendId) {
+      return
+    }
+    if (!immediate && nextId === pendingTrendHoverId) {
       return
     }
 
     cancelTrendHover()
+    if (immediate) {
+      hoverPointId = null
+      hoverTrendId = nextId
+      cancelScheduledDetailLoad()
+      render()
+      return
+    }
+
     pendingTrendHoverId = nextId
     trendHoverTimer = setTimeout(() => {
       trendHoverTimer = null
@@ -1405,12 +1416,24 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function getSeasonAxisInteractions() {
+    const activeTrend = getTrendSummary(getActiveTrendId())
     const selectedTrend = getTrendSummary(selectedTrendId)
     return {
       activeSeasonNumber:
+        activeTrend?.kind === 'season' ? activeTrend.seasonNumber : null,
+      selectedSeasonNumber:
         selectedTrend?.kind === 'season' ? selectedTrend.seasonNumber : null,
+      hoverEnabled: finePointerQuery.matches,
       isSelectable(seasonNumber) {
         return Boolean(getTrendSummary(`season:${seasonNumber}`))
+      },
+      onHover(seasonNumber) {
+        previewTrend(
+          seasonNumber == null
+            ? null
+            : getTrendSummary(`season:${seasonNumber}`),
+          { immediate: true }
+        )
       },
       onSelect: selectSeasonTrend,
       shouldSuppressClick

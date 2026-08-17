@@ -202,7 +202,7 @@ export function renderSeasonAxis(
     )
     .attr('aria-pressed', (span) =>
       isSelectableSeasonAxisLabel(span, interactions)
-        ? String(span.seasonNumber === interactions.activeSeasonNumber)
+        ? String(span.seasonNumber === interactions.selectedSeasonNumber)
         : null
     )
     .attr('data-keyboard-chart', (span) =>
@@ -211,6 +211,24 @@ export function renderSeasonAxis(
     .attr('pointer-events', (span) =>
       isSelectableSeasonAxisLabel(span, interactions) ? null : 'none'
     )
+    .on('pointerenter', (event, span) => {
+      if (
+        !interactions.hoverEnabled ||
+        !isSelectableSeasonAxisLabel(span, interactions)
+      ) {
+        return
+      }
+      interactions.onHover?.(span.seasonNumber)
+    })
+    .on('pointerleave', (event, span) => {
+      if (
+        !interactions.hoverEnabled ||
+        !isSelectableSeasonAxisLabel(span, interactions)
+      ) {
+        return
+      }
+      interactions.onHover?.(null)
+    })
     .on('click', (event, span) => {
       if (!isSelectableSeasonAxisLabel(span, interactions)) {
         return
@@ -249,7 +267,7 @@ function isSelectableSeasonAxisLabel(span, interactions) {
 }
 
 function getSeasonAxisLabelAriaLabel(span, interactions) {
-  return span.seasonNumber === interactions.activeSeasonNumber
+  return span.seasonNumber === interactions.selectedSeasonNumber
     ? `Season ${span.seasonNumber} trendline selected`
     : `Select Season ${span.seasonNumber} trendline`
 }

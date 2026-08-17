@@ -1693,6 +1693,55 @@ describe('createChart', () => {
     expect(chart.getDebugState().hoverTrendId).toBeNull()
   })
 
+  it('highlights the matching axis label and trendline from either hover target', async () => {
+    vi.useFakeTimers()
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createTwoSeasons())
+    const surface = container.querySelector('.chart-hit-surface')
+    const getSeasonLabel = (seasonNumber) =>
+      Array.from(container.querySelectorAll('.season-axis-label')).find(
+        (label) => label.__data__.seasonNumber === seasonNumber
+      )
+    const getSeasonTrend = (seasonNumber) =>
+      Array.from(container.querySelectorAll('.micro-trendline')).find(
+        (trendline) => trendline.__data__.id === `season:${seasonNumber}`
+      )
+    const seasonTwoPoint = getPathMidpoint(getSeasonTrend(2).getAttribute('d'))
+
+    surface.dispatchEvent(
+      new MouseEvent('pointermove', {
+        bubbles: true,
+        clientX: seasonTwoPoint.x,
+        clientY: seasonTwoPoint.y
+      })
+    )
+    await vi.advanceTimersByTimeAsync(100)
+
+    expect(getSeasonTrend(2).classList.contains('is-active')).toBe(true)
+    expect(getSeasonLabel(2).classList.contains('is-active')).toBe(true)
+    expect(getSeasonLabel(1).getAttribute('aria-pressed')).toBe('true')
+    expect(getSeasonLabel(2).getAttribute('aria-pressed')).toBe('false')
+
+    surface.dispatchEvent(new MouseEvent('pointerleave'))
+    getSeasonLabel(2).dispatchEvent(new MouseEvent('pointerenter'))
+
+    expect(chart.getDebugState().hoverTrendId).toBe('season:2')
+    expect(getSeasonTrend(2).classList.contains('is-active')).toBe(true)
+    expect(getSeasonLabel(2).classList.contains('is-active')).toBe(true)
+
+    getSeasonLabel(2).dispatchEvent(new MouseEvent('pointerleave'))
+
+    expect(chart.getDebugState().hoverTrendId).toBeNull()
+    expect(getSeasonTrend(1).classList.contains('is-active')).toBe(true)
+    expect(getSeasonLabel(1).classList.contains('is-active')).toBe(true)
+  })
+
   it('uses a wider tap tolerance without hover on coarse pointers', async () => {
     vi.useFakeTimers()
     vi.stubGlobal(
