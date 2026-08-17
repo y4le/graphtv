@@ -213,6 +213,15 @@ export function renderSeasonAxis(
     .attr('pointer-events', (span) =>
       isSelectableSeasonAxisLabel(span, interactions) ? null : 'none'
     )
+    .on('pointerenter', (event, span) => {
+      if (
+        !interactions.hoverEnabled ||
+        !isSelectableSeasonAxisLabel(span, interactions)
+      ) {
+        return
+      }
+      interactions.onEnter?.(span.seasonNumber)
+    })
     .on('pointermove', (event, span) => {
       if (
         !interactions.hoverEnabled ||

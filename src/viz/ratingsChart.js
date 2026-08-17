@@ -38,6 +38,7 @@ const FINE_POINTER_QUERY = '(hover: hover) and (pointer: fine)'
 const COARSE_POINTER_QUERY = '(pointer: coarse)'
 const DETAIL_LOAD_DELAY_MS = 250
 const TREND_HOVER_DELAY_MS = 100
+const SCROLL_HOVER_SUPPRESSION_MS = 100
 const MAX_DETAIL_ERRORS = 25
 const TOUCH_DRAG_START_TOLERANCE_PX = 9
 const MIN_VIEWPORT_SPAN = 4
@@ -119,6 +120,8 @@ export function createChart(container, seasons, options = {}) {
   let viewportAnnouncementTimer = null
   let selectionAnnouncementTimer = null
   let trendHoverTimer = null
+  let scrollHoverSuppressionTimer = null
+  let suppressStationaryHover = false
   let pendingTrendHoverId = null
   let detailLoadTimer = null
   let scheduledDetailPointId = null
@@ -1420,17 +1423,24 @@ export function createChart(container, seasons, options = {}) {
       isSelectable(seasonNumber) {
         return Boolean(getTrendSummary(`season:${seasonNumber}`))
       },
+      onEnter(seasonNumber) {
+        if (!suppressStationaryHover) {
+          previewSeasonTrend(seasonNumber)
+        }
+      },
       onHover(seasonNumber) {
-        previewTrend(
-          seasonNumber == null
-            ? null
-            : getTrendSummary(`season:${seasonNumber}`),
-          { immediate: true }
-        )
+        previewSeasonTrend(seasonNumber)
       },
       onSelect: selectSeasonTrend,
       shouldSuppressClick
     }
+  }
+
+  function previewSeasonTrend(seasonNumber) {
+    previewTrend(
+      seasonNumber == null ? null : getTrendSummary(`season:${seasonNumber}`),
+      { immediate: true }
+    )
   }
 
   function renderChart(
@@ -2010,6 +2020,19 @@ export function createChart(container, seasons, options = {}) {
 
   document.addEventListener('mousemove', handleDocumentMouseMove)
 
+  function handleDocumentScroll() {
+    suppressStationaryHover = true
+    if (scrollHoverSuppressionTimer) {
+      clearTimeout(scrollHoverSuppressionTimer)
+    }
+    scrollHoverSuppressionTimer = setTimeout(() => {
+      scrollHoverSuppressionTimer = null
+      suppressStationaryHover = false
+    }, SCROLL_HOVER_SUPPRESSION_MS)
+  }
+
+  window.addEventListener('scroll', handleDocumentScroll, { passive: true })
+
   const resizeObserver = new ResizeObserver(() => {
     render()
   })
@@ -2116,11 +2139,15 @@ export function createChart(container, seasons, options = {}) {
       if (selectionAnnouncementTimer) {
         clearTimeout(selectionAnnouncementTimer)
       }
+      if (scrollHoverSuppressionTimer) {
+        clearTimeout(scrollHoverSuppressionTimer)
+      }
       loadingDetailPointIds.clear()
       failedDetailPointIds.clear()
       resizeObserver.disconnect()
       document.removeEventListener('graphtv:settings-change', settingsListener)
       document.removeEventListener('mousemove', handleDocumentMouseMove)
+      window.removeEventListener('scroll', handleDocumentScroll)
       bodyShell.removeEventListener('wheel', handleBodyWheel)
       sparklineSvg.removeEventListener('wheel', handleSparklineWheel)
       sparkline?.destroy()

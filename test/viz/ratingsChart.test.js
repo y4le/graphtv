@@ -1806,6 +1806,14 @@ describe('createChart', () => {
     movePointerAway()
     getSeasonLabel(2).dispatchEvent(new MouseEvent('pointerenter'))
 
+    expect(chart.getDebugState().hoverTrendId).toBe('season:2')
+    expect(getSeasonTrend(2).classList.contains('is-active')).toBe(true)
+    expect(getSeasonLabel(2).classList.contains('is-active')).toBe(true)
+
+    movePointerAway()
+    window.dispatchEvent(new Event('scroll'))
+    getSeasonLabel(2).dispatchEvent(new MouseEvent('pointerenter'))
+
     expect(chart.getDebugState().hoverTrendId).toBeNull()
 
     getSeasonLabel(2).dispatchEvent(new MouseEvent('pointermove'))
