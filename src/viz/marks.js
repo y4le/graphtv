@@ -213,7 +213,7 @@ export function renderSeasonAxis(
     .attr('pointer-events', (span) =>
       isSelectableSeasonAxisLabel(span, interactions) ? null : 'none'
     )
-    .on('pointerenter', (event, span) => {
+    .on('pointermove', (event, span) => {
       if (
         !interactions.hoverEnabled ||
         !isSelectableSeasonAxisLabel(span, interactions)
@@ -221,15 +221,6 @@ export function renderSeasonAxis(
         return
       }
       interactions.onHover?.(span.seasonNumber)
-    })
-    .on('pointerleave', (event, span) => {
-      if (
-        !interactions.hoverEnabled ||
-        !isSelectableSeasonAxisLabel(span, interactions)
-      ) {
-        return
-      }
-      interactions.onHover?.(null)
     })
     .on('click', (event, span) => {
       if (!isSelectableSeasonAxisLabel(span, interactions)) {
@@ -414,10 +405,6 @@ export function renderTrendlines(
       )
       hitSurface.style('cursor', trendline ? 'pointer' : 'default')
       interactions.onHover?.(trendline)
-    })
-    .on('pointerleave', () => {
-      hitSurface.style('cursor', 'default')
-      interactions.onHover?.(null)
     })
     .on('click', function (event) {
       event.stopPropagation()
@@ -987,33 +974,23 @@ function bindBatchedPointInteractions(hitBatch, points, scales, interactions) {
     }
   }
 
-  hitBatch
-    .on('mouseenter', updateHover)
-    .on('mousemove', updateHover)
-    .on('mouseleave', function () {
-      if (!interactions.hoverEnabled || this.__hoveredPointId == null) {
-        return
-      }
-      this.__hoveredPointId = null
-      interactions.onLeave()
-    })
-    .on('click', function (event) {
-      const point = resolvePointHit(
-        d3Pointer(event, this),
-        points,
-        scales,
-        this.__data__.radius
-      )
-      if (!point) {
-        return
-      }
+  hitBatch.on('mousemove', updateHover).on('click', function (event) {
+    const point = resolvePointHit(
+      d3Pointer(event, this),
+      points,
+      scales,
+      this.__data__.radius
+    )
+    if (!point) {
+      return
+    }
 
-      event.stopPropagation()
-      if (interactions.shouldSuppressClick?.()) {
-        return
-      }
-      interactions.onSelect(point)
-    })
+    event.stopPropagation()
+    if (interactions.shouldSuppressClick?.()) {
+      return
+    }
+    interactions.onSelect(point)
+  })
 }
 
 function resolvePointHit([x, y], points, scales, hitRadius) {
@@ -1096,10 +1073,9 @@ function isSecondaryRatingActive(point, interactions) {
 function bindPointInteractions(points, interactions) {
   points
     .on(
-      'mouseenter',
+      'mousemove',
       (_, point) => interactions.hoverEnabled && interactions.onHover(point)
     )
-    .on('mouseleave', () => interactions.hoverEnabled && interactions.onLeave())
     .on('click', (event, point) => {
       event.stopPropagation()
       if (interactions.shouldSuppressClick?.()) {

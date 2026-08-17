@@ -218,6 +218,10 @@ export function createSidenote({
   const trendInfoId = `trend-info-tooltip-${++trendInfoSequence}`
   let navigatorKey = null
   let contentMarkup = null
+  let pointerRatingButton = null
+  let pointerTrendInfoControl = null
+  let pointerClientX = null
+  let pointerClientY = null
 
   function setMarkup(markup) {
     if (markup === contentMarkup) {
@@ -470,36 +474,51 @@ export function createSidenote({
     }
   })
 
-  listen('mouseover', (event) => {
-    const ratingButton = event.target.closest?.('[data-provider-rating]')
-    if (ratingButton && !ratingButton.contains(event.relatedTarget)) {
-      onPreviewRating?.(getProviderRatingTarget(ratingButton))
-    }
+  listen('mousemove', (event) => {
+    pointerClientX = event.clientX
+    pointerClientY = event.clientY
+    updatePointerRatingButton(
+      event.target.closest?.('[data-provider-rating]') ?? null
+    )
+    updatePointerTrendInfoControl(
+      event.target.closest?.('.trend-info-control') ?? null
+    )
+  })
 
-    const control = event.target.closest?.('.trend-info-control')
-    if (!control || control.contains(event.relatedTarget)) {
+  listen('mouseleave', (event) => {
+    if (event.clientX === pointerClientX && event.clientY === pointerClientY) {
       return
     }
 
-    control.dataset.hovered = 'true'
-    control.dataset.dismissed = 'false'
-    syncTrendInfo(control)
+    updatePointerRatingButton(null)
+    updatePointerTrendInfoControl(null)
   })
 
-  listen('mouseout', (event) => {
-    const ratingButton = event.target.closest?.('[data-provider-rating]')
-    if (ratingButton && !ratingButton.contains(event.relatedTarget)) {
-      onPreviewRating?.(null)
-    }
-
-    const control = event.target.closest?.('.trend-info-control')
-    if (!control || control.contains(event.relatedTarget)) {
+  function updatePointerRatingButton(nextButton) {
+    if (nextButton === pointerRatingButton) {
       return
     }
 
-    control.dataset.hovered = 'false'
-    syncTrendInfo(control)
-  })
+    pointerRatingButton = nextButton
+    onPreviewRating?.(nextButton ? getProviderRatingTarget(nextButton) : null)
+  }
+
+  function updatePointerTrendInfoControl(nextControl) {
+    if (nextControl === pointerTrendInfoControl) {
+      return
+    }
+
+    if (pointerTrendInfoControl) {
+      pointerTrendInfoControl.dataset.hovered = 'false'
+      syncTrendInfo(pointerTrendInfoControl)
+    }
+    pointerTrendInfoControl = nextControl
+    if (pointerTrendInfoControl) {
+      pointerTrendInfoControl.dataset.hovered = 'true'
+      pointerTrendInfoControl.dataset.dismissed = 'false'
+      syncTrendInfo(pointerTrendInfoControl)
+    }
+  }
 
   listen('focusin', (event) => {
     const ratingButton = event.target.closest?.('[data-provider-rating]')

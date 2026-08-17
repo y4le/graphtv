@@ -232,12 +232,29 @@ describe('createSidenote', () => {
     expect(secondary.getAttribute('aria-pressed')).toBe('false')
 
     secondary.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+    expect(onPreviewRating).not.toHaveBeenCalled()
+
+    secondary.dispatchEvent(
+      new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: 10,
+        clientY: 10
+      })
+    )
     expect(onPreviewRating).toHaveBeenLastCalledWith({
       pointId: 'episode-1',
       source: 'tmdb'
     })
 
-    secondary.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }))
+    const previewCallCount = onPreviewRating.mock.calls.length
+    root.dispatchEvent(
+      new MouseEvent('mouseleave', { clientX: 10, clientY: 10 })
+    )
+    expect(onPreviewRating).toHaveBeenCalledTimes(previewCallCount)
+
+    root.dispatchEvent(
+      new MouseEvent('mouseleave', { clientX: 20, clientY: 20 })
+    )
     expect(onPreviewRating).toHaveBeenLastCalledWith(null)
 
     secondary.click()
@@ -441,6 +458,8 @@ describe('createSidenote', () => {
     expect(tooltip.id).toMatch(/^trend-info-tooltip-\d+$/)
     expect(tooltip.hidden).toBe(true)
     infoButton.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+    expect(tooltip.hidden).toBe(true)
+    infoButton.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }))
     expect(infoButton.getAttribute('aria-expanded')).toBe('true')
     expect(tooltip.hidden).toBe(false)
 
@@ -456,11 +475,11 @@ describe('createSidenote', () => {
     expect(tooltip.hidden).toBe(false)
     document.removeEventListener('keydown', onDocumentKeydown)
 
-    infoButton.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }))
+    root.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }))
     expect(infoButton.getAttribute('aria-expanded')).toBe('false')
     expect(tooltip.hidden).toBe(true)
 
-    infoButton.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+    infoButton.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }))
     infoButton.focus()
     infoButton.click()
     expect(infoButton.getAttribute('aria-expanded')).toBe('true')
@@ -477,7 +496,7 @@ describe('createSidenote', () => {
     document.removeEventListener('keydown', onDismissedKeydown)
     root.querySelector('[data-trend-point-id="high"]').focus()
     expect(tooltip.hidden).toBe(true)
-    infoButton.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }))
+    root.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }))
     infoButton.focus()
     infoButton.click()
     expect(root.querySelectorAll('[data-passed="true"]')).toHaveLength(3)

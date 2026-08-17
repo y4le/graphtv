@@ -391,6 +391,9 @@ describe('createChart', () => {
       container.querySelectorAll('.episode-point')
     ).find((point) => point.__data__.id === 'episode-3')
     thirdPoint.dispatchEvent(new MouseEvent('mouseenter'))
+    expect(detailRoot.textContent).not.toContain('Episode 3')
+
+    thirdPoint.dispatchEvent(new MouseEvent('mousemove'))
     expect(detailRoot.textContent).toContain('Episode 3')
     expect(detailRoot.querySelector('.sidenote-nav-label').textContent).toBe(
       'S01E03'
@@ -399,7 +402,7 @@ describe('createChart', () => {
       '2 of 3 rated episodes'
     )
     expect(chart.getDebugState().selectedPointId).toBe('episode-1')
-    thirdPoint.dispatchEvent(new MouseEvent('mouseleave'))
+    movePointerAway()
     expect(detailRoot.querySelector('.sidenote-nav-label').textContent).toBe(
       'S01E01'
     )
@@ -1007,7 +1010,7 @@ describe('createChart', () => {
     const hoveredPoint = Array.from(
       container.querySelectorAll('.episode-point')
     ).find((point) => point.__data__.id === 'episode-2')
-    hoveredPoint.dispatchEvent(new MouseEvent('mouseenter'))
+    hoveredPoint.dispatchEvent(new MouseEvent('mousemove'))
     expect(chart.getDebugState().hasUserInteracted).toBe(false)
 
     const updatedSeasons = createSeasons()
@@ -1019,7 +1022,7 @@ describe('createChart', () => {
       selectedTrendId: 'season:1',
       hasUserInteracted: false
     })
-    hoveredPoint.dispatchEvent(new MouseEvent('mouseleave'))
+    movePointerAway()
     expect(container.textContent).toContain('Mean')
     expect(container.querySelector('.chart-selection-status').textContent).toBe(
       ''
@@ -1289,6 +1292,8 @@ describe('createChart', () => {
     const accentColor = mainPoint.getAttribute('fill')
 
     providerRating.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+    expect(container.querySelector('.provider-rating-preview')).toBeNull()
+    providerRating.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }))
 
     let preview = container.querySelector('.provider-rating-preview')
     expect(preview.getAttribute('data-rating-source')).toBe('tmdb')
@@ -1303,7 +1308,7 @@ describe('createChart', () => {
       rating: 1
     })
 
-    providerRating.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }))
+    moveSidenotePointerAway(providerRating)
     expect(container.querySelector('.provider-rating-preview')).toBeNull()
     expect(mainPoint.getAttribute('fill')).toBe(accentColor)
 
@@ -1317,10 +1322,10 @@ describe('createChart', () => {
       source: 'tmdb'
     })
 
-    mainRating.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+    mainRating.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }))
     expect(container.querySelector('.provider-rating-preview')).toBeNull()
     expect(mainPoint.getAttribute('fill')).toBe(accentColor)
-    mainRating.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }))
+    moveSidenotePointerAway(mainRating)
     expect(container.querySelector('.provider-rating-preview')).not.toBeNull()
 
     mainRating.click()
@@ -1678,7 +1683,7 @@ describe('createChart', () => {
       clientY: pathY
     }
     hitBatch.dispatchEvent(
-      new MouseEvent('mouseenter', {
+      new MouseEvent('mousemove', {
         bubbles: true,
         ...pointerPosition
       })
@@ -1759,7 +1764,7 @@ describe('createChart', () => {
     expect(chart.getDebugState().hoverTrendId).toBe('season:1')
     expect(container.textContent).toContain('Mean')
 
-    surface.dispatchEvent(new MouseEvent('pointerleave'))
+    movePointerAway()
     expect(chart.getDebugState().hoverTrendId).toBeNull()
   })
 
@@ -1798,14 +1803,18 @@ describe('createChart', () => {
     expect(getSeasonLabel(1).getAttribute('aria-pressed')).toBe('true')
     expect(getSeasonLabel(2).getAttribute('aria-pressed')).toBe('false')
 
-    surface.dispatchEvent(new MouseEvent('pointerleave'))
+    movePointerAway()
     getSeasonLabel(2).dispatchEvent(new MouseEvent('pointerenter'))
+
+    expect(chart.getDebugState().hoverTrendId).toBeNull()
+
+    getSeasonLabel(2).dispatchEvent(new MouseEvent('pointermove'))
 
     expect(chart.getDebugState().hoverTrendId).toBe('season:2')
     expect(getSeasonTrend(2).classList.contains('is-active')).toBe(true)
     expect(getSeasonLabel(2).classList.contains('is-active')).toBe(true)
 
-    getSeasonLabel(2).dispatchEvent(new MouseEvent('pointerleave'))
+    movePointerAway()
 
     expect(chart.getDebugState().hoverTrendId).toBeNull()
     expect(getSeasonTrend(1).classList.contains('is-active')).toBe(true)
@@ -2822,19 +2831,19 @@ describe('createChart', () => {
     })
     chart = createChart(container, seasons, { loadEpisodeDetails })
     const firstPoint = container.querySelector('.episode-point')
-    firstPoint.dispatchEvent(new MouseEvent('mouseenter'))
+    firstPoint.dispatchEvent(new MouseEvent('mousemove'))
     expect(container.querySelector('.sidenote-votes-loading')).not.toBeNull()
     await vi.advanceTimersByTimeAsync(249)
     expect(loadEpisodeDetails).not.toHaveBeenCalled()
 
-    firstPoint.dispatchEvent(new MouseEvent('mouseleave'))
+    movePointerAway()
     expect(container.querySelector('.sidenote-votes-loading')).toBeNull()
     await vi.advanceTimersByTimeAsync(1)
     expect(loadEpisodeDetails).not.toHaveBeenCalled()
 
     container
       .querySelectorAll('.episode-point')[1]
-      .dispatchEvent(new MouseEvent('mouseenter'))
+      .dispatchEvent(new MouseEvent('mousemove'))
     await vi.advanceTimersByTimeAsync(250)
 
     expect(loadEpisodeDetails).toHaveBeenCalledTimes(1)
@@ -2922,6 +2931,25 @@ function dispatchSurfaceClick(surface, { x, y }) {
       clientY: y
     })
   )
+}
+
+function movePointerAway() {
+  document.body.dispatchEvent(
+    new MouseEvent('mousemove', { bubbles: true, clientX: -1, clientY: -1 })
+  )
+}
+
+function moveSidenotePointerAway(ratingButton) {
+  ratingButton
+    .closest('.chart-shell')
+    .querySelector('[data-sidenote-nav]')
+    .dispatchEvent(
+      new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: -1,
+        clientY: -1
+      })
+    )
 }
 
 function createSeasons() {

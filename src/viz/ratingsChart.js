@@ -584,12 +584,6 @@ export function createChart(container, seasons, options = {}) {
     scheduledDetailPointId = null
   }
 
-  function leaveHoveredPoint() {
-    hoverPointId = null
-    cancelScheduledDetailLoad()
-    render()
-  }
-
   function updateDetail(point, { load = false } = {}) {
     if (!point) {
       cancelScheduledDetailLoad()
@@ -1406,7 +1400,6 @@ export function createChart(container, seasons, options = {}) {
         updateDetail(point, { load: true })
         render()
       },
-      onLeave: leaveHoveredPoint,
       onSelect(point) {
         hoverPointId = null
         setSelectedPoint(point, 'pointer')
@@ -1977,6 +1970,46 @@ export function createChart(container, seasons, options = {}) {
     selectSeriesTrend()
   })
 
+  function handleDocumentMouseMove(event) {
+    if (!finePointerQuery.matches) {
+      return
+    }
+
+    const target = event.target
+    const isInteractiveChartTarget =
+      bodyShell.contains(target) &&
+      target.closest?.(
+        '.episode-point, .episode-point-hit, .episode-point-hit-batch, .season-axis-label, .chart-hit-surface'
+      )
+    if (isInteractiveChartTarget) {
+      return
+    }
+
+    let shouldRender = false
+    if (hoverPointId) {
+      hoverPointId = null
+      cancelScheduledDetailLoad()
+      const hitBatch = bodyShell.querySelector('.episode-point-hit-batch')
+      if (hitBatch) {
+        hitBatch.__hoveredPointId = null
+      }
+      shouldRender = true
+    }
+    bodyShell
+      .querySelector('.chart-hit-surface')
+      ?.style.removeProperty('cursor')
+    cancelTrendHover()
+    if (hoverTrendId) {
+      hoverTrendId = null
+      shouldRender = true
+    }
+    if (shouldRender) {
+      render()
+    }
+  }
+
+  document.addEventListener('mousemove', handleDocumentMouseMove)
+
   const resizeObserver = new ResizeObserver(() => {
     render()
   })
@@ -2087,6 +2120,7 @@ export function createChart(container, seasons, options = {}) {
       failedDetailPointIds.clear()
       resizeObserver.disconnect()
       document.removeEventListener('graphtv:settings-change', settingsListener)
+      document.removeEventListener('mousemove', handleDocumentMouseMove)
       bodyShell.removeEventListener('wheel', handleBodyWheel)
       sparklineSvg.removeEventListener('wheel', handleSparklineWheel)
       sparkline?.destroy()
