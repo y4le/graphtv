@@ -67,7 +67,10 @@ test('searches, navigates the chart, and isolates modal interaction', async ({
 
   await page.keyboard.press('Enter')
   await expect(page).toHaveURL(/show=tvmaze%3A179/)
-  await expect(page.getByRole('heading', { name: 'The Wire' })).toBeVisible()
+  const resultsTitle = page.getByRole('heading', { name: 'The Wire' })
+  await expect(resultsTitle).toBeVisible()
+  await expect(resultsTitle).toBeFocused()
+  await expect(resultsTitle).toHaveCSS('outline-style', 'none')
   await expect(page.locator('.sparkline-point')).toHaveCount(72)
   await expect(page.locator('.episode-point').first()).toBeVisible()
   // A second provider badge means the supposedly hermetic build loaded a local key.

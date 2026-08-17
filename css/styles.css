@@ -695,6 +695,10 @@ button {
   line-height: 0.94;
 }
 
+.results-title:focus {
+  outline: none;
+}
+
 .results-year {
   margin: 0;
   color: var(--textSecondary);
