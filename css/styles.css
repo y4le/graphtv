@@ -909,6 +909,34 @@ button {
   text-align: center;
 }
 
+.chart-source-dismiss {
+  margin-inline-start: 0.35rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--textMuted);
+  font: inherit;
+  font-size: 0.88em;
+  text-decoration: underline;
+  text-decoration-color: var(--lineStrong);
+  text-underline-offset: 0.16em;
+  cursor: pointer;
+  transition:
+    color var(--transition-fast),
+    text-decoration-color var(--transition-fast);
+}
+
+.chart-source-dismiss:hover,
+.chart-source-dismiss:focus-visible {
+  color: var(--textSecondary);
+  text-decoration-color: currentColor;
+}
+
+.chart-source-dismiss:focus-visible {
+  outline: 2px solid var(--spotColor);
+  outline-offset: 2px;
+}
+
 @media (max-width: 767px) {
   .chart-source-status {
     display: none;

@@ -49,6 +49,7 @@ const SELECTION_ANNOUNCEMENT_DELAY_MS = 120
 const SUPPRESS_CLICK_DURATION_MS = 350
 const WHEEL_DELTA_LINE = 1
 const WHEEL_DELTA_PAGE = 2
+const CHART_HELP_DISMISSED_KEY = 'graphtv-chart-help-dismissed'
 
 export function createChart(container, seasons, options = {}) {
   container.innerHTML = ''
@@ -58,7 +59,10 @@ export function createChart(container, seasons, options = {}) {
   const shell = document.createElement('div')
   shell.className = 'chart-shell'
   shell.innerHTML = `
-    <p class="chart-source-status" aria-live="polite"></p>
+    <p class="chart-source-status">
+      <span data-chart-source-status-text aria-live="polite"></span>
+      <button type="button" class="chart-source-dismiss" data-chart-source-dismiss>Dismiss</button>
+    </p>
     <p class="chart-viewport-status visually-hidden" aria-live="polite" aria-atomic="true"></p>
     <p class="chart-selection-status visually-hidden" aria-live="polite" aria-atomic="true"></p>
     <div class="sparkline-shell">
@@ -88,6 +92,7 @@ export function createChart(container, seasons, options = {}) {
   const mainSvg = select(shell.querySelector('.ratings-chart'))
   const bodyShell = shell.querySelector('.chart-body-shell')
   const sourceStatus = shell.querySelector('.chart-source-status')
+  const sourceDismiss = shell.querySelector('[data-chart-source-dismiss]')
   const viewportStatus = shell.querySelector('.chart-viewport-status')
   const selectionStatus = shell.querySelector('.chart-selection-status')
   const readingPane = shell.querySelector('[data-reading-pane]')
@@ -116,6 +121,7 @@ export function createChart(container, seasons, options = {}) {
   let hoveredProviderRating = null
   let selectedProviderRating = null
   let hasUserInteracted = false
+  let sourceHelpDismissed = readSourceHelpDismissed()
   let sparkline = null
   let viewportAnnouncementTimer = null
   let selectionAnnouncementTimer = null
@@ -1729,7 +1735,10 @@ export function createChart(container, seasons, options = {}) {
 
     shell.style.setProperty('--axis-width', `${axisWidth}px`)
     shell.style.setProperty('--chart-height', `${chartHeight}px`)
-    renderSourceStatus(sourceStatus, model, defaultViewport)
+    renderSourceStatus(sourceStatus, model, defaultViewport, {
+      helpDismissed: sourceHelpDismissed,
+      touchOnly: coarsePointerQuery.matches && !finePointerQuery.matches
+    })
 
     renderChart(chartTheme, axisWidth, chartWidth, chartHeight, sparklineHeight)
 
@@ -1815,6 +1824,14 @@ export function createChart(container, seasons, options = {}) {
   bodyShell.addEventListener('wheel', handleBodyWheel, { passive: false })
   sparklineSvg.addEventListener('wheel', handleSparklineWheel, {
     passive: false
+  })
+  sourceDismiss.addEventListener('click', (event) => {
+    sourceHelpDismissed = true
+    persistSourceHelpDismissal()
+    sourceStatus.hidden = true
+    if (event.detail === 0) {
+      mainSvg.node()?.focus({ preventScroll: true })
+    }
   })
 
   let gesture = null
@@ -2303,23 +2320,54 @@ function getWheelZoomScale(event) {
   return 2 ** exponent
 }
 
-function renderSourceStatus(root, model, defaultViewport) {
+function renderSourceStatus(
+  root,
+  model,
+  defaultViewport,
+  { helpDismissed = false, touchOnly = false } = {}
+) {
+  const text = root.querySelector('[data-chart-source-status-text]')
+  const dismiss = root.querySelector('[data-chart-source-dismiss]')
   root.hidden = false
   if (!model.primaryRatingSource) {
-    setTextContent(root, 'No usable episode ratings.')
+    dismiss.hidden = true
+    setTextContent(text, 'No usable episode ratings.')
     return
   }
 
-  root.hidden = defaultViewport.start <= 1 && defaultViewport.end >= model.xMax
+  dismiss.hidden = helpDismissed
+  root.hidden =
+    helpDismissed ||
+    (defaultViewport.start <= 1 && defaultViewport.end >= model.xMax)
   setTextContent(
-    root,
-    'Drag the overview window to pan; resize it, Ctrl-scroll, or pinch to zoom.'
+    text,
+    touchOnly
+      ? 'Drag the overview window to pan; resize it or pinch to zoom.'
+      : 'Drag the overview window to pan; resize it, Ctrl-scroll, or pinch to zoom.'
   )
 }
 
 function setTextContent(element, value) {
   if (element.textContent !== value) {
     element.textContent = value
+  }
+}
+
+function readSourceHelpDismissed() {
+  try {
+    return (
+      globalThis.sessionStorage?.getItem(CHART_HELP_DISMISSED_KEY) === 'true'
+    )
+  } catch {
+    return false
+  }
+}
+
+function persistSourceHelpDismissal() {
+  try {
+    globalThis.sessionStorage?.setItem(CHART_HELP_DISMISSED_KEY, 'true')
+  } catch {
+    // The current chart still remembers the dismissal when storage is blocked.
   }
 }
 

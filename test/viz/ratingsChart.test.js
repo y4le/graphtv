@@ -7,8 +7,10 @@ import { MARK_DENSITY_CONFIG } from '../../src/viz/pointSize.js'
 import { updateUiSettings } from '../../src/viz/theme.js'
 
 let chart
+const CHART_HELP_DISMISSED_KEY = 'graphtv-chart-help-dismissed'
 
 beforeEach(() => {
+  window.sessionStorage.removeItem(CHART_HELP_DISMISSED_KEY)
   vi.stubGlobal(
     'ResizeObserver',
     class {
@@ -39,6 +41,7 @@ beforeEach(() => {
 afterEach(() => {
   chart?.destroy()
   chart = undefined
+  window.sessionStorage.removeItem(CHART_HELP_DISMISSED_KEY)
   vi.useRealTimers()
   vi.unstubAllGlobals()
   document.body.replaceChildren()
@@ -112,7 +115,7 @@ describe('createChart', () => {
     })
     document.body.appendChild(container)
     chart = createChart(container, createSeasons())
-    const status = container.querySelector('.chart-source-status')
+    const status = container.querySelector('[data-chart-source-status-text]')
     const onMutation = vi.fn()
     const observer = new MutationObserver(onMutation)
     observer.observe(status, { childList: true, characterData: true })
@@ -1296,7 +1299,9 @@ describe('createChart', () => {
 
     expect(container.querySelectorAll('.source-spread')).toHaveLength(1)
     expect(container.querySelector('.chart-source-status').hidden).toBe(false)
-    expect(container.querySelector('.chart-source-status').textContent).toBe(
+    expect(
+      container.querySelector('[data-chart-source-status-text]').textContent
+    ).toBe(
       'Drag the overview window to pan; resize it, Ctrl-scroll, or pinch to zoom.'
     )
     expect(
@@ -1344,6 +1349,59 @@ describe('createChart', () => {
     expect(
       container.querySelector('.trend-summary-provenance').textContent
     ).not.toContain('source spread shows TMDB')
+  })
+
+  it('omits the Ctrl-scroll hint on touch-only devices', () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query) => ({
+        matches: query === '(pointer: coarse)',
+        media: query,
+        addEventListener() {},
+        removeEventListener() {}
+      }))
+    )
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+
+    expect(
+      container.querySelector('[data-chart-source-status-text]').textContent
+    ).toBe('Drag the overview window to pan; resize it or pinch to zoom.')
+  })
+
+  it('keeps the viewport hint dismissed for the current tab session', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+    chart = createChart(container, createSeasons())
+    const status = container.querySelector('.chart-source-status')
+    const dismiss = container.querySelector('[data-chart-source-dismiss]')
+
+    expect(status.hidden).toBe(false)
+    expect(dismiss.textContent).toBe('Dismiss')
+
+    dismiss.click()
+    expect(status.hidden).toBe(true)
+
+    chart.panHalfViewport(1)
+    chart.updateSeasons(createSeasons())
+
+    expect(status.hidden).toBe(true)
+    expect(window.sessionStorage.getItem(CHART_HELP_DISMISSED_KEY)).toBe('true')
+
+    chart.destroy()
+    chart = createChart(container, createSeasons())
+
+    expect(container.querySelector('.chart-source-status').hidden).toBe(true)
   })
 
   it('previews and pins a provider rating as the graph accent', () => {
