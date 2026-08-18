@@ -2172,7 +2172,13 @@ export function createChart(container, seasons, options = {}) {
     cyclePrimaryRatingSource,
     clearSelection() {
       hasUserInteracted = true
-      if (isAtRestingSelection()) {
+      if (
+        isAtRestingSelection() &&
+        !hoverPointId &&
+        !hoverTrendId &&
+        !hoveredProviderRating &&
+        !pendingTrendHoverId
+      ) {
         return false
       }
       selectSeriesTrend({ announce: true })

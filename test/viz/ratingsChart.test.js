@@ -1048,6 +1048,37 @@ describe('createChart', () => {
     expect(chart.getDebugState().selectedTrendId).toBe('series')
   })
 
+  it('clears an active hover even when the committed selection is already resting', () => {
+    updateUiSettings({ fullShowTrendline: true })
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+
+    chart = createChart(container, createSeasons(), { detailRoot })
+    const point = container.querySelector('.episode-point')
+    point.dispatchEvent(new MouseEvent('mousemove'))
+
+    expect(chart.getDebugState()).toMatchObject({
+      selectedTrendId: 'series',
+      hoverPointId: 'episode-1'
+    })
+    expect(detailRoot.textContent).toContain('Episode 1')
+    expect(chart.clearSelection()).toBe(true)
+    expect(chart.getDebugState()).toMatchObject({
+      selectedTrendId: 'series',
+      hoverPointId: null,
+      hoverTrendId: null
+    })
+    expect(detailRoot.textContent).toContain('Full Series')
+
+    point.dispatchEvent(new MouseEvent('mousemove'))
+    expect(chart.getDebugState().hoverPointId).toBe('episode-1')
+  })
+
   it('upgrades the untouched fallback selection when richer data arrives', () => {
     const container = document.createElement('div')
     Object.defineProperty(container, 'clientWidth', {
