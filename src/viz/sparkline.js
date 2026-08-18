@@ -59,10 +59,7 @@ export function createSparkline(svgNode, config) {
       if (!event.selection) {
         if (event.type === 'end') {
           suppressBrushEvents = true
-          brushLayer.call(
-            brush.move,
-            viewportToBrushSelection(config.viewport, config.scales.xScale)
-          )
+          brushLayer.call(brush.move, getViewportSelection(config))
           suppressBrushEvents = false
         }
         return
@@ -98,10 +95,7 @@ export function createSparkline(svgNode, config) {
       'viewBox',
       `0 0 ${config.dimensions.width} ${config.dimensions.height}`
     )
-    const [windowX1, windowX2] = viewportToBrushSelection(
-      config.viewport,
-      config.scales.xScale
-    )
+    const [windowX1, windowX2] = getViewportSelection(config)
     const isInWindow = (point) =>
       point.x >= config.viewport.start && point.x <= config.viewport.end
     const pathData =
@@ -384,6 +378,14 @@ export function createSparkline(svgNode, config) {
   function clampX(value) {
     return Math.max(0, Math.min(config.dimensions.width, value))
   }
+}
+
+function getViewportSelection(config) {
+  if (config.viewport.start <= 1 && config.viewport.end >= config.model.xMax) {
+    return config.scales.xScale.range()
+  }
+
+  return viewportToBrushSelection(config.viewport, config.scales.xScale)
 }
 
 function isTouchBrushEvent(event) {

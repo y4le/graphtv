@@ -1236,6 +1236,14 @@ export function createChart(container, seasons, options = {}) {
     return Math.max(width - axisWidth - 16, 240)
   }
 
+  function getHorizontalScaleOptions() {
+    return {
+      centerSparse: true,
+      episodeDensity,
+      isMobile: isMobile()
+    }
+  }
+
   function fitSeries() {
     hasUserInteracted = true
     setFullSeriesViewport()
@@ -1617,7 +1625,8 @@ export function createChart(container, seasons, options = {}) {
 
     const scaleOptions = {
       absoluteYAxis: uiSettings.absoluteYAxis,
-      showSourceSpread: uiSettings.showSourceSpread
+      showSourceSpread: uiSettings.showSourceSpread,
+      ...getHorizontalScaleOptions()
     }
     const mainScales = createMainScales(
       model,
@@ -1824,10 +1833,15 @@ export function createChart(container, seasons, options = {}) {
 
     const activePoint = getActivePoint()
     if (activePoint) {
-      const scale = createMainScales(model, viewport, {
-        width: chartWidth,
-        height: chartHeight
-      }).xScale
+      const scale = createMainScales(
+        model,
+        viewport,
+        {
+          width: chartWidth,
+          height: chartHeight
+        },
+        getHorizontalScaleOptions()
+      ).xScale
       shell.style.setProperty(
         '--reading-pane-marker',
         `${scale(activePoint.x)}px`
@@ -1949,10 +1963,15 @@ export function createChart(container, seasons, options = {}) {
 
     const chartWidth = getCurrentChartWidth()
     const { chartHeight } = getChartDimensions()
-    const xScale = createMainScales(model, viewport, {
-      width: chartWidth,
-      height: chartHeight
-    }).xScale
+    const xScale = createMainScales(
+      model,
+      viewport,
+      {
+        width: chartWidth,
+        height: chartHeight
+      },
+      getHorizontalScaleOptions()
+    ).xScale
     const localX = getEventXRatio({ clientX }, bodyShell) * chartWidth
     const dataX = clamp(xScale.invert(localX), viewport.start, viewport.end)
 

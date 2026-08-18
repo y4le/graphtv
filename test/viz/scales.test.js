@@ -47,6 +47,54 @@ describe('rating scale domains', () => {
     expect(model.ratedPoints.map((point) => point.id)).toEqual(['eligible'])
   })
 
+  it('does not reserve chart space for trailing unrated episodes', () => {
+    const model = buildChartModel([
+      {
+        number: 1,
+        episodes: [
+          createEpisode('aired', [{ source: 'test', rating: 8 }]),
+          createEpisode('upcoming-1', [{ source: 'test', rating: null }]),
+          createEpisode('upcoming-2', [{ source: 'test', rating: null }])
+        ]
+      }
+    ])
+
+    expect(model.points).toHaveLength(3)
+    expect(model.xMax).toBe(1)
+    expect(model.seasonSpans).toEqual([
+      {
+        seasonNumber: 1,
+        seasonIndex: 0,
+        start: 1,
+        end: 1,
+        midpoint: 1
+      }
+    ])
+  })
+
+  it('centers sparse rated episodes at normal density spacing', () => {
+    const model = buildChartModel([
+      {
+        number: 1,
+        episodes: Array.from({ length: 3 }, (_, index) =>
+          createEpisode(`episode-${index + 1}`, [
+            { source: 'test', rating: 7 + index / 10 }
+          ])
+        )
+      }
+    ])
+    const scales = createMainScales(
+      model,
+      { start: 1, end: 3 },
+      { width: 600, height: 400 },
+      { centerSparse: true, episodeDensity: 'balanced', isMobile: false }
+    )
+
+    expect(scales.xScale(2)).toBeCloseTo(300)
+    expect(scales.xScale(2) - scales.xScale(1)).toBeCloseTo(30.95, 1)
+    expect(scales.xScale(3) - 300).toBeCloseTo(300 - scales.xScale(1))
+  })
+
   it('tracks nonempty season spans for the bottom season axis', () => {
     const model = buildChartModel([
       {

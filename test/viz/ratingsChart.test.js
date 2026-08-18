@@ -107,6 +107,38 @@ describe('createChart', () => {
     expect(sparklineWidth).toBe(mainPlotWidth)
   })
 
+  it('centers the currently rated episodes when the known season is mostly upcoming', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+    const episodes = Array.from({ length: 8 }, (_, index) => ({
+      id: `episode-${index + 1}`,
+      title: `Episode ${index + 1}`,
+      season: 1,
+      episode: index + 1,
+      ratings: [{ source: 'test', rating: index === 0 ? 8 : null }]
+    }))
+
+    chart = createChart(container, [{ number: 1, episodes }])
+
+    const mainWidth = getViewBoxWidth(container.querySelector('.ratings-chart'))
+    const mainPoint = container.querySelector('.episode-point')
+    const sparklinePoint = container.querySelector('.sparkline-point')
+    expect(chart.getDebugState().viewport).toEqual({ start: 1, end: 1 })
+    expect(Number(mainPoint.getAttribute('cx'))).toBeCloseTo(mainWidth / 2)
+    expect(Number(sparklinePoint.getAttribute('cx'))).toBeCloseTo(mainWidth / 2)
+    expect(
+      Number(
+        container
+          .querySelector('.viewport-brush .selection')
+          .getAttribute('width')
+      )
+    ).toBeCloseTo(mainWidth - 12)
+  })
+
   it('does not rewrite an unchanged chart status live region', async () => {
     const container = document.createElement('div')
     Object.defineProperty(container, 'clientWidth', {

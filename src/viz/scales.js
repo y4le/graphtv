@@ -16,6 +16,7 @@ const MAX_RATING = 10
 const X_EDGE_INSET = 6
 const DEFAULT_VIEWPORT_SNAP_EPISODES = 3
 const DEFAULT_VIEWPORT_MIN_SPACING_RATIO = 0.85
+const SPARSE_CENTER_TARGET_SPACING = 30
 const VIEWPORT_DENSITY_CONFIG = {
   roomy: {
     desktop: { targetSpacing: 30, minimum: 12, maximum: 40 },
@@ -131,6 +132,17 @@ export function buildChartModel(seasons, options = {}) {
   const primaryRatedPoints = ratedPoints.filter(
     (point) => !point.isFallbackRating
   )
+  const xMax = Math.max(ratedPoints.at(-1)?.x ?? points.length, 1)
+  const visibleSeasonSpans = seasonSpans
+    .filter((span) => span.start <= xMax)
+    .map((span) => {
+      const end = Math.min(span.end, xMax)
+      return {
+        ...span,
+        end,
+        midpoint: span.start + (end - span.start) / 2
+      }
+    })
   const macroRegression =
     primaryRatedPoints.length >= 3
       ? linearRegressionFromPoints(
@@ -212,13 +224,13 @@ export function buildChartModel(seasons, options = {}) {
     primaryRatingSource: primaryRating.source,
     ratingSourceCoverage: primaryRating.coverage,
     minimumPrimaryCoverage: primaryRating.minimumCoverage,
-    seasonSpans,
+    seasonSpans: visibleSeasonSpans,
     seasonTrendlines,
     trendSummaries,
     seriesBreakpointCandidate,
     seriesBreakpoint,
     macroRegression,
-    xMax: Math.max(points.length, 1),
+    xMax,
     totalSeasons: seasons.length
   }
 }
@@ -540,7 +552,14 @@ export function createSparklineScales(model, dimensions, options = {}) {
 
   return {
     xScale: scaleLinear()
-      .domain([1, model.xMax])
+      .domain(
+        resolveHorizontalDomain(
+          model,
+          [1, model.xMax],
+          dimensions.width,
+          options
+        )
+      )
       .range(resolveXRange(dimensions.width)),
     yScale: scaleLinear().domain(domain).range([dimensions.height, 0]),
     yDomain: domain
@@ -552,11 +571,63 @@ export function createMainScales(model, viewport, dimensions, options = {}) {
 
   return {
     xScale: scaleLinear()
-      .domain([viewport.start, viewport.end])
+      .domain(
+        resolveHorizontalDomain(
+          model,
+          [viewport.start, viewport.end],
+          dimensions.width,
+          options
+        )
+      )
       .range(resolveXRange(dimensions.width)),
     yScale: scaleLinear().domain(domain).range([dimensions.height, 0]),
     yDomain: domain
   }
+}
+
+function resolveHorizontalDomain(model, domain, width, options) {
+  if (!options.centerSparse || model.ratedPoints.length === 0) {
+    return domain
+  }
+
+  const [start, end] = domain
+  const visibleRatedPoints = model.ratedPoints.filter(
+    (point) => point.x >= start && point.x <= end
+  )
+  if (visibleRatedPoints.length !== model.ratedPoints.length) {
+    return domain
+  }
+
+  const preferredEpisodeCount = getPreferredEpisodeCount(
+    width,
+    options.isMobile,
+    options.episodeDensity
+  )
+  const preferredSpan = Math.max(preferredEpisodeCount - 1, 0)
+  const ratedStart = visibleRatedPoints[0].x
+  const ratedEnd = visibleRatedPoints.at(-1).x
+  if (ratedEnd - ratedStart >= preferredSpan) {
+    return domain
+  }
+
+  const center = ratedStart + (ratedEnd - ratedStart) / 2
+  return [center - preferredSpan / 2, center + preferredSpan / 2]
+}
+
+function getPreferredEpisodeCount(width, isMobile, density = 'balanced') {
+  if (density === 'all') {
+    return 1
+  }
+
+  const densityConfig =
+    VIEWPORT_DENSITY_CONFIG[density] ?? VIEWPORT_DENSITY_CONFIG.balanced
+  const deviceConfig = densityConfig[isMobile ? 'mobile' : 'desktop']
+  const preferredWindow = Math.floor(
+    Math.max(width, 240) /
+      Math.max(deviceConfig.targetSpacing, SPARSE_CENTER_TARGET_SPACING)
+  )
+
+  return clamp(preferredWindow, deviceConfig.minimum, deviceConfig.maximum)
 }
 
 function resolveXRange(width) {
