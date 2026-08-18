@@ -2311,7 +2311,10 @@ function renderSourceStatus(root, model, defaultViewport) {
   }
 
   root.hidden = defaultViewport.start <= 1 && defaultViewport.end >= model.xMax
-  setTextContent(root, 'Drag the overview window to pan; resize it to zoom.')
+  setTextContent(
+    root,
+    'Drag the overview window to pan; resize it, Ctrl-scroll, or pinch to zoom.'
+  )
 }
 
 function setTextContent(element, value) {

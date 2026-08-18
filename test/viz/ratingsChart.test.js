@@ -1297,7 +1297,7 @@ describe('createChart', () => {
     expect(container.querySelectorAll('.source-spread')).toHaveLength(1)
     expect(container.querySelector('.chart-source-status').hidden).toBe(false)
     expect(container.querySelector('.chart-source-status').textContent).toBe(
-      'Drag the overview window to pan; resize it to zoom.'
+      'Drag the overview window to pan; resize it, Ctrl-scroll, or pinch to zoom.'
     )
     expect(
       container.querySelector('.chart-source-status').textContent
