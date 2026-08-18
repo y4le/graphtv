@@ -350,6 +350,79 @@ export function createChart(container, seasons, options = {}) {
     selectedPointId = model.ratedPoints[0]?.id ?? null
   }
 
+  function restoreInitialSelection(selection = options.initialSelection) {
+    if (!selection) {
+      return
+    }
+
+    if (selection === 'none') {
+      clearProviderRatingState()
+      selectedPointId = null
+      selectedTrendId = null
+      hasUserInteracted = true
+      return
+    }
+
+    const coordinate = /^s(\d+)(?:e(\d+))?$/u.exec(selection)
+    if (coordinate?.[2]) {
+      const point = model.ratedPoints.find(
+        (candidate) =>
+          candidate.season === Number(coordinate[1]) &&
+          getEpisodeNumber(candidate) === Number(coordinate[2])
+      )
+      if (!point) {
+        return
+      }
+
+      clearProviderRatingState()
+      selectedPointId = point.id
+      selectedTrendId = null
+      hasUserInteracted = true
+      followViewportToX(point.x)
+      return
+    }
+
+    const trendId = coordinate
+      ? `season:${Number(coordinate[1])}`
+      : selection === 'breakpoint'
+        ? 'series:breakpoint'
+        : selection
+    const summary = getTrendSummary(trendId)
+    if (!summary) {
+      return
+    }
+    if (summary.kind === 'season' && !getUiSettings().seasonTrendlines) {
+      updateUiSettings({ seasonTrendlines: true })
+    }
+
+    clearProviderRatingState()
+    selectedPointId = null
+    selectedTrendId = summary.id
+    hasUserInteracted = true
+    if (summary.kind === 'season') {
+      followSeasonSelection(summary)
+    } else if (summary.kind === 'breakpoint') {
+      setFullSeriesViewport()
+    }
+  }
+
+  function getSelectionId() {
+    const point = getPointById(selectedPointId)
+    if (point) {
+      return formatEpisodeCode(point).toLowerCase()
+    }
+    if (selectedTrendId?.startsWith('season:')) {
+      return `s${selectedTrendId.slice(7).padStart(2, '0')}`
+    }
+    return selectedTrendId === 'series:breakpoint'
+      ? 'breakpoint'
+      : (selectedTrendId ?? 'none')
+  }
+
+  function notifySelectionChange() {
+    options.onSelectionChange?.(getSelectionId())
+  }
+
   function getNavigatorViewModel() {
     const points = getRatedPoints()
     if (points.length === 0) {
@@ -696,6 +769,7 @@ export function createChart(container, seasons, options = {}) {
     }
 
     render()
+    notifySelectionChange()
   }
 
   function followViewportToX(x) {
@@ -764,6 +838,7 @@ export function createChart(container, seasons, options = {}) {
     cancelScheduledDetailLoad()
     announceSelection({ summary })
     render()
+    notifySelectionChange()
   }
 
   function selectSeasonTrend(seasonNumber) {
@@ -1164,6 +1239,7 @@ export function createChart(container, seasons, options = {}) {
       announceSelection(summary ? { summary } : null)
     }
     render()
+    notifySelectionChange()
   }
 
   function toggleSeriesTrend() {
@@ -2042,6 +2118,7 @@ export function createChart(container, seasons, options = {}) {
     const nextEpisodeDensity = getUiSettings().episodeDensity
     const densityChanged = nextEpisodeDensity !== episodeDensity
     episodeDensity = nextEpisodeDensity
+    let selectionChanged = false
 
     if (selectedTrendId && !isTrendEnabled(selectedTrendId)) {
       const previousTrend = getTrendSummary(selectedTrendId)
@@ -2049,6 +2126,7 @@ export function createChart(container, seasons, options = {}) {
       const nextPoint = getFirstRatedPointInScope(previousTrend)
       selectedPointId = nextPoint?.id ?? null
       hasUserInteracted = true
+      selectionChanged = true
       if (nextPoint) {
         announceSelection({ point: nextPoint })
       }
@@ -2059,16 +2137,23 @@ export function createChart(container, seasons, options = {}) {
 
     if (densityChanged) {
       resetViewportWidth(getCurrentChartWidth(), getKeyboardViewportAnchor())
+      if (selectionChanged) {
+        notifySelectionChange()
+      }
       return
     }
     render()
+    if (selectionChanged) {
+      notifySelectionChange()
+    }
   }
-  document.addEventListener('graphtv:settings-change', settingsListener)
 
   ensureViewport(getCurrentChartWidth())
   resolveDefaultSelection()
+  restoreInitialSelection()
   render()
   notifyPrimaryRatingSource()
+  document.addEventListener('graphtv:settings-change', settingsListener)
 
   return {
     getDensityMetrics: () => densityMetrics,

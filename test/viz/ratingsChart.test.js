@@ -171,6 +171,64 @@ describe('createChart', () => {
     )
   })
 
+  it('restores an episode by season coordinates without emitting an initial URL change', () => {
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    const onSelectionChange = vi.fn()
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+    const seasons = createTwoSeasons()
+
+    chart = createChart(container, seasons, {
+      detailRoot,
+      initialSelection: 's02e03',
+      onSelectionChange
+    })
+
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId: 'season-2-episode-3',
+      selectedTrendId: null,
+      hasUserInteracted: true
+    })
+    expect(onSelectionChange).not.toHaveBeenCalled()
+
+    chart.moveEpisode(1)
+
+    expect(onSelectionChange).toHaveBeenLastCalledWith('s01e01')
+    onSelectionChange.mockClear()
+    container
+      .querySelector('.episode-point')
+      .dispatchEvent(new MouseEvent('mouseenter'))
+    expect(onSelectionChange).not.toHaveBeenCalled()
+  })
+
+  it('restores a season trend and enables it in the local view settings', () => {
+    updateUiSettings({ seasonTrendlines: false })
+    const container = document.createElement('div')
+    const onSelectionChange = vi.fn()
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createTwoSeasons(), {
+      initialSelection: 's02',
+      onSelectionChange
+    })
+
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId: null,
+      selectedTrendId: 'season:2',
+      hasUserInteracted: true,
+      uiSettings: { seasonTrendlines: true }
+    })
+    expect(onSelectionChange).not.toHaveBeenCalled()
+  })
+
   it('shows a detected breakpoint overlay only while its detail selection is active', () => {
     updateUiSettings({ fullShowTrendline: true })
     const container = document.createElement('div')

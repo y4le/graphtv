@@ -13,7 +13,7 @@ import {
   renderPublisherBrand
 } from './shared.js'
 import { orderVisibleRatings } from '../data/ratingProviders.js'
-import { buildUrl, preserveDebugParams } from '../lib/url.js'
+import { buildUrl, getUrlParams, preserveDebugParams } from '../lib/url.js'
 import { escapeHtml } from '../lib/html.js'
 import { forwardAbort, isAbortError } from '../lib/abort.js'
 
@@ -59,6 +59,7 @@ export async function renderResultsPage(container, showRef, options = {}) {
   let latestShow = null
   let primaryProvider = null
   let chartPrimaryRatingSource = null
+  const initialSelection = getUrlParams().get('select')
   const abortController = new AbortController()
   const stopForwardingAbort = forwardAbort(options.signal, abortController)
   const handleSeriesRatingSelection = (event) => {
@@ -86,6 +87,16 @@ export async function renderResultsPage(container, showRef, options = {}) {
         chartPrimaryRatingSource
       )
     }
+  }
+
+  function syncChartUrlState(selection) {
+    const nextParams = getUrlParams()
+    if (selection === 'series') {
+      nextParams.delete('select')
+    } else {
+      nextParams.set('select', selection)
+    }
+    window.history.replaceState(window.history.state, '', buildUrl(nextParams))
   }
 
   container.addEventListener('click', handleSeriesRatingSelection)
@@ -127,7 +138,9 @@ export async function renderResultsPage(container, showRef, options = {}) {
       latestBundle.seasons,
       {
         detailRoot: container.querySelector('.results-episode'),
+        initialSelection,
         loadEpisodeDetails: episodeDetailLoader,
+        onSelectionChange: syncChartUrlState,
         show: latestBundle.show,
         onPrimaryRatingSourceChange: syncChartPrimaryRatingSource
       }

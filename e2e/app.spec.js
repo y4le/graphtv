@@ -120,6 +120,32 @@ test('searches, navigates the chart, and isolates modal interaction', async ({
   await expectNoAccessibilityViolations(page)
 })
 
+test('keeps a shared chart selection across reloads', async ({ page }) => {
+  await page.goto('/?show=tvmaze%3A179')
+  await expect(page.locator('.sparkline-point')).toHaveCount(72)
+
+  await page.locator('.episode-point').nth(2).click()
+
+  await expect(page).toHaveURL(/[?&]select=s01e03(?:&|$)/u)
+  await expect(page.locator('.results-episode')).toContainText('Episode 3')
+
+  await page.reload()
+
+  await expect(page.locator('.sparkline-point')).toHaveCount(72)
+  await expect(page.locator('.results-episode')).toContainText('Episode 3')
+  await expect(page).toHaveURL(/[?&]select=s01e03(?:&|$)/u)
+
+  await page.keyboard.press('Escape')
+
+  await expect(page).not.toHaveURL(/[?&]select=/u)
+  await expect(page.locator('.results-episode')).toContainText('Full Series')
+
+  await page.reload()
+
+  await expect(page.locator('.results-episode')).toContainText('Full Series')
+  await expect(page).not.toHaveURL(/[?&]select=/u)
+})
+
 test.describe('mobile chart', () => {
   test.use({
     viewport: { width: 390, height: 844 },

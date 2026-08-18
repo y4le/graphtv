@@ -95,6 +95,64 @@ describe('renderResultsMasthead', () => {
 })
 
 describe('renderResultsPage', () => {
+  it('hydrates chart selection from the URL and replaces it with canonical committed state', async () => {
+    window.history.replaceState(
+      {},
+      '',
+      '/graphtv/?show=tvmaze%3A1&select=s03e07&debug=1'
+    )
+    const bundle = createBundle()
+    const bundleStream = async function* () {
+      yield {
+        phase: 'show',
+        show: bundle.show,
+        pendingProviders: [],
+        complete: false
+      }
+      yield {
+        phase: 'primary',
+        bundle,
+        pendingProviders: [],
+        complete: true
+      }
+    }
+    const chart = {
+      updateSeasons: vi.fn(),
+      destroy: vi.fn(),
+      getDebugState: vi.fn(() => ({
+        ratings: { primarySource: 'tmdb' }
+      }))
+    }
+    const chartFactory = vi.fn(() => chart)
+    const container = document.createElement('div')
+    const historyLength = window.history.length
+
+    const page = await renderResultsPage(container, 'tvmaze:1', {
+      bundleStream,
+      chartFactory,
+      detailLoaderFactory: () => vi.fn(),
+      compareProviders: []
+    })
+    const chartOptions = chartFactory.mock.calls[0][2]
+
+    expect(chartOptions.initialSelection).toBe('s03e07')
+
+    chartOptions.onSelectionChange('s02')
+
+    const params = new URL(window.location.href).searchParams
+    expect(params.get('show')).toBe('tvmaze:1')
+    expect(params.get('select')).toBe('s02')
+    expect(params.get('debug')).toBe('1')
+    expect(window.history.length).toBe(historyLength)
+
+    chartOptions.onSelectionChange('series')
+
+    expect(new URL(window.location.href).searchParams.has('select')).toBe(false)
+    expect(window.history.length).toBe(historyLength)
+
+    page.destroy()
+  })
+
   it('shows metadata before episodes and updates the primary chart as supplements settle', async () => {
     let resolvePrimary
     let resolveSupplemental
