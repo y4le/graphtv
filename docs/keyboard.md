@@ -74,6 +74,14 @@ On the results page, chart navigation is the default keyboard target in normal m
 
 The vim spatial metaphor: episodes within a season are characters within a line (`h`/`l`), and seasons are lines (`j`/`k`).
 
+#### Pointer and touch gestures
+
+- **Scan episodes:** With a mouse or pen, press empty plot space and drag. On touch, hold for about 300ms and then drag. The vertical line follows the pointer while the nearest rated episode is previewed by x-position; release commits that episode.
+- **Pan:** Swipe horizontally on touch, horizontally scroll with a trackpad, or drag the overview window. A touch swipe that moves before the hold completes pans instead of scanning.
+- **Zoom:** Pinch with two fingers, Ctrl-scroll with a trackpad, or resize the overview window.
+- **Cancel scanning:** Press `Escape`, begin a two-finger pinch, or let the browser cancel the pointer gesture. The prior committed selection is restored.
+- **Page scroll:** A vertical touch gesture beginning on the chart remains native page scrolling.
+
 | Action                    | Vim        | Conventional | Notes                                                                        |
 | ------------------------- | ---------- | ------------ | ---------------------------------------------------------------------------- |
 | Previous episode          | `h`        | `ArrowLeft`  | Wraps across season boundaries                                               |

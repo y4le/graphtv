@@ -40,7 +40,10 @@ const DETAIL_LOAD_DELAY_MS = 250
 const TREND_HOVER_DELAY_MS = 100
 const SCROLL_HOVER_SUPPRESSION_MS = 100
 const MAX_DETAIL_ERRORS = 25
+const MOUSE_SCRUB_START_TOLERANCE_PX = 4
+const PEN_SCRUB_START_TOLERANCE_PX = 6
 const TOUCH_DRAG_START_TOLERANCE_PX = 9
+const TOUCH_SCRUB_HOLD_MS = 300
 const MIN_VIEWPORT_SPAN = 4
 const VIEWPORT_FOLLOW_EDGE_RATIO = 0.1
 const VIEWPORT_ANNOUNCEMENT_DELAY_MS = 120
@@ -116,6 +119,8 @@ export function createChart(container, seasons, options = {}) {
   let densityMetrics = null
   let selectedPointId = null
   let hoverPointId = null
+  let scrubPointId = null
+  let scrubX = null
   let selectedTrendId = null
   let hoverTrendId = null
   let hoveredProviderRating = null
@@ -126,6 +131,7 @@ export function createChart(container, seasons, options = {}) {
   let viewportAnnouncementTimer = null
   let selectionAnnouncementTimer = null
   let trendHoverTimer = null
+  let scrubArmTimer = null
   let scrollHoverSuppressionTimer = null
   let suppressStationaryHover = false
   let pendingTrendHoverId = null
@@ -205,6 +211,9 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function getActivePoint() {
+    if (gesture?.type === 'scrub') {
+      return getPointById(scrubPointId)
+    }
     if (hoverTrendId) {
       return null
     }
@@ -300,7 +309,7 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function getActiveTrendId() {
-    if (hoverPointId) {
+    if (gesture?.type === 'scrub' || hoverPointId) {
       return null
     }
 
@@ -1479,6 +1488,9 @@ export function createChart(container, seasons, options = {}) {
       hoverEnabled: finePointerQuery.matches,
       totalSeasons: model.totalSeasons,
       onHover(point) {
+        if (gesture?.type === 'scrub') {
+          return
+        }
         cancelTrendHover()
         hoverTrendId = null
         hoverPointId = point.id
@@ -1566,7 +1578,9 @@ export function createChart(container, seasons, options = {}) {
     const visiblePoints = getVisiblePoints(model, viewport)
     const visibleRatedPoints = getVisibleRatedPoints(model, viewport)
 
-    bodyShell.style.touchAction = isMobile() ? 'none' : ''
+    // Preserve native vertical page scrolling while keeping horizontal pan and
+    // the chart's custom pinch gesture available on every touch-capable layout.
+    bodyShell.style.touchAction = 'pan-y'
 
     axisSvg
       .attr('viewBox', `0 0 ${axisWidth} ${chartHeight}`)
@@ -1613,7 +1627,8 @@ export function createChart(container, seasons, options = {}) {
       mainScales,
       { width: chartWidth, height: chartHeight },
       chartTheme,
-      uiSettings.showSourceSpread
+      uiSettings.showSourceSpread,
+      gesture?.type === 'scrub' ? scrubX : null
     )
     renderPoints(
       mainSvg,
@@ -1731,11 +1746,10 @@ export function createChart(container, seasons, options = {}) {
     const axisWidth = isMobile() ? 40 : 56
     const chartWidth = Math.max(width - axisWidth - 16, 240)
     const { chartHeight, sparklineHeight } = getChartDimensions()
-    const defaultViewport = getDefaultViewport(chartWidth)
 
     shell.style.setProperty('--axis-width', `${axisWidth}px`)
     shell.style.setProperty('--chart-height', `${chartHeight}px`)
-    renderSourceStatus(sourceStatus, model, defaultViewport, {
+    renderSourceStatus(sourceStatus, model, {
       helpDismissed: sourceHelpDismissed,
       touchOnly: coarsePointerQuery.matches && !finePointerQuery.matches
     })
@@ -1840,6 +1854,115 @@ export function createChart(container, seasons, options = {}) {
   const FLING_FRICTION = 0.95
   const FLING_MIN_VELOCITY = 0.3
 
+  function clearScrubArmTimer() {
+    if (!scrubArmTimer) {
+      return
+    }
+    clearTimeout(scrubArmTimer)
+    scrubArmTimer = null
+  }
+
+  function getPointerType(event) {
+    return event.pointerType || 'mouse'
+  }
+
+  function getPointerCoordinate(event, key) {
+    return Number.isFinite(event[key]) ? event[key] : 0
+  }
+
+  function isScrubStartTarget(event) {
+    return !event.target.closest?.(
+      '.episode-point, .episode-point-hit, .episode-point-hit-batch, .season-axis-label'
+    )
+  }
+
+  function getScrubTarget(clientX) {
+    if (!viewport) {
+      return null
+    }
+
+    const chartWidth = getCurrentChartWidth()
+    const { chartHeight } = getChartDimensions()
+    const xScale = createMainScales(model, viewport, {
+      width: chartWidth,
+      height: chartHeight
+    }).xScale
+    const localX = getEventXRatio({ clientX }, bodyShell) * chartWidth
+    const dataX = clamp(xScale.invert(localX), viewport.start, viewport.end)
+
+    return {
+      x: dataX,
+      point: getVisibleRatedPoints(model, viewport).reduce((nearest, point) => {
+        if (point.x < viewport.start || point.x > viewport.end) {
+          return nearest
+        }
+        return !nearest ||
+          Math.abs(point.x - dataX) < Math.abs(nearest.x - dataX)
+          ? point
+          : nearest
+      }, null)
+    }
+  }
+
+  function updateScrubPreview(clientX, { force = false } = {}) {
+    const target = getScrubTarget(clientX)
+    const nextPointId = target?.point?.id ?? null
+    const nextX = target?.x ?? null
+    if (!force && nextPointId === scrubPointId && nextX === scrubX) {
+      return
+    }
+
+    scrubPointId = nextPointId
+    scrubX = nextX
+    render()
+  }
+
+  function beginScrub(pointerId, pointerType, clientX) {
+    clearScrubArmTimer()
+    cancelTrendHover()
+    hoverPointId = null
+    hoverTrendId = null
+    hoveredProviderRating = null
+    gesture.type = 'scrub'
+    gesture.pointerType = pointerType
+    bodyShell.classList.add('is-scrubbing')
+    bodyShell.setPointerCapture?.(pointerId)
+    updateScrubPreview(clientX, { force: true })
+  }
+
+  function clearScrubPreview() {
+    scrubPointId = null
+    scrubX = null
+    bodyShell.classList.remove('is-scrubbing')
+    cancelScheduledDetailLoad()
+  }
+
+  function cancelActiveScrub({ inert = false } = {}) {
+    if (gesture?.type !== 'scrub') {
+      return false
+    }
+
+    clearScrubPreview()
+    if (inert) {
+      gesture.type = 'scrub-cancelled'
+      suppressClickUntil = performance.now() + SUPPRESS_CLICK_DURATION_MS
+    }
+    render()
+    return true
+  }
+
+  function commitActiveScrub() {
+    const point = getPointById(scrubPointId)
+    clearScrubPreview()
+    gesture = null
+    suppressClickUntil = performance.now() + SUPPRESS_CLICK_DURATION_MS
+    if (point) {
+      setSelectedPoint(point, 'pointer', { follow: false })
+    } else {
+      render()
+    }
+  }
+
   function stopFling() {
     if (flingFrame) {
       cancelAnimationFrame(flingFrame)
@@ -1893,7 +2016,35 @@ export function createChart(container, seasons, options = {}) {
 
   bodyShell.addEventListener('pointerdown', (event) => {
     hasUserInteracted = true
-    if (event.pointerType !== 'touch' || !isMobile() || !viewport) {
+    if (!viewport) {
+      return
+    }
+
+    const pointerType = getPointerType(event)
+    const clientX = getPointerCoordinate(event, 'clientX')
+    const clientY = getPointerCoordinate(event, 'clientY')
+
+    if (pointerType !== 'touch') {
+      if (
+        gesture ||
+        !isScrubStartTarget(event) ||
+        event.isPrimary === false ||
+        (event.button != null && event.button !== 0) ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey
+      ) {
+        return
+      }
+
+      gesture = {
+        type: 'pressing',
+        pointerType,
+        pointers: new Map([[event.pointerId, clientX]]),
+        startX: clientX,
+        startY: clientY
+      }
       return
     }
 
@@ -1906,18 +2057,48 @@ export function createChart(container, seasons, options = {}) {
       clearTrendHover({ rerender: true })
       gesture = {
         type: 'pending',
-        pointers: new Map([[event.pointerId, event.clientX]]),
-        startX: event.clientX,
+        pointerType,
+        pointers: new Map([[event.pointerId, clientX]]),
+        startX: clientX,
+        startY: clientY,
         startViewport: { ...viewport },
-        prevX: event.clientX,
+        prevX: clientX,
         prevTime: performance.now(),
         velocity: 0,
         viewportChanged: stoppedFling
       }
+
+      if (isScrubStartTarget(event)) {
+        scrubArmTimer = setTimeout(() => {
+          scrubArmTimer = null
+          if (
+            destroyed ||
+            gesture?.type !== 'pending' ||
+            gesture.pointers.size !== 1 ||
+            !gesture.pointers.has(event.pointerId)
+          ) {
+            return
+          }
+          beginScrub(
+            event.pointerId,
+            pointerType,
+            gesture.pointers.get(event.pointerId)
+          )
+        }, TOUCH_SCRUB_HOLD_MS)
+      }
       return
     }
 
-    gesture.pointers.set(event.pointerId, event.clientX)
+    if (!gesture.pointers || gesture.pointerType !== 'touch') {
+      return
+    }
+
+    const wasScrubbing = gesture.type === 'scrub'
+    if (wasScrubbing) {
+      clearScrubPreview()
+    }
+    clearScrubArmTimer()
+    gesture.pointers.set(event.pointerId, clientX)
     if (gesture.pointers.size >= 2) {
       const xs = Array.from(gesture.pointers.values())
       for (const pointerId of gesture.pointers.keys()) {
@@ -1930,19 +2111,52 @@ export function createChart(container, seasons, options = {}) {
         startViewport: { ...viewport },
         viewportChanged: gesture.viewportChanged
       }
+      if (wasScrubbing) {
+        render()
+      }
     }
   })
 
   bodyShell.addEventListener('pointermove', (event) => {
-    if (
-      !gesture ||
-      event.pointerType !== 'touch' ||
-      !gesture.pointers.has(event.pointerId)
-    ) {
+    if (!gesture?.pointers?.has(event.pointerId)) {
       return
     }
 
-    gesture.pointers.set(event.pointerId, event.clientX)
+    const pointerType = getPointerType(event)
+    const clientX = getPointerCoordinate(event, 'clientX')
+    const clientY = getPointerCoordinate(event, 'clientY')
+    gesture.pointers.set(event.pointerId, clientX)
+
+    if (gesture.type === 'scrub') {
+      event.preventDefault()
+      updateScrubPreview(clientX)
+      return
+    }
+
+    if (gesture.type === 'scrub-cancelled') {
+      return
+    }
+
+    if (gesture.type === 'pressing') {
+      const tolerance =
+        pointerType === 'pen'
+          ? PEN_SCRUB_START_TOLERANCE_PX
+          : MOUSE_SCRUB_START_TOLERANCE_PX
+      if (
+        Math.hypot(clientX - gesture.startX, clientY - gesture.startY) <
+        tolerance
+      ) {
+        return
+      }
+
+      event.preventDefault()
+      beginScrub(event.pointerId, pointerType, clientX)
+      return
+    }
+
+    if (pointerType !== 'touch') {
+      return
+    }
 
     if (gesture.type === 'pinch') {
       event.preventDefault()
@@ -1975,10 +2189,17 @@ export function createChart(container, seasons, options = {}) {
       const instantV = (event.clientX - gesture.prevX) / dt
       gesture.velocity = gesture.velocity * 0.4 + instantV * 0.6
     }
-    gesture.prevX = event.clientX
+    gesture.prevX = clientX
     gesture.prevTime = now
 
-    const deltaX = event.clientX - gesture.startX
+    const deltaX = clientX - gesture.startX
+    const deltaY = clientY - gesture.startY
+    if (
+      gesture.type === 'pending' &&
+      Math.hypot(deltaX, deltaY) >= TOUCH_DRAG_START_TOLERANCE_PX
+    ) {
+      clearScrubArmTimer()
+    }
     if (
       gesture.type === 'pending' &&
       Math.abs(deltaX) < TOUCH_DRAG_START_TOLERANCE_PX
@@ -2016,6 +2237,32 @@ export function createChart(container, seasons, options = {}) {
       return
     }
 
+    clearScrubArmTimer()
+
+    if (gesture.type === 'scrub') {
+      if (bodyShell.hasPointerCapture?.(event.pointerId)) {
+        bodyShell.releasePointerCapture(event.pointerId)
+      }
+      if (event.type === 'pointercancel') {
+        cancelActiveScrub()
+        gesture = null
+      } else {
+        commitActiveScrub()
+      }
+      return
+    }
+
+    if (gesture.type === 'pressing' || gesture.type === 'scrub-cancelled') {
+      if (bodyShell.hasPointerCapture?.(event.pointerId)) {
+        bodyShell.releasePointerCapture(event.pointerId)
+      }
+      if (gesture.type === 'scrub-cancelled') {
+        suppressClickUntil = performance.now() + SUPPRESS_CLICK_DURATION_MS
+      }
+      gesture = null
+      return
+    }
+
     const wasPan = gesture.type === 'pan'
     const velocity = gesture.velocity
     if (bodyShell.hasPointerCapture?.(event.pointerId)) {
@@ -2032,7 +2279,8 @@ export function createChart(container, seasons, options = {}) {
       }
       gesture = null
 
-      const shouldFling = wasPan && Math.abs(velocity) > 0.15
+      const shouldFling =
+        event.type !== 'pointercancel' && wasPan && Math.abs(velocity) > 0.15
       if (shouldFling) {
         startFling(velocity)
       } else if (viewportChanged) {
@@ -2059,6 +2307,18 @@ export function createChart(container, seasons, options = {}) {
 
   bodyShell.addEventListener('pointerup', endGesture)
   bodyShell.addEventListener('pointercancel', endGesture)
+  document.addEventListener('pointerup', endGesture)
+  document.addEventListener('pointercancel', endGesture)
+
+  function handleScrubTouchMove(event) {
+    if (gesture?.type === 'scrub') {
+      event.preventDefault()
+    }
+  }
+
+  bodyShell.addEventListener('touchmove', handleScrubTouchMove, {
+    passive: false
+  })
 
   bodyShell.addEventListener('click', (event) => {
     hasUserInteracted = true
@@ -2074,7 +2334,7 @@ export function createChart(container, seasons, options = {}) {
   })
 
   function handleDocumentMouseMove(event) {
-    if (!finePointerQuery.matches) {
+    if (!finePointerQuery.matches || gesture?.type === 'scrub') {
       return
     }
 
@@ -2189,6 +2449,9 @@ export function createChart(container, seasons, options = {}) {
     cyclePrimaryRatingSource,
     clearSelection() {
       hasUserInteracted = true
+      if (cancelActiveScrub({ inert: true })) {
+        return true
+      }
       if (
         isAtRestingSelection() &&
         !hoverPointId &&
@@ -2239,6 +2502,7 @@ export function createChart(container, seasons, options = {}) {
     destroy() {
       destroyed = true
       stopFling()
+      clearScrubArmTimer()
       cancelScheduledDetailLoad()
       cancelTrendHover()
       if (viewportAnnouncementTimer) {
@@ -2255,7 +2519,10 @@ export function createChart(container, seasons, options = {}) {
       resizeObserver.disconnect()
       document.removeEventListener('graphtv:settings-change', settingsListener)
       document.removeEventListener('mousemove', handleDocumentMouseMove)
+      document.removeEventListener('pointerup', endGesture)
+      document.removeEventListener('pointercancel', endGesture)
       window.removeEventListener('scroll', handleDocumentScroll)
+      bodyShell.removeEventListener('touchmove', handleScrubTouchMove)
       bodyShell.removeEventListener('wheel', handleBodyWheel)
       sparklineSvg.removeEventListener('wheel', handleSparklineWheel)
       sparkline?.destroy()
@@ -2323,7 +2590,6 @@ function getWheelZoomScale(event) {
 function renderSourceStatus(
   root,
   model,
-  defaultViewport,
   { helpDismissed = false, touchOnly = false } = {}
 ) {
   const text = root.querySelector('[data-chart-source-status-text]')
@@ -2336,14 +2602,12 @@ function renderSourceStatus(
   }
 
   dismiss.hidden = helpDismissed
-  root.hidden =
-    helpDismissed ||
-    (defaultViewport.start <= 1 && defaultViewport.end >= model.xMax)
+  root.hidden = helpDismissed
   setTextContent(
     text,
     touchOnly
-      ? 'Drag the overview window to pan; resize it or pinch to zoom.'
-      : 'Drag the overview window to pan; resize it, Ctrl-scroll, or pinch to zoom.'
+      ? 'Swipe to pan; hold, then drag to scan. Pinch to zoom.'
+      : 'Drag chart to scan. Use the overview to pan or resize; Ctrl-scroll or pinch to zoom.'
   )
 }
 

@@ -556,36 +556,46 @@ export function renderCrosshair(
   scales,
   dimensions,
   theme,
-  showSourceSpread = false
+  showSourceSpread = false,
+  pointerX = null
 ) {
   const crosshairLayer = svg
     .selectAll('.crosshair-layer')
     .data([null])
     .join('g')
     .attr('class', 'crosshair-layer')
-  const spread = showSourceSpread ? createSourceSpreadMark(point, scales) : null
-  const x = point ? scales.xScale(point.x) : 0
+  const followsPointer = Number.isFinite(pointerX)
+  const spread =
+    showSourceSpread && !followsPointer
+      ? createSourceSpreadMark(point, scales)
+      : null
+  const x = followsPointer
+    ? scales.xScale(pointerX)
+    : point
+      ? scales.xScale(point.x)
+      : 0
 
-  const lines = point
-    ? spread
-      ? [
-          {
-            key: 'vertical-before',
-            x1: x,
-            x2: x,
-            y1: 0,
-            y2: Math.min(spread.y1, spread.y2)
-          },
-          {
-            key: 'vertical-after',
-            x1: x,
-            x2: x,
-            y1: Math.max(spread.y1, spread.y2),
-            y2: dimensions.height
-          }
-        ].filter((lineData) => lineData.y2 > lineData.y1)
-      : [{ key: 'vertical', x1: x, x2: x, y1: 0, y2: dimensions.height }]
-    : []
+  const lines =
+    point || followsPointer
+      ? spread
+        ? [
+            {
+              key: 'vertical-before',
+              x1: x,
+              x2: x,
+              y1: 0,
+              y2: Math.min(spread.y1, spread.y2)
+            },
+            {
+              key: 'vertical-after',
+              x1: x,
+              x2: x,
+              y1: Math.max(spread.y1, spread.y2),
+              y2: dimensions.height
+            }
+          ].filter((lineData) => lineData.y2 > lineData.y1)
+        : [{ key: 'vertical', x1: x, x2: x, y1: 0, y2: dimensions.height }]
+      : []
 
   crosshairLayer
     .selectAll('.crosshair')

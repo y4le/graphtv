@@ -1244,7 +1244,7 @@ describe('createChart', () => {
     )
   })
 
-  it('hides the viewport hint when the default view shows every episode', () => {
+  it('keeps the scan hint visible when the default view shows every episode', () => {
     const container = document.createElement('div')
     Object.defineProperty(container, 'clientWidth', {
       configurable: true,
@@ -1257,7 +1257,7 @@ describe('createChart', () => {
     chart = createChart(container, seasons)
 
     expect(chart.getDebugState().viewport).toEqual({ start: 1, end: 50 })
-    expect(container.querySelector('.chart-source-status').hidden).toBe(true)
+    expect(container.querySelector('.chart-source-status').hidden).toBe(false)
   })
 
   it('applies episode density to the initial view and live setting changes', () => {
@@ -1278,7 +1278,7 @@ describe('createChart', () => {
 
     updateUiSettings({ episodeDensity: 'all' })
     expect(chart.getDebugState().viewport).toEqual({ start: 1, end: 72 })
-    expect(container.querySelector('.chart-source-status').hidden).toBe(true)
+    expect(container.querySelector('.chart-source-status').hidden).toBe(false)
   })
 
   it('shows provider disagreement by default and lets the setting hide it', () => {
@@ -1302,7 +1302,7 @@ describe('createChart', () => {
     expect(
       container.querySelector('[data-chart-source-status-text]').textContent
     ).toBe(
-      'Drag the overview window to pan; resize it, Ctrl-scroll, or pinch to zoom.'
+      'Drag chart to scan. Use the overview to pan or resize; Ctrl-scroll or pinch to zoom.'
     )
     expect(
       container.querySelector('.chart-source-status').textContent
@@ -1351,7 +1351,7 @@ describe('createChart', () => {
     ).not.toContain('source spread shows TMDB')
   })
 
-  it('omits the Ctrl-scroll hint on touch-only devices', () => {
+  it('shows hold-to-scan guidance on touch-only devices', () => {
     vi.stubGlobal(
       'matchMedia',
       vi.fn((query) => ({
@@ -1372,7 +1372,7 @@ describe('createChart', () => {
 
     expect(
       container.querySelector('[data-chart-source-status-text]').textContent
-    ).toBe('Drag the overview window to pan; resize it or pinch to zoom.')
+    ).toBe('Swipe to pan; hold, then drag to scan. Pinch to zoom.')
   })
 
   it('keeps the viewport hint dismissed for the current tab session', () => {
@@ -2418,6 +2418,291 @@ describe('createChart', () => {
     )
   })
 
+  it.each([
+    { pointerType: 'mouse', movement: 5 },
+    { pointerType: 'pen', movement: 7 }
+  ])(
+    'previews episodes by x and commits once after a $pointerType drag',
+    ({ pointerType, movement }) => {
+      const onSelectionChange = vi.fn()
+      const container = document.createElement('div')
+      Object.defineProperty(container, 'clientWidth', {
+        configurable: true,
+        value: 600
+      })
+      document.body.appendChild(container)
+
+      chart = createChart(container, createSeasons(), { onSelectionChange })
+      const body = container.querySelector('.chart-body-shell')
+      const surface = container.querySelector('.chart-hit-surface')
+      Object.defineProperty(body, 'clientWidth', {
+        configurable: true,
+        value: 528
+      })
+
+      dispatchPointer(surface, 'pointerdown', {
+        pointerType,
+        pointerId: 1,
+        clientX: 100,
+        clientY: 200
+      })
+      dispatchPointer(body, 'pointermove', {
+        pointerType,
+        pointerId: 1,
+        clientX: 100 + movement,
+        clientY: 200
+      })
+
+      const [firstPoint, secondPoint] =
+        container.querySelectorAll('.episode-point')
+      const betweenPoints =
+        (Number(firstPoint.getAttribute('cx')) +
+          Number(secondPoint.getAttribute('cx'))) /
+        2
+      dispatchPointer(body, 'pointermove', {
+        pointerType,
+        pointerId: 1,
+        clientX: betweenPoints,
+        clientY: 20
+      })
+
+      const firstPreviewId = getPreviewedPointId(container)
+      const crosshairX = Number(
+        container.querySelector('.crosshair').getAttribute('x1')
+      )
+      expect(firstPreviewId).not.toBeNull()
+      expect(crosshairX).toBeCloseTo(betweenPoints)
+      expect(crosshairX).not.toBeCloseTo(Number(firstPoint.getAttribute('cx')))
+      expect(crosshairX).not.toBeCloseTo(Number(secondPoint.getAttribute('cx')))
+      expect(chart.getDebugState().selectedPointId).toBeNull()
+      expect(container.querySelector('.crosshair')).not.toBeNull()
+      expect(body.classList.contains('is-scrubbing')).toBe(true)
+      expect(onSelectionChange).not.toHaveBeenCalled()
+
+      dispatchPointer(body, 'pointermove', {
+        pointerType,
+        pointerId: 1,
+        clientX: 400,
+        clientY: 20
+      })
+      const finalPreviewId = getPreviewedPointId(container)
+      expect(finalPreviewId).not.toBe(firstPreviewId)
+      expect(onSelectionChange).not.toHaveBeenCalled()
+
+      dispatchPointer(body, 'pointerup', {
+        pointerType,
+        pointerId: 1,
+        clientX: 400,
+        clientY: 20
+      })
+      body.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+      expect(chart.getDebugState().selectedPointId).toBe(finalPreviewId)
+      expect(body.classList.contains('is-scrubbing')).toBe(false)
+      expect(onSelectionChange).toHaveBeenCalledTimes(1)
+    }
+  )
+
+  it('preserves an empty-space click below the mouse drag threshold', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    const body = container.querySelector('.chart-body-shell')
+    const surface = container.querySelector('.chart-hit-surface')
+
+    dispatchPointer(surface, 'pointerdown', {
+      pointerType: 'mouse',
+      pointerId: 1,
+      clientX: 100,
+      clientY: 100
+    })
+    dispatchPointer(body, 'pointermove', {
+      pointerType: 'mouse',
+      pointerId: 1,
+      clientX: 103,
+      clientY: 100
+    })
+    dispatchPointer(body, 'pointerup', {
+      pointerType: 'mouse',
+      pointerId: 1,
+      clientX: 103,
+      clientY: 100
+    })
+
+    expect(body.classList.contains('is-scrubbing')).toBe(false)
+    body.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(chart.getDebugState().selectedTrendId).toBe('series')
+  })
+
+  it('requires a hold to scrub on touch and leaves quick movement to pan', () => {
+    vi.useFakeTimers()
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query) => ({
+        matches: query === '(pointer: coarse)',
+        media: query,
+        addEventListener() {},
+        removeEventListener() {}
+      }))
+    )
+    const onSelectionChange = vi.fn()
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons(), { onSelectionChange })
+    const body = container.querySelector('.chart-body-shell')
+    const surface = container.querySelector('.chart-hit-surface')
+    Object.defineProperty(body, 'clientWidth', {
+      configurable: true,
+      value: 528
+    })
+
+    expect(body.style.touchAction).toBe('pan-y')
+    dispatchTouchPointer(surface, 'pointerdown', {
+      pointerId: 1,
+      clientX: 120,
+      clientY: 100
+    })
+    const pendingTouchMove = new Event('touchmove', {
+      bubbles: true,
+      cancelable: true
+    })
+    surface.dispatchEvent(pendingTouchMove)
+    expect(pendingTouchMove.defaultPrevented).toBe(false)
+    vi.advanceTimersByTime(299)
+    expect(body.classList.contains('is-scrubbing')).toBe(false)
+
+    vi.advanceTimersByTime(1)
+    const initialPreviewId = getPreviewedPointId(container)
+    expect(body.classList.contains('is-scrubbing')).toBe(true)
+    expect(initialPreviewId).not.toBeNull()
+    expect(onSelectionChange).not.toHaveBeenCalled()
+
+    const scrubTouchMove = new Event('touchmove', {
+      bubbles: true,
+      cancelable: true
+    })
+    surface.dispatchEvent(scrubTouchMove)
+    expect(scrubTouchMove.defaultPrevented).toBe(true)
+
+    dispatchTouchPointer(body, 'pointermove', {
+      pointerId: 1,
+      clientX: 800,
+      clientY: 800
+    })
+    const finalPreviewId = getPreviewedPointId(container)
+    expect(finalPreviewId).not.toBe(initialPreviewId)
+    expect(chart.getDebugState().selectedPointId).toBeNull()
+
+    dispatchTouchPointer(body, 'pointerup', {
+      pointerId: 1,
+      clientX: 800,
+      clientY: 800
+    })
+    body.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(chart.getDebugState().selectedPointId).toBe(finalPreviewId)
+    expect(onSelectionChange).toHaveBeenCalledTimes(1)
+  })
+
+  it('lets a vertical touch movement cancel scrub arming for page scroll', () => {
+    vi.useFakeTimers()
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    const body = container.querySelector('.chart-body-shell')
+    const surface = container.querySelector('.chart-hit-surface')
+    Object.defineProperty(body, 'clientWidth', {
+      configurable: true,
+      value: 528
+    })
+
+    dispatchTouchPointer(surface, 'pointerdown', {
+      pointerId: 1,
+      clientX: 200,
+      clientY: 100
+    })
+    const move = dispatchTouchPointer(body, 'pointermove', {
+      pointerId: 1,
+      clientX: 202,
+      clientY: 120
+    })
+    vi.advanceTimersByTime(300)
+
+    expect(move.defaultPrevented).toBe(false)
+    expect(body.classList.contains('is-scrubbing')).toBe(false)
+
+    dispatchTouchPointer(body, 'pointercancel', {
+      pointerId: 1,
+      clientX: 202,
+      clientY: 120
+    })
+    expect(body.classList.contains('is-scrubbing')).toBe(false)
+  })
+
+  it('cancels a scrub without changing the committed selection', () => {
+    const onSelectionChange = vi.fn()
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons(), { onSelectionChange })
+    chart.moveEpisode(1)
+    onSelectionChange.mockClear()
+    const selectedPointId = chart.getDebugState().selectedPointId
+    const body = container.querySelector('.chart-body-shell')
+    const surface = container.querySelector('.chart-hit-surface')
+    Object.defineProperty(body, 'clientWidth', {
+      configurable: true,
+      value: 528
+    })
+
+    dispatchPointer(surface, 'pointerdown', {
+      pointerType: 'mouse',
+      pointerId: 1,
+      clientX: 100,
+      clientY: 100
+    })
+    dispatchPointer(body, 'pointermove', {
+      pointerType: 'mouse',
+      pointerId: 1,
+      clientX: 350,
+      clientY: 100
+    })
+    expect(body.classList.contains('is-scrubbing')).toBe(true)
+
+    expect(chart.clearSelection()).toBe(true)
+    expect(chart.getDebugState().selectedPointId).toBe(selectedPointId)
+    expect(body.classList.contains('is-scrubbing')).toBe(false)
+
+    dispatchPointer(body, 'pointerup', {
+      pointerType: 'mouse',
+      pointerId: 1,
+      clientX: 350,
+      clientY: 100
+    })
+    body.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    expect(chart.getDebugState().selectedPointId).toBe(selectedPointId)
+    expect(onSelectionChange).not.toHaveBeenCalled()
+  })
+
   it('responds continuously and announces a completed slow touch drag', () => {
     vi.useFakeTimers()
     vi.stubGlobal(
@@ -3061,6 +3346,15 @@ function getRenderedPoint(container, id) {
   )
 }
 
+function getPreviewedPointId(container) {
+  const title = container.querySelector('.sidenote-title')?.textContent
+  return (
+    Array.from(container.querySelectorAll('.episode-point')).find(
+      (point) => point.__data__.title === title
+    )?.__data__.id ?? null
+  )
+}
+
 function viewportEpisodeCount(chartInstance) {
   const { start, end } = chartInstance.getDebugState().viewport
   return end - start + 1
@@ -3183,11 +3477,26 @@ function createRatedEpisode(id, ratings) {
 }
 
 function dispatchTouchPointer(target, type, properties) {
+  return dispatchPointer(target, type, {
+    ...properties,
+    pointerType: 'touch'
+  })
+}
+
+function dispatchPointer(target, type, properties) {
   const event = new Event(type, { bubbles: true, cancelable: true })
   Object.defineProperties(event, {
-    pointerType: { value: 'touch' },
-    pointerId: { value: properties.pointerId },
-    clientX: { value: properties.clientX }
+    pointerType: { value: properties.pointerType },
+    pointerId: { value: properties.pointerId ?? 1 },
+    clientX: { value: properties.clientX ?? 0 },
+    clientY: { value: properties.clientY ?? 0 },
+    button: { value: properties.button ?? 0 },
+    isPrimary: { value: properties.isPrimary ?? true },
+    altKey: { value: properties.altKey ?? false },
+    ctrlKey: { value: properties.ctrlKey ?? false },
+    metaKey: { value: properties.metaKey ?? false },
+    shiftKey: { value: properties.shiftKey ?? false }
   })
   target.dispatchEvent(event)
+  return event
 }

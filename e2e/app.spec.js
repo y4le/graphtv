@@ -146,6 +146,54 @@ test('keeps a shared chart selection across reloads', async ({ page }) => {
   await expect(page).not.toHaveURL(/[?&]select=/u)
 })
 
+test('scrubs episodes across empty chart space and commits on release', async ({
+  page
+}) => {
+  await page.goto('/?show=tvmaze%3A179')
+  await expect(page.locator('.episode-point').first()).toBeVisible()
+
+  const chartBody = page.locator('.chart-body-shell')
+  const hitSurface = page.locator('.chart-hit-surface')
+  const box = await chartBody.boundingBox()
+  expect(box).not.toBeNull()
+  await expect(hitSurface).toHaveCSS('cursor', 'default')
+
+  await hitSurface.dispatchEvent('pointerdown', {
+    pointerId: 1,
+    pointerType: 'mouse',
+    isPrimary: true,
+    button: 0,
+    clientX: box.x + box.width * 0.2,
+    clientY: box.y + 20,
+    bubbles: true
+  })
+  await chartBody.dispatchEvent('pointermove', {
+    pointerId: 1,
+    pointerType: 'mouse',
+    isPrimary: true,
+    clientX: box.x + box.width * 0.7,
+    clientY: box.y + 20,
+    bubbles: true
+  })
+
+  await expect(chartBody).toHaveClass(/is-scrubbing/u)
+  await expect(chartBody).toHaveCSS('cursor', 'col-resize')
+  await expect(page.locator('.crosshair')).toHaveCount(1)
+  await expect(page).not.toHaveURL(/[?&]select=/u)
+
+  await chartBody.dispatchEvent('pointerup', {
+    pointerId: 1,
+    pointerType: 'mouse',
+    isPrimary: true,
+    clientX: box.x + box.width * 0.7,
+    clientY: box.y + 20,
+    bubbles: true
+  })
+
+  await expect(chartBody).not.toHaveClass(/is-scrubbing/u)
+  await expect(page).toHaveURL(/[?&]select=s\d+e\d+(?:&|$)/u)
+})
+
 test.describe('mobile chart', () => {
   test.use({
     viewport: { width: 390, height: 844 },
@@ -187,6 +235,108 @@ test.describe('mobile chart', () => {
 
     await expect(status).not.toHaveText('')
     await expect(page.locator('.ratings-chart')).toBeVisible()
+  })
+
+  test('holds before scrubbing with touch', async ({ page }) => {
+    await page.goto('/?show=tvmaze%3A179')
+    await expect(page.locator('.episode-point').first()).toBeVisible()
+
+    const chartBody = page.locator('.chart-body-shell')
+    const hitSurface = page.locator('.chart-hit-surface')
+    const box = await chartBody.boundingBox()
+    expect(box).not.toBeNull()
+    await expect(chartBody).toHaveCSS('touch-action', 'pan-y')
+
+    await hitSurface.dispatchEvent('pointerdown', {
+      pointerId: 1,
+      pointerType: 'touch',
+      isPrimary: true,
+      clientX: box.x + box.width * 0.25,
+      clientY: box.y + 20,
+      bubbles: true
+    })
+    await page.waitForTimeout(320)
+    await expect(chartBody).toHaveClass(/is-scrubbing/u)
+
+    await chartBody.dispatchEvent('pointermove', {
+      pointerId: 1,
+      pointerType: 'touch',
+      isPrimary: true,
+      clientX: box.x + box.width * 0.65,
+      clientY: box.y + 22,
+      bubbles: true
+    })
+    await chartBody.dispatchEvent('pointerup', {
+      pointerId: 1,
+      pointerType: 'touch',
+      isPrimary: true,
+      clientX: box.x + box.width * 0.65,
+      clientY: box.y + 22,
+      bubbles: true
+    })
+
+    await expect(chartBody).not.toHaveClass(/is-scrubbing/u)
+    await expect(page).toHaveURL(/[?&]select=s\d+e\d+(?:&|$)/u)
+  })
+
+  test('keeps an armed scrub active outside the plot without scrolling', async ({
+    page,
+    context
+  }) => {
+    await page.goto('/?show=tvmaze%3A179')
+    await expect(page.locator('.episode-point').first()).toBeVisible()
+
+    const chartBody = page.locator('.chart-body-shell')
+    const box = await chartBody.boundingBox()
+    expect(box).not.toBeNull()
+    const start = await page.evaluate((bounds) => {
+      for (let y = bounds.y + 10; y < bounds.y + bounds.height; y += 20) {
+        for (let x = bounds.x + 10; x < bounds.x + bounds.width; x += 20) {
+          if (document.elementFromPoint(x, y)?.matches('.chart-hit-surface')) {
+            return { x, y, id: 1 }
+          }
+        }
+      }
+      throw new Error('No empty chart coordinate found')
+    }, box)
+    const session = await context.newCDPSession(page)
+
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [start]
+    })
+    await page.waitForTimeout(320)
+    await expect(chartBody).toHaveClass(/is-scrubbing/u)
+    const initialCrosshairX = await page
+      .locator('.crosshair')
+      .first()
+      .getAttribute('x1')
+    const initialScrollY = await page.evaluate(() => window.scrollY)
+
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [
+        {
+          x: Math.min(389, box.x + box.width + 20),
+          y: 1,
+          id: 1
+        }
+      ]
+    })
+    await page.waitForTimeout(100)
+
+    await expect(chartBody).toHaveClass(/is-scrubbing/u)
+    await expect(page.locator('.crosshair').first()).not.toHaveAttribute(
+      'x1',
+      initialCrosshairX
+    )
+    expect(await page.evaluate(() => window.scrollY)).toBe(initialScrollY)
+
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchEnd',
+      touchPoints: []
+    })
+    await expect(chartBody).not.toHaveClass(/is-scrubbing/u)
   })
 })
 

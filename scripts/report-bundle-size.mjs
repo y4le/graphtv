@@ -70,12 +70,12 @@ export function reportBundleSize(
 ) {
   const maxTotalGzipBytes = readLimit(
     'MAX_TOTAL_GZIP_BYTES',
-    90_000,
+    92_000,
     environment
   )
   const maxEntryGzipBytes = readLimit(
     'MAX_ENTRY_GZIP_BYTES',
-    78_000,
+    79_000,
     environment
   )
   const assetFiles = listFiles(directory).filter((filePath) =>

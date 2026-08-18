@@ -1,7 +1,35 @@
 import { scaleLinear, select } from 'd3'
 import { describe, expect, it } from 'vitest'
 
-import { renderSeasonAxis, resolveTrendHit } from '../../src/viz/marks.js'
+import {
+  renderCrosshair,
+  renderSeasonAxis,
+  resolveTrendHit
+} from '../../src/viz/marks.js'
+
+describe('crosshair', () => {
+  it('can follow a pointer x between episode points', () => {
+    const svgNode = document.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'svg'
+    )
+    const xScale = scaleLinear().domain([1, 5]).range([0, 100])
+
+    renderCrosshair(
+      select(svgNode),
+      { id: 'episode-2', x: 2 },
+      { xScale },
+      { width: 100, height: 80 },
+      { textSecondary: '#737373' },
+      false,
+      2.5
+    )
+
+    expect(Number(svgNode.querySelector('.crosshair').getAttribute('x1'))).toBe(
+      xScale(2.5)
+    )
+  })
+})
 
 describe('season axis', () => {
   it('uses one bottom row, draws boundary ticks, and shortens labels when space is tight', () => {
