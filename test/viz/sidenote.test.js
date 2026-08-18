@@ -246,14 +246,8 @@ describe('createSidenote', () => {
       source: 'tmdb'
     })
 
-    const previewCallCount = onPreviewRating.mock.calls.length
     root.dispatchEvent(
       new MouseEvent('mouseleave', { clientX: 10, clientY: 10 })
-    )
-    expect(onPreviewRating).toHaveBeenCalledTimes(previewCallCount)
-
-    root.dispatchEvent(
-      new MouseEvent('mouseleave', { clientX: 20, clientY: 20 })
     )
     expect(onPreviewRating).toHaveBeenLastCalledWith(null)
 

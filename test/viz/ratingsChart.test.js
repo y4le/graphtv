@@ -1070,6 +1070,15 @@ describe('createChart', () => {
       hoverPointId: 'episode-1'
     })
     expect(detailRoot.textContent).toContain('Episode 1')
+
+    point.dispatchEvent(new MouseEvent('mouseleave'))
+    expect(chart.getDebugState()).toMatchObject({
+      selectedTrendId: 'series',
+      hoverPointId: null
+    })
+    expect(detailRoot.textContent).toContain('Full Series')
+
+    point.dispatchEvent(new MouseEvent('mousemove'))
     expect(chart.clearSelection()).toBe(true)
     expect(chart.getDebugState()).toMatchObject({
       selectedTrendId: 'series',
@@ -1080,6 +1089,36 @@ describe('createChart', () => {
 
     point.dispatchEvent(new MouseEvent('mousemove'))
     expect(chart.getDebugState().hoverPointId).toBe('episode-1')
+  })
+
+  it('restores the committed selection as soon as an episode hover ends', () => {
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+
+    chart = createChart(container, createSeasons(), { detailRoot })
+    chart.moveEpisode(1)
+    const selectedPointId = chart.getDebugState().selectedPointId
+    const hoveredPoint = Array.from(
+      container.querySelectorAll('.episode-point')
+    ).find((point) => point.__data__.id !== selectedPointId)
+
+    hoveredPoint.dispatchEvent(new MouseEvent('mousemove'))
+    expect(chart.getDebugState().hoverPointId).toBe(hoveredPoint.__data__.id)
+
+    hoveredPoint.dispatchEvent(new MouseEvent('mouseleave'))
+
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId,
+      hoverPointId: null
+    })
+    expect(detailRoot.querySelector('.sidenote-nav-label').textContent).toBe(
+      'S01E01'
+    )
   })
 
   it('upgrades the untouched fallback selection when richer data arrives', () => {
@@ -1838,6 +1877,16 @@ describe('createChart', () => {
 
     expect(chart.getDebugState().hoverPointId).toBe(firstPoint.id)
 
+    hitBatch.dispatchEvent(new MouseEvent('mouseleave'))
+    expect(chart.getDebugState().hoverPointId).toBeNull()
+
+    hitBatch.dispatchEvent(
+      new MouseEvent('mousemove', {
+        bubbles: true,
+        ...pointerPosition
+      })
+    )
+
     hitBatch.dispatchEvent(
       new MouseEvent('click', {
         bubbles: true,
@@ -1913,6 +1962,45 @@ describe('createChart', () => {
 
     movePointerAway()
     expect(chart.getDebugState().hoverTrendId).toBeNull()
+  })
+
+  it('restores the committed selection as soon as a trend hover ends', async () => {
+    vi.useFakeTimers()
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+
+    chart = createChart(container, createSeasons(), { detailRoot })
+    chart.moveEpisode(1)
+    const selectedPointId = chart.getDebugState().selectedPointId
+    const surface = container.querySelector('.chart-hit-surface')
+    const trendPoint = getPathMidpoint(
+      container.querySelector('.micro-trendline').getAttribute('d')
+    )
+
+    surface.dispatchEvent(
+      new MouseEvent('pointermove', {
+        bubbles: true,
+        clientX: trendPoint.x,
+        clientY: trendPoint.y
+      })
+    )
+    await vi.advanceTimersByTimeAsync(100)
+    expect(chart.getDebugState().hoverTrendId).toBe('season:1')
+
+    surface.dispatchEvent(new MouseEvent('pointerleave'))
+
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId,
+      hoverTrendId: null
+    })
+    expect(detailRoot.querySelector('.sidenote-nav-label').textContent).toBe(
+      'S01E01'
+    )
   })
 
   it('highlights the matching axis label and trendline from either hover target', async () => {

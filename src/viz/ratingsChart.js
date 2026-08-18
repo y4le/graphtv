@@ -532,30 +532,79 @@ export function createChart(container, seasons, options = {}) {
   function clearTrendHover({ rerender = false } = {}) {
     cancelTrendHover()
     if (!hoverTrendId) {
-      return
+      return false
     }
 
     hoverTrendId = null
     if (rerender) {
       render()
     }
+    return true
+  }
+
+  function clearPointHover({ rerender = false } = {}) {
+    if (!hoverPointId) {
+      return false
+    }
+
+    const previousHoverPointId = hoverPointId
+    hoverPointId = null
+    if (getActivePoint()?.id !== previousHoverPointId) {
+      cancelScheduledDetailLoad()
+    }
+
+    const hitBatch = bodyShell.querySelector('.episode-point-hit-batch')
+    if (hitBatch) {
+      hitBatch.__hoveredPointId = null
+    }
+    if (rerender) {
+      render()
+    }
+    return true
+  }
+
+  function clearChartHover({ rerender = false } = {}) {
+    const pointCleared = clearPointHover()
+    const trendCleared = clearTrendHover()
+    bodyShell
+      .querySelector('.chart-hit-surface')
+      ?.style.removeProperty('cursor')
+
+    if (rerender && (pointCleared || trendCleared)) {
+      render()
+    }
+
+    return pointCleared || trendCleared
   }
 
   function previewTrend(trendline, { immediate = false } = {}) {
+    const pointCleared = clearPointHover()
     if (!finePointerQuery.matches || gesture || flingFrame) {
-      clearTrendHover({ rerender: true })
+      const trendCleared = clearTrendHover()
+      if (pointCleared || trendCleared) {
+        render()
+      }
       return
     }
 
     const nextId = trendline?.id ?? null
     if (!nextId) {
-      clearTrendHover({ rerender: true })
+      const trendCleared = clearTrendHover()
+      if (pointCleared || trendCleared) {
+        render()
+      }
       return
     }
     if (nextId === hoverTrendId) {
+      if (pointCleared) {
+        render()
+      }
       return
     }
     if (!immediate && nextId === pendingTrendHoverId) {
+      if (pointCleared) {
+        render()
+      }
       return
     }
 
@@ -568,6 +617,9 @@ export function createChart(container, seasons, options = {}) {
       return
     }
 
+    if (pointCleared) {
+      render()
+    }
     pendingTrendHoverId = nextId
     trendHoverTimer = setTimeout(() => {
       trendHoverTimer = null
@@ -1470,6 +1522,9 @@ export function createChart(container, seasons, options = {}) {
       hoverEnabled: finePointerQuery.matches,
       hitTolerance: coarsePointerQuery.matches ? 14 : 7,
       onHover: previewTrend,
+      onLeave() {
+        clearTrendHover({ rerender: true })
+      },
       onSelect(trendline) {
         if (trendline) {
           setSelectedTrend(trendline.id)
@@ -1496,6 +1551,11 @@ export function createChart(container, seasons, options = {}) {
         hoverPointId = point.id
         updateDetail(point, { load: true })
         render()
+      },
+      onLeave(pointId) {
+        if (hoverPointId === pointId) {
+          clearPointHover({ rerender: true })
+        }
       },
       onSelect(point) {
         hoverPointId = null
@@ -1524,6 +1584,12 @@ export function createChart(container, seasons, options = {}) {
       },
       onHover(seasonNumber) {
         previewSeasonTrend(seasonNumber)
+      },
+      onLeave(seasonNumber) {
+        const trendId = `season:${seasonNumber}`
+        if (hoverTrendId === trendId || pendingTrendHoverId === trendId) {
+          clearTrendHover({ rerender: true })
+        }
       },
       onSelect: selectSeasonTrend,
       shouldSuppressClick
@@ -2348,27 +2414,7 @@ export function createChart(container, seasons, options = {}) {
       return
     }
 
-    let shouldRender = false
-    if (hoverPointId) {
-      hoverPointId = null
-      cancelScheduledDetailLoad()
-      const hitBatch = bodyShell.querySelector('.episode-point-hit-batch')
-      if (hitBatch) {
-        hitBatch.__hoveredPointId = null
-      }
-      shouldRender = true
-    }
-    bodyShell
-      .querySelector('.chart-hit-surface')
-      ?.style.removeProperty('cursor')
-    cancelTrendHover()
-    if (hoverTrendId) {
-      hoverTrendId = null
-      shouldRender = true
-    }
-    if (shouldRender) {
-      render()
-    }
+    clearChartHover({ rerender: true })
   }
 
   document.addEventListener('mousemove', handleDocumentMouseMove)

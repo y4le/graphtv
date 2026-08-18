@@ -220,8 +220,6 @@ export function createSidenote({
   let contentMarkup = null
   let pointerRatingButton = null
   let pointerTrendInfoControl = null
-  let pointerClientX = null
-  let pointerClientY = null
 
   function setMarkup(markup) {
     if (markup === contentMarkup) {
@@ -475,8 +473,6 @@ export function createSidenote({
   })
 
   listen('mousemove', (event) => {
-    pointerClientX = event.clientX
-    pointerClientY = event.clientY
     updatePointerRatingButton(
       event.target.closest?.('[data-provider-rating]') ?? null
     )
@@ -485,11 +481,7 @@ export function createSidenote({
     )
   })
 
-  listen('mouseleave', (event) => {
-    if (event.clientX === pointerClientX && event.clientY === pointerClientY) {
-      return
-    }
-
+  listen('mouseleave', () => {
     updatePointerRatingButton(null)
     updatePointerTrendInfoControl(null)
   })
