@@ -48,6 +48,30 @@ describe('createSparkline', () => {
     expect(activePath.getAttribute('clip-path')).toBe(`url(#${clipPath.id})`)
   })
 
+  it('uses the displayed chart domain for its window and active points', () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    document.body.appendChild(svg)
+    const scales = createSparklineScales(MODEL, DIMENSIONS)
+    const displayViewport = { start: 1.5, end: 7 }
+    sparkline = createSparkline(svg, {
+      ...createConfig(scales, { start: 2, end: 6 }),
+      displayViewport
+    })
+    const [windowX1, windowX2] = viewportToBrushSelection(
+      displayViewport,
+      scales.xScale
+    )
+    const selection = svg.querySelector('.selection')
+    const points = Array.from(svg.querySelectorAll('.sparkline-point'))
+    const pointAtSeven = points.find((point) => point.__data__.x === 7)
+
+    expect(Number(selection.getAttribute('x'))).toBeCloseTo(windowX1)
+    expect(Number(selection.getAttribute('width'))).toBeCloseTo(
+      windowX2 - windowX1
+    )
+    expect(Number(pointAtSeven.getAttribute('opacity'))).toBe(1)
+  })
+
   it('renders in-window marks more strongly than the surrounding series', () => {
     const { svg } = renderSparkline()
     const basePath = svg.querySelector('.sparkline-path')

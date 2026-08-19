@@ -10,7 +10,8 @@ import {
   getVisiblePoints,
   getVisibleRatedPoints,
   getVisibleSeriesBreakpoint,
-  getVisibleSeasonTrendlines
+  getVisibleSeasonTrendlines,
+  resolveViewportFromDisplay
 } from './scales.js'
 import {
   renderCrosshair,
@@ -1660,6 +1661,8 @@ export function createChart(container, seasons, options = {}) {
     )
     const visiblePoints = getVisiblePoints(model, viewport)
     const visibleRatedPoints = getVisibleRatedPoints(model, viewport)
+    const [displayStart, displayEnd] = mainScales.xScale.domain()
+    const displayViewport = { start: displayStart, end: displayEnd }
 
     // Preserve native vertical page scrolling while keeping horizontal pan and
     // the chart's custom pinch gesture available on every touch-capable layout.
@@ -1761,11 +1764,20 @@ export function createChart(container, seasons, options = {}) {
     renderSparkline(
       chartTheme,
       sparklineScales,
+      displayViewport,
       chartWidth,
       sparklineHeight,
-      (nextViewport) => {
+      (nextDisplayViewport) => {
         hasUserInteracted = true
-        viewport = clampViewport(nextViewport, model)
+        viewport = clampViewport(
+          resolveViewportFromDisplay(
+            model,
+            nextDisplayViewport,
+            chartWidth,
+            getHorizontalScaleOptions()
+          ),
+          model
+        )
         render()
       },
       () => {
@@ -1794,6 +1806,7 @@ export function createChart(container, seasons, options = {}) {
   function renderSparkline(
     chartTheme,
     sparklineScales,
+    displayViewport,
     width,
     height,
     onViewportChange,
@@ -1803,6 +1816,7 @@ export function createChart(container, seasons, options = {}) {
       sparkline = createSparkline(sparklineSvg, {
         model,
         viewport,
+        displayViewport,
         theme: chartTheme,
         dimensions: { width, height },
         scales: sparklineScales,
@@ -1815,6 +1829,7 @@ export function createChart(container, seasons, options = {}) {
     sparkline.render({
       model,
       viewport,
+      displayViewport,
       theme: chartTheme,
       dimensions: { width, height },
       scales: sparklineScales,

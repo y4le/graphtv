@@ -72,7 +72,7 @@ describe('rating scale domains', () => {
     ])
   })
 
-  it('centers sparse rated episodes at normal density spacing', () => {
+  it('centers sparse rated episodes at bounded sparse spacing', () => {
     const model = buildChartModel([
       {
         number: 1,
@@ -91,7 +91,7 @@ describe('rating scale domains', () => {
     )
 
     expect(scales.xScale(2)).toBeCloseTo(300)
-    expect(scales.xScale(2) - scales.xScale(1)).toBeCloseTo(30.95, 1)
+    expect(scales.xScale(2) - scales.xScale(1)).toBeCloseTo(80)
     expect(scales.xScale(3) - 300).toBeCloseTo(300 - scales.xScale(1))
   })
 

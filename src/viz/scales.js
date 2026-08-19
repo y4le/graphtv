@@ -16,7 +16,8 @@ const MAX_RATING = 10
 const X_EDGE_INSET = 6
 const DEFAULT_VIEWPORT_SNAP_EPISODES = 3
 const DEFAULT_VIEWPORT_MIN_SPACING_RATIO = 0.85
-const SPARSE_CENTER_TARGET_SPACING = 30
+const SPARSE_CENTER_MAX_SPACING = 80
+const SPARSE_CENTER_ZOOM_TRANSITION_RATIO = 0.1
 const VIEWPORT_DENSITY_CONFIG = {
   roomy: {
     desktop: { targetSpacing: 30, minimum: 12, maximum: 40 },
@@ -586,48 +587,114 @@ export function createMainScales(model, viewport, dimensions, options = {}) {
 }
 
 function resolveHorizontalDomain(model, domain, width, options) {
-  if (!options.centerSparse || model.ratedPoints.length === 0) {
+  const centering = getSparseCentering(model, width, options)
+  if (!centering) {
     return domain
   }
 
   const [start, end] = domain
-  const visibleRatedPoints = model.ratedPoints.filter(
-    (point) => point.x >= start && point.x <= end
-  )
-  if (visibleRatedPoints.length !== model.ratedPoints.length) {
-    return domain
+  const { centeredCenter, centeredSpan, fullCenter, fullSpan } = centering
+  if (fullSpan === 0) {
+    return [
+      centeredCenter - centeredSpan / 2,
+      centeredCenter + centeredSpan / 2
+    ]
   }
 
-  const preferredEpisodeCount = getPreferredEpisodeCount(
-    width,
-    options.isMobile,
-    options.episodeDensity
-  )
-  const preferredSpan = Math.max(preferredEpisodeCount - 1, 0)
-  const ratedStart = visibleRatedPoints[0].x
-  const ratedEnd = visibleRatedPoints.at(-1).x
-  if (ratedEnd - ratedStart >= preferredSpan) {
-    return domain
-  }
+  // Ease the centering space away as zoom begins. Previously it disappeared
+  // as soon as an endpoint left the logical viewport, which made tiny zoom
+  // changes snap between two unrelated horizontal domains.
+  const viewportSpan = Math.max(end - start, 0)
+  const centeredRatio = getSparseCenterRatio(viewportSpan, fullSpan)
+  const viewportCenter = start + viewportSpan / 2
+  const resolvedCenter =
+    viewportCenter + (centeredCenter - fullCenter) * centeredRatio
+  const resolvedSpan =
+    viewportSpan + (centeredSpan - fullSpan) * centeredRatio
 
-  const center = ratedStart + (ratedEnd - ratedStart) / 2
-  return [center - preferredSpan / 2, center + preferredSpan / 2]
+  return [
+    resolvedCenter - resolvedSpan / 2,
+    resolvedCenter + resolvedSpan / 2
+  ]
 }
 
-function getPreferredEpisodeCount(width, isMobile, density = 'balanced') {
-  if (density === 'all') {
-    return 1
+export function resolveViewportFromDisplay(
+  model,
+  displayViewport,
+  width,
+  options = {}
+) {
+  const centering = getSparseCentering(model, width, options)
+  if (!centering) {
+    return displayViewport
   }
 
-  const densityConfig =
-    VIEWPORT_DENSITY_CONFIG[density] ?? VIEWPORT_DENSITY_CONFIG.balanced
-  const deviceConfig = densityConfig[isMobile ? 'mobile' : 'desktop']
-  const preferredWindow = Math.floor(
-    Math.max(width, 240) /
-      Math.max(deviceConfig.targetSpacing, SPARSE_CENTER_TARGET_SPACING)
-  )
+  const { centeredCenter, centeredSpan, fullCenter, fullSpan } = centering
+  if (fullSpan === 0) {
+    return { start: 1, end: model.xMax }
+  }
 
-  return clamp(preferredWindow, deviceConfig.minimum, deviceConfig.maximum)
+  const displaySpan = Math.max(
+    displayViewport.end - displayViewport.start,
+    0
+  )
+  const transitionSpan = fullSpan * SPARSE_CENTER_ZOOM_TRANSITION_RATIO
+  const transitionStart = fullSpan - transitionSpan
+  const addedCenteredSpan = centeredSpan - fullSpan
+  const viewportSpan =
+    displaySpan <= transitionStart
+      ? displaySpan
+      : (displaySpan +
+          (addedCenteredSpan * transitionStart) / transitionSpan) /
+        (1 + addedCenteredSpan / transitionSpan)
+  const safeViewportSpan = clamp(viewportSpan, 0, fullSpan)
+  const centeredRatio = getSparseCenterRatio(safeViewportSpan, fullSpan)
+  const displayCenter =
+    displayViewport.start +
+    (displayViewport.end - displayViewport.start) / 2
+  const viewportCenter =
+    displayCenter - (centeredCenter - fullCenter) * centeredRatio
+
+  return {
+    start: viewportCenter - safeViewportSpan / 2,
+    end: viewportCenter + safeViewportSpan / 2
+  }
+}
+
+function getSparseCentering(model, width, options) {
+  if (!options.centerSparse || model.ratedPoints.length === 0) {
+    return null
+  }
+
+  const ratedStart = model.ratedPoints[0].x
+  const ratedEnd = model.ratedPoints.at(-1).x
+  const ratedSpan = ratedEnd - ratedStart
+  const availableWidth = Math.max(width - X_EDGE_INSET * 2, 0)
+  const minimumCenteredSpan = availableWidth / SPARSE_CENTER_MAX_SPACING
+
+  // First let a short series spread out to fill the chart. Only add centered
+  // breathing room when doing so would put its episodes farther apart than
+  // the sparse-spacing ceiling.
+  if (ratedSpan >= minimumCenteredSpan) {
+    return null
+  }
+
+  const fullSpan = Math.max(model.xMax - 1, 0)
+  return {
+    centeredCenter: ratedStart + ratedSpan / 2,
+    centeredSpan: Math.max(minimumCenteredSpan, fullSpan),
+    fullCenter: 1 + fullSpan / 2,
+    fullSpan
+  }
+}
+
+function getSparseCenterRatio(viewportSpan, fullSpan) {
+  const transitionSpan = fullSpan * SPARSE_CENTER_ZOOM_TRANSITION_RATIO
+  return clamp(
+    (viewportSpan - (fullSpan - transitionSpan)) / transitionSpan,
+    0,
+    1
+  )
 }
 
 function resolveXRange(width) {

@@ -87,6 +87,7 @@ export function createSparkline(svgNode, config) {
 
   function render(nextConfig) {
     config = nextConfig
+    const displayViewport = getDisplayViewport(config)
     const generator = line()
       .x((point) => config.scales.xScale(point.x))
       .y((point) => config.scales.yScale(point.rating))
@@ -97,7 +98,7 @@ export function createSparkline(svgNode, config) {
     )
     const [windowX1, windowX2] = getViewportSelection(config)
     const isInWindow = (point) =>
-      point.x >= config.viewport.start && point.x <= config.viewport.end
+      point.x >= displayViewport.start && point.x <= displayViewport.end
     const pathData =
       config.model.ratedPoints.length > 1
         ? generator(config.model.ratedPoints)
@@ -357,7 +358,8 @@ export function createSparkline(svgNode, config) {
 
   function centerViewportAt(localX) {
     const center = config.scales.xScale.invert(clampX(localX))
-    const width = config.viewport.end - config.viewport.start
+    const displayViewport = getDisplayViewport(config)
+    const width = displayViewport.end - displayViewport.start
     config.onViewportChange?.(
       {
         start: center - width / 2,
@@ -381,11 +383,20 @@ export function createSparkline(svgNode, config) {
 }
 
 function getViewportSelection(config) {
-  if (config.viewport.start <= 1 && config.viewport.end >= config.model.xMax) {
+  const displayViewport = getDisplayViewport(config)
+  const [overviewStart, overviewEnd] = config.scales.xScale.domain()
+  if (
+    displayViewport.start <= overviewStart &&
+    displayViewport.end >= overviewEnd
+  ) {
     return config.scales.xScale.range()
   }
 
-  return viewportToBrushSelection(config.viewport, config.scales.xScale)
+  return viewportToBrushSelection(displayViewport, config.scales.xScale)
+}
+
+function getDisplayViewport(config) {
+  return config.displayViewport ?? config.viewport
 }
 
 function isTouchBrushEvent(event) {
