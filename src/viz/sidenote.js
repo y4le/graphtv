@@ -45,7 +45,10 @@ function listenForOutsideTrendInfoDismissal(root) {
   return () => ownerDocument.removeEventListener('click', handleClick, true)
 }
 
-function formatRatingList(point, { loadingDetails = false, show = null } = {}) {
+function formatRatingList(
+  point,
+  { loadingDetails = false, show = null, interactive = true } = {}
+) {
   return orderVisibleRatings(point.ratings.filter(isTrustedRating))
     .map((rating, index) => {
       const isPrimary = rating.source === point.ratingSource
@@ -70,14 +73,16 @@ function formatRatingList(point, { loadingDetails = false, show = null } = {}) {
         className: 'sidenote-rating-source'
       })
       const value = formattedRating
-        ? renderProviderRatingButton(
-            point,
-            rating,
-            formattedRating,
-            votes,
-            votesLabel,
-            isPrimary
-          )
+        ? interactive
+          ? renderProviderRatingButton(
+              point,
+              rating,
+              formattedRating,
+              votes,
+              votesLabel,
+              isPrimary
+            )
+          : `${formattedRating}${votes}`
         : `n/a${votes}`
       const content = `${source} ${value}`
       const entry = isPrimary
@@ -193,6 +198,8 @@ export function createSidenote({
   onPreviewRating,
   onSelectRating,
   onSelectPoint,
+  onStartComparison,
+  onCancelComparison,
   onSelectSeasonTrend,
   onSelectSeriesBreakpoint
 }) {
@@ -255,6 +262,7 @@ export function createSidenote({
   }
 
   function renderNavigator(viewModel) {
+    navigatorRoot.hidden = viewModel.mode === 'comparison'
     const key = [
       viewModel.mode,
       viewModel.navigationKind,
@@ -296,7 +304,8 @@ export function createSidenote({
       loadingDetails = false,
       show = null,
       selectedRatingSource = null,
-      seriesRank = null
+      seriesRank = null,
+      comparisonMode = null
     } = {}
   ) {
     const markup = point
@@ -310,6 +319,7 @@ export function createSidenote({
             </div>
             <p class="sidenote-ratings">${formatRatingList(point, { loadingDetails, show })}</p>
             ${renderSeriesRank(seriesRank)}
+            ${renderComparisonAction(comparisonMode, point)}
             ${
               point.plot
                 ? `<p class="sidenote-body">${escapeHtml(point.plot)}</p>`
@@ -321,6 +331,26 @@ export function createSidenote({
 
     setMarkup(markup)
     syncSelectedProviderRating(contentRoot, point?.id, selectedRatingSource)
+  }
+
+  function renderComparison(comparison, { show = null } = {}) {
+    setMarkup(`
+      <article class="sidenote-comparison" aria-labelledby="episode-comparison-title">
+        <header class="sidenote-comparison-header">
+          <div>
+            <p class="eyebrow">Episode comparison</p>
+            <h2 id="episode-comparison-title" class="sidenote-comparison-title">${escapeHtml(formatEpisodeLabel(comparison.earlier.point))} to ${escapeHtml(formatEpisodeLabel(comparison.later.point))}</h2>
+          </div>
+          <button type="button" class="sidenote-compare-button" data-comparison-action="cancel">Exit comparison</button>
+        </header>
+        <div class="sidenote-comparison-episodes">
+          ${renderComparisonEpisode('Earlier', comparison.earlier, show)}
+          ${renderComparisonEpisode('Later', comparison.later, show)}
+        </div>
+        ${renderComparisonMetrics(comparison)}
+        ${renderComparisonExtremes(comparison)}
+      </article>
+    `)
   }
 
   function renderTrendSummary(summary, { show = null } = {}) {
@@ -446,6 +476,26 @@ export function createSidenote({
         return
       }
       onNavigate?.(navigatorButton.dataset.sidenoteNav === 'previous' ? -1 : 1)
+      return
+    }
+
+    const comparisonAction = event.target.closest?.('[data-comparison-action]')
+    if (comparisonAction) {
+      onInteract?.()
+      if (comparisonAction.dataset.comparisonAction === 'start') {
+        onStartComparison?.()
+      } else {
+        onCancelComparison?.()
+      }
+      return
+    }
+
+    const comparisonPointButton = event.target.closest?.(
+      '[data-comparison-point-id]'
+    )
+    if (comparisonPointButton) {
+      onInteract?.()
+      onSelectPoint?.(comparisonPointButton.dataset.comparisonPointId)
       return
     }
 
@@ -586,6 +636,7 @@ export function createSidenote({
   return {
     renderNavigator,
     renderPoint,
+    renderComparison,
     renderTrendSummary,
     renderRestingState,
     destroy() {
@@ -594,6 +645,101 @@ export function createSidenote({
       root.replaceChildren()
     }
   }
+}
+
+function renderComparisonAction(mode, point) {
+  if (mode === 'available') {
+    return `
+      <div class="sidenote-comparison-action">
+        <button type="button" class="sidenote-compare-button" data-comparison-action="start">Compare with…</button>
+      </div>
+    `
+  }
+
+  if (mode === 'armed') {
+    return `
+      <div class="sidenote-comparison-action is-armed">
+        <span>Choose a second episode to compare with ${escapeHtml(formatEpisodeLabel(point))}.</span>
+        <button type="button" class="sidenote-compare-button" data-comparison-action="cancel">Cancel</button>
+      </div>
+    `
+  }
+
+  return ''
+}
+
+function renderComparisonEpisode(label, entry, show) {
+  const point = entry.point
+  return `
+    <section class="sidenote-comparison-episode" aria-label="${label} episode">
+      <p class="eyebrow">${label}${entry.isAnchor ? ' · Anchor' : ''}</p>
+      <button type="button" class="sidenote-comparison-episode-button" data-comparison-point-id="${escapeHtml(point.id)}" aria-label="Select only ${escapeHtml(formatEpisodeLabel(point))}, ${escapeHtml(point.title)}">
+        <span>${escapeHtml(formatEpisodeLabel(point))}</span>
+        <strong>${escapeHtml(point.title)}</strong>
+      </button>
+      <p class="sidenote-meta">${escapeHtml(point.date ?? 'Unknown air date')}</p>
+      <p class="sidenote-ratings">${formatRatingList(point, {
+        loadingDetails: entry.loadingDetails,
+        show,
+        interactive: false
+      })}</p>
+      ${renderSeriesRank(entry.seriesRank)}
+    </section>
+  `
+}
+
+function renderComparisonMetrics(comparison) {
+  const ratingChange = Number.isFinite(comparison.ratingDelta)
+    ? `<strong>${formatSignedDelta(comparison.ratingDelta)}</strong> · ${escapeHtml(getRatingSourceLabel(comparison.ratingSource))}`
+    : 'Not calculated · different rating sources'
+  const dateGap = Number.isFinite(comparison.airDateGapDays)
+    ? `
+        <div>
+          <dt>Aired</dt>
+          <dd>${comparison.airDateGapDays} ${comparison.airDateGapDays === 1 ? 'day' : 'days'} apart</dd>
+        </div>
+      `
+    : ''
+
+  return `
+    <dl class="sidenote-comparison-metrics">
+      <div>
+        <dt>Rating change</dt>
+        <dd>${ratingChange}</dd>
+      </div>
+      <div>
+        <dt>Span</dt>
+        <dd>${comparison.span.episodeCount} ${comparison.span.episodeCount === 1 ? 'episode' : 'episodes'} · ${comparison.span.ratedCount} rated by ${escapeHtml(getRatingSourceLabel(comparison.span.ratingSource))}</dd>
+      </div>
+      ${dateGap}
+    </dl>
+  `
+}
+
+function renderComparisonExtremes(comparison) {
+  if (!comparison.span.top || !comparison.span.bottom) {
+    return ''
+  }
+
+  return `
+    <div class="sidenote-comparison-extremes" aria-label="Highest and lowest rated episodes in the comparison span">
+      ${renderComparisonExtreme('Highest in span', comparison.span.top)}
+      ${renderComparisonExtreme('Lowest in span', comparison.span.bottom)}
+    </div>
+  `
+}
+
+function renderComparisonExtreme(label, extreme) {
+  return `
+    <section>
+      <h3>${label}</h3>
+      <button type="button" class="sidenote-comparison-extreme" data-comparison-point-id="${escapeHtml(extreme.point.id)}" aria-label="Select ${escapeHtml(formatEpisodeLabel(extreme.point))}, ${escapeHtml(extreme.point.title)}">
+        <span>${escapeHtml(formatEpisodeLabel(extreme.point))}</span>
+        <span>${escapeHtml(extreme.point.title)}</span>
+        <strong>${extreme.point.rating.toFixed(1)}</strong>
+      </button>
+    </section>
+  `
 }
 
 function renderBreakpointRegime(label, summary, medianRating) {

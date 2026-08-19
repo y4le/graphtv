@@ -1019,6 +1019,10 @@ button {
   margin-bottom: 0.7rem;
 }
 
+.sidenote-nav[hidden] {
+  display: none;
+}
+
 .sidenote-nav-button {
   width: 1.75rem;
   padding-inline: 0;
@@ -1109,6 +1113,161 @@ button {
   color: var(--textSecondary);
   font-family: var(--font-sans);
   font-size: var(--type-size-meta);
+}
+
+.sidenote-comparison-action {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  margin-top: 0.65rem;
+  color: var(--textSecondary);
+  font-family: var(--font-sans);
+  font-size: var(--type-size-meta);
+}
+
+.sidenote-comparison-action.is-armed {
+  padding-block: 0.55rem;
+  border-block: 1px solid var(--lineSoft);
+}
+
+.sidenote-compare-button {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--lineStrong);
+  background: transparent;
+  color: var(--textSecondary);
+  font-family: var(--font-sans);
+  font-size: var(--type-size-utility);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.sidenote-compare-button:hover,
+.sidenote-compare-button:focus-visible {
+  border-color: var(--spotColor);
+  color: var(--spotColor);
+}
+
+.sidenote-compare-button:focus-visible,
+.sidenote-comparison-episode-button:focus-visible,
+.sidenote-comparison-extreme:focus-visible {
+  outline: 2px solid var(--spotColor);
+  outline-offset: 2px;
+}
+
+.sidenote-comparison-header {
+  display: flex;
+  gap: 1rem;
+  align-items: start;
+  justify-content: space-between;
+}
+
+.sidenote-comparison-title {
+  margin: 0.15rem 0 0;
+  font-family: var(--font-editorial-serif);
+  font-size: var(--type-size-heading);
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.sidenote-comparison-episodes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--columnGap);
+  margin-top: 0.9rem;
+}
+
+.sidenote-comparison-episode {
+  min-width: 0;
+  padding-top: 0.65rem;
+  border-top: 2px solid var(--spotColor);
+}
+
+.sidenote-comparison-episode-button {
+  display: flex;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  align-items: baseline;
+  background: transparent;
+  color: var(--textPrimary);
+  font-family: var(--font-editorial-serif);
+  font-size: var(--type-size-body);
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.sidenote-comparison-episode-button span {
+  flex: 0 0 auto;
+  color: var(--textSecondary);
+  font-family: var(--font-sans);
+  font-size: var(--type-size-meta);
+}
+
+.sidenote-comparison-episode-button:hover,
+.sidenote-comparison-episode-button:focus-visible,
+.sidenote-comparison-extreme:hover,
+.sidenote-comparison-extreme:focus-visible {
+  color: var(--spotColor);
+}
+
+.sidenote-comparison-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--lineStrong);
+  font-family: var(--font-sans);
+  font-size: var(--type-size-meta);
+}
+
+.sidenote-comparison-metrics dt {
+  color: var(--textSecondary);
+}
+
+.sidenote-comparison-metrics dd {
+  margin: 0.15rem 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.sidenote-comparison-extremes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--columnGap);
+  margin-top: 0.85rem;
+}
+
+.sidenote-comparison-extremes h3 {
+  margin: 0;
+  color: var(--textSecondary);
+  font-family: var(--font-sans);
+  font-size: var(--type-size-meta);
+}
+
+.sidenote-comparison-extreme {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.25rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--lineStrong);
+  background: transparent;
+  color: var(--textPrimary);
+  font-family: var(--font-sans);
+  font-size: var(--type-size-meta);
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.sidenote-comparison-extreme span:nth-child(2) {
+  overflow: hidden;
+  color: var(--textSecondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sidenote-rating-primary {
@@ -1577,6 +1736,12 @@ button {
     min-height: 2.75rem;
   }
 
+  .sidenote-compare-button,
+  .sidenote-comparison-episode-button,
+  .sidenote-comparison-extreme {
+    min-height: 2.75rem;
+  }
+
   .trend-summary-extreme {
     min-height: 2.75rem;
   }
@@ -1815,6 +1980,32 @@ button {
 
   .results-episode:empty {
     display: none;
+  }
+
+  .sidenote-comparison-header {
+    align-items: center;
+  }
+
+  .sidenote-comparison-episodes,
+  .sidenote-comparison-metrics,
+  .sidenote-comparison-extremes {
+    grid-template-columns: 1fr;
+  }
+
+  .sidenote-comparison-episodes,
+  .sidenote-comparison-extremes {
+    gap: 0.85rem;
+  }
+
+  .sidenote-comparison-action.is-armed {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sidenote-compare-button,
+  .sidenote-comparison-episode-button,
+  .sidenote-comparison-extreme {
+    min-height: 2.75rem;
   }
 
   .results-data {

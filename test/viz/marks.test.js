@@ -153,6 +153,33 @@ describe('season axis', () => {
       )
     ).toBe(true)
   })
+
+  it('draws a clipped comparison range on the season axis', () => {
+    const svgNode = document.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'svg'
+    )
+    const xScale = scaleLinear().domain([3, 7]).range([6, 234])
+
+    renderSeasonAxis(
+      select(svgNode),
+      [
+        { seasonNumber: 1, seasonIndex: 0, start: 1, end: 4, midpoint: 2.5 },
+        { seasonNumber: 2, seasonIndex: 1, start: 5, end: 8, midpoint: 6.5 }
+      ],
+      { start: 3, end: 7 },
+      { xScale },
+      { width: 240, height: 124 },
+      { textSecondary: '#737373', spotColor: '#d9480f' },
+      { comparisonRange: { start: 2, end: 6 } }
+    )
+
+    const comparison = svgNode.querySelector('.season-axis-comparison')
+    expect(Number(comparison.getAttribute('x1'))).toBe(xScale(3))
+    expect(Number(comparison.getAttribute('x2'))).toBe(xScale(6))
+    expect(comparison.getAttribute('stroke')).toBe('#d9480f')
+    expect(comparison.getAttribute('stroke-width')).toBe('3')
+  })
 })
 
 describe('trendline hit testing', () => {

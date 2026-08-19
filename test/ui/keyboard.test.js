@@ -271,8 +271,10 @@ describe('createKeyboardController', () => {
       panHalfViewport: vi.fn(),
       resetZoom: vi.fn(),
       clearSelection: vi.fn(),
+      commitComparison: vi.fn(() => true),
       cyclePrimaryRatingSource: vi.fn(),
       toggleSeasonTrend: vi.fn(),
+      toggleComparison: vi.fn(() => true),
       toggleSeriesBreakpoint: vi.fn(),
       toggleSeriesTrend: vi.fn(),
       zoomBy: vi.fn()
@@ -293,6 +295,8 @@ describe('createKeyboardController', () => {
     pressKey('f')
     pressKey('r')
     pressKey('p')
+    pressKey('v')
+    pressKey('Enter')
     pressKey('-')
     pressKey('=')
     pressKey('+', { shiftKey: true })
@@ -310,6 +314,8 @@ describe('createKeyboardController', () => {
     expect(chart.fitSeries).toHaveBeenCalledOnce()
     expect(chart.resetZoom).toHaveBeenCalledOnce()
     expect(chart.cyclePrimaryRatingSource).toHaveBeenCalledOnce()
+    expect(chart.toggleComparison).toHaveBeenCalledOnce()
+    expect(chart.commitComparison).toHaveBeenCalledOnce()
     expect(chart.zoomBy.mock.calls).toEqual([[1.5], [1 / 1.5], [1 / 1.5]])
     expect(chart.toggleSeriesTrend).toHaveBeenCalledOnce()
     expect(chart.toggleSeriesBreakpoint).toHaveBeenCalledOnce()

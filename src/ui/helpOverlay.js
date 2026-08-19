@@ -112,6 +112,13 @@ function resultsHelpSections() {
       ]
     },
     {
+      title: 'Episode comparison',
+      items: [
+        { keys: ['v'], action: 'Start or exit episode comparison' },
+        { keys: ['Enter'], action: 'Compare with previewed episode' }
+      ]
+    },
+    {
       title: 'Viewport',
       items: [
         { keys: ['Ctrl-U'], action: 'Pan back half a viewport' },

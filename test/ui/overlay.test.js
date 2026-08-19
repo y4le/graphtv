@@ -396,6 +396,8 @@ describe('keyboard help overlay', () => {
         't',
         'b',
         'T',
+        'v',
+        'Enter',
         'Escape'
       ])
     )
@@ -407,6 +409,9 @@ describe('keyboard help overlay', () => {
     )
     expect(document.querySelector('.help-sections').textContent).toContain(
       'Cycle primary rating provider'
+    )
+    expect(document.querySelector('.help-sections').textContent).toContain(
+      'Compare with previewed episode'
     )
     expect(document.querySelector('[data-help-action="debug"]')).toMatchObject({
       tagName: 'BUTTON'

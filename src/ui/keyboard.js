@@ -306,6 +306,20 @@ export function createKeyboardController({
       return
     }
 
+    if (key === 'v') {
+      if (page.chart.toggleComparison?.()) {
+        event.preventDefault()
+      }
+      return
+    }
+
+    if (key === 'Enter') {
+      if (page.chart.commitComparison?.()) {
+        event.preventDefault()
+      }
+      return
+    }
+
     if (isChartHalfViewportShortcut(event)) {
       event.preventDefault()
       page.chart.panHalfViewport(key === 'u' ? -1 : 1)

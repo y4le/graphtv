@@ -452,6 +452,16 @@ describe('createChart', () => {
 
     expect(chart.getDebugState().selectedPointId).toBe('episode-4')
     expect(detailRoot.querySelector('.sidenote-rank')).toBeNull()
+
+    getRenderedPoint(container, 'episode-1').dispatchEvent(
+      new MouseEvent('click', { bubbles: true, shiftKey: true })
+    )
+    expect(
+      detailRoot.querySelector('.sidenote-comparison-metrics').textContent
+    ).toContain('Not calculated · different rating sources')
+    expect(
+      detailRoot.querySelector('.sidenote-comparison-metrics').textContent
+    ).toContain('4 episodes · 3 rated by IMDb')
   })
 
   it('offers the browse view only when no full-series trend exists', () => {
@@ -3190,6 +3200,357 @@ describe('createChart', () => {
     chart.destroy()
     chart = undefined
     expect(detailRoot.childNodes).toHaveLength(0)
+  })
+
+  it('arms, previews, commits, and unwinds an episode comparison', () => {
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+
+    chart = createChart(container, createSeasons(), { detailRoot })
+    chart.moveEpisode(1)
+    detailRoot.querySelector('[data-comparison-action="start"]').click()
+
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId: 'episode-1',
+      comparison: { armed: true, pointId: null, committed: false }
+    })
+    expect(detailRoot.textContent).toContain(
+      'Choose a second episode to compare with S01E01.'
+    )
+
+    chart.moveEpisode(1)
+    expect(chart.getDebugState().comparison).toEqual({
+      armed: true,
+      pointId: 'episode-2',
+      committed: false
+    })
+    expect(detailRoot.querySelector('.sidenote-nav-meta').textContent).toBe(
+      'S01E02 ready · Enter to compare'
+    )
+    const armedAnchor = getRenderedPoint(container, 'episode-1')
+    const armedCandidate = getRenderedPoint(container, 'episode-2')
+    const armedNeighbour = getRenderedPoint(container, 'episode-3')
+    expect(Number(armedAnchor.getAttribute('r'))).toBeGreaterThan(
+      Number(armedNeighbour.getAttribute('r'))
+    )
+    expect(armedAnchor.getAttribute('r')).toBe(armedCandidate.getAttribute('r'))
+    expect(
+      container
+        .querySelector('.chart-shell')
+        .style.getPropertyValue('--reading-pane-marker')
+    ).toBe('')
+
+    expect(chart.commitComparison()).toBe(true)
+    expect(chart.getDebugState().comparison).toEqual({
+      armed: false,
+      pointId: 'episode-2',
+      committed: true
+    })
+    expect(
+      Array.from(
+        detailRoot.querySelectorAll('.sidenote-comparison-episode .eyebrow'),
+        (label) => label.textContent
+      )
+    ).toEqual(['Earlier · Anchor', 'Later'])
+    expect(container.querySelector('.season-axis-comparison')).not.toBeNull()
+
+    const anchor = getRenderedPoint(container, 'episode-1')
+    const comparisonPoint = getRenderedPoint(container, 'episode-2')
+    const unselectedPoint = getRenderedPoint(container, 'episode-3')
+    expect(anchor.getAttribute('r')).toBe(comparisonPoint.getAttribute('r'))
+    expect(Number(anchor.getAttribute('r'))).toBeGreaterThan(
+      Number(unselectedPoint.getAttribute('r'))
+    )
+
+    chart.moveEpisode(1)
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId: 'episode-1',
+      comparison: { armed: false, pointId: 'episode-2', committed: true }
+    })
+
+    expect(chart.clearSelection()).toBe(true)
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId: 'episode-1',
+      comparison: { armed: false, pointId: null, committed: false }
+    })
+    expect(detailRoot.querySelector('.sidenote-comparison')).toBeNull()
+  })
+
+  it('keeps episode and season navigation inert while a comparison is committed', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createTwoSeasons())
+    getRenderedPoint(container, 'season-1-episode-1').dispatchEvent(
+      new MouseEvent('click', { bubbles: true })
+    )
+    getRenderedPoint(container, 'season-1-episode-2').dispatchEvent(
+      new MouseEvent('click', { bubbles: true, shiftKey: true })
+    )
+    const committedState = {
+      selectedPointId: 'season-1-episode-1',
+      comparison: {
+        armed: false,
+        pointId: 'season-1-episode-2',
+        committed: true
+      }
+    }
+
+    chart.moveEpisode(1)
+    expect(chart.getDebugState()).toMatchObject(committedState)
+    chart.moveSeason(1)
+    expect(chart.getDebugState()).toMatchObject(committedState)
+    chart.jumpBoundary('end')
+    expect(chart.getDebugState()).toMatchObject(committedState)
+  })
+
+  it('uses shift-click as a comparison accelerator and ignores shifted misses', () => {
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+
+    chart = createChart(container, createSeasons(), { detailRoot })
+    const firstPoint = getRenderedPoint(container, 'episode-1')
+    const thirdPoint = getRenderedPoint(container, 'episode-3')
+    const fourthPoint = getRenderedPoint(container, 'episode-4')
+    const fifthPoint = getRenderedPoint(container, 'episode-5')
+
+    firstPoint.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, shiftKey: true })
+    )
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId: 'episode-1',
+      comparison: { committed: false }
+    })
+
+    thirdPoint.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, shiftKey: true })
+    )
+    expect(chart.getDebugState().comparison).toEqual({
+      armed: false,
+      pointId: 'episode-3',
+      committed: true
+    })
+
+    fifthPoint.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, shiftKey: true })
+    )
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId: 'episode-1',
+      comparison: { pointId: 'episode-5', committed: true }
+    })
+
+    firstPoint.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, shiftKey: true })
+    )
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId: 'episode-1',
+      comparison: { pointId: null, committed: false }
+    })
+
+    fifthPoint.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, shiftKey: true })
+    )
+    expect(chart.getDebugState().comparison.committed).toBe(true)
+
+    container
+      .querySelector('.chart-body-shell')
+      .dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }))
+    expect(chart.getDebugState().comparison.committed).toBe(true)
+
+    fourthPoint.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }))
+    expect(chart.getDebugState().hoverPointId).toBeNull()
+    expect(detailRoot.querySelector('.sidenote-comparison')).not.toBeNull()
+
+    fourthPoint.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId: 'episode-4',
+      comparison: { committed: false, pointId: null }
+    })
+  })
+
+  it('orders a reverse-selected comparison chronologically', () => {
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+
+    chart = createChart(container, createSeasons(), { detailRoot })
+    getRenderedPoint(container, 'episode-4').dispatchEvent(
+      new MouseEvent('click', { bubbles: true })
+    )
+    getRenderedPoint(container, 'episode-2').dispatchEvent(
+      new MouseEvent('click', { bubbles: true, shiftKey: true })
+    )
+
+    expect(
+      Array.from(
+        detailRoot.querySelectorAll('.sidenote-comparison-episode .eyebrow'),
+        (label) => label.textContent
+      )
+    ).toEqual(['Earlier', 'Later · Anchor'])
+    expect(
+      Array.from(
+        detailRoot.querySelectorAll(
+          '.sidenote-comparison-episode-button span:first-child'
+        ),
+        (label) => label.textContent
+      )
+    ).toEqual(['S01E02', 'S01E04'])
+    expect(
+      detailRoot.querySelector('.sidenote-comparison-metrics').textContent
+    ).toContain('3 episodes · 3 rated by TEST')
+  })
+
+  it('preserves a comparison across data updates and collapses if an endpoint disappears', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons())
+    getRenderedPoint(container, 'episode-1').dispatchEvent(
+      new MouseEvent('click', { bubbles: true })
+    )
+    getRenderedPoint(container, 'episode-3').dispatchEvent(
+      new MouseEvent('click', { bubbles: true, shiftKey: true })
+    )
+
+    chart.updateSeasons(createSeasons())
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId: 'episode-1',
+      comparison: { pointId: 'episode-3', committed: true }
+    })
+
+    const withoutComparisonPoint = createSeasons()
+    withoutComparisonPoint[0].episodes.splice(2, 1)
+    chart.updateSeasons(withoutComparisonPoint)
+
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId: 'episode-1',
+      comparison: { pointId: null, committed: false }
+    })
+  })
+
+  it('loads supplemental details for both compared episodes', async () => {
+    vi.useFakeTimers()
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    const loadEpisodeDetails = vi.fn(async (point) => ({
+      ...point,
+      ratings: point.ratings.map((rating) => ({ ...rating, votes: 100 }))
+    }))
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+
+    chart = createChart(container, createSeasons(), {
+      detailRoot,
+      loadEpisodeDetails
+    })
+    getRenderedPoint(container, 'episode-1').dispatchEvent(
+      new MouseEvent('click', { bubbles: true })
+    )
+    getRenderedPoint(container, 'episode-2').dispatchEvent(
+      new MouseEvent('click', { bubbles: true, shiftKey: true })
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+
+    expect(loadEpisodeDetails.mock.calls.map(([point]) => point.id)).toEqual([
+      'episode-1',
+      'episode-2'
+    ])
+    expect(
+      Array.from(
+        detailRoot.querySelectorAll(
+          '.sidenote-comparison-episode .sidenote-ratings'
+        ),
+        (ratings) => ratings.textContent
+      )
+    ).toEqual(['TEST 6.0 (100 votes)', 'TEST 7.0 (100 votes)'])
+  })
+
+  it('loads both comparison endpoints while an unrelated detail request is in flight', async () => {
+    vi.useFakeTimers()
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    let resolveUnrelatedLoad
+    const loadEpisodeDetails = vi.fn((point) => {
+      if (point.id === 'episode-9') {
+        return new Promise((resolve) => {
+          resolveUnrelatedLoad = () => resolve(point)
+        })
+      }
+      return Promise.resolve({
+        ...point,
+        ratings: point.ratings.map((rating) => ({
+          ...rating,
+          votes: Number(point.id.split('-').at(-1)) * 100
+        }))
+      })
+    })
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+
+    chart = createChart(container, createSeasons(), {
+      detailRoot,
+      loadEpisodeDetails
+    })
+    getRenderedPoint(container, 'episode-9').dispatchEvent(
+      new MouseEvent('mousemove', { bubbles: true })
+    )
+    await vi.advanceTimersByTimeAsync(250)
+    expect(resolveUnrelatedLoad).toEqual(expect.any(Function))
+
+    getRenderedPoint(container, 'episode-1').dispatchEvent(
+      new MouseEvent('click', { bubbles: true })
+    )
+    getRenderedPoint(container, 'episode-2').dispatchEvent(
+      new MouseEvent('click', { bubbles: true, shiftKey: true })
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+
+    expect(loadEpisodeDetails.mock.calls.map(([point]) => point.id)).toEqual([
+      'episode-9',
+      'episode-1',
+      'episode-2'
+    ])
+    expect(
+      Array.from(
+        detailRoot.querySelectorAll(
+          '.sidenote-comparison-episode .sidenote-ratings'
+        ),
+        (ratings) => ratings.textContent
+      )
+    ).toEqual(['TEST 6.0 (100 votes)', 'TEST 7.0 (200 votes)'])
+
+    resolveUnrelatedLoad()
+    await Promise.resolve()
   })
 
   it('refreshes episode source links when supplemental provider context arrives', () => {

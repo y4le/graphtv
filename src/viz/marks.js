@@ -102,6 +102,18 @@ export function renderSeasonAxis(
   )
   const [, axisEndX] = scales.xScale.range()
   const axisY = dimensions.height - 0.5
+  const comparisonRange = interactions.comparisonRange
+  const visibleComparisonRange =
+    comparisonRange &&
+    comparisonRange.end >= viewport.start &&
+    comparisonRange.start <= viewport.end
+      ? {
+          startX: scales.xScale(
+            Math.max(comparisonRange.start, viewport.start)
+          ),
+          endX: scales.xScale(Math.min(comparisonRange.end, viewport.end))
+        }
+      : null
 
   if (
     focusedSeasonNumber != null &&
@@ -126,6 +138,22 @@ export function renderSeasonAxis(
     .attr('stroke', theme.textSecondary)
     .attr('stroke-opacity', 0.45)
     .attr('stroke-width', 1)
+    .attr('aria-hidden', 'true')
+    .attr('pointer-events', 'none')
+
+  layer
+    .selectAll('.season-axis-comparison')
+    .data(visibleComparisonRange ? [visibleComparisonRange] : [])
+    .join('line')
+    .attr('class', 'season-axis-comparison')
+    .attr('x1', (range) => range.startX)
+    .attr('x2', (range) => range.endX)
+    .attr('y1', axisY)
+    .attr('y2', axisY)
+    .attr('stroke', theme.spotColor)
+    .attr('stroke-opacity', 1)
+    .attr('stroke-width', 3)
+    .attr('stroke-linecap', 'round')
     .attr('aria-hidden', 'true')
     .attr('pointer-events', 'none')
 
@@ -842,6 +870,9 @@ export function renderPoints(svg, points, scales, theme, interactions) {
     .attr('pointer-events', 'all')
     .attr('aria-hidden', 'true')
 
+  const isEmphasized = (point) =>
+    point.id === interactions.activePointId ||
+    interactions.selectedPointIds?.includes(point.id)
   const visiblePoints = markLayer
     .selectAll('.episode-point')
     .data(individualPoints, (point) => point.id)
@@ -850,12 +881,12 @@ export function renderPoints(svg, points, scales, theme, interactions) {
     .attr('cx', (point) => scales.xScale(point.x))
     .attr('cy', (point) => scales.yScale(point.rating))
     .attr('r', (point) =>
-      point.id === interactions.activePointId
+      isEmphasized(point)
         ? scaleSelectedPointRadius(pointRadius, theme.markDensity)
         : pointRadius
     )
     .attr('fill', (point) => {
-      if (point.id === interactions.activePointId) {
+      if (isEmphasized(point)) {
         if (isSecondaryRatingActive(point, interactions)) {
           return theme.textSecondary
         }
@@ -864,7 +895,7 @@ export function renderPoints(svg, points, scales, theme, interactions) {
       return pointColor(point)
     })
     .attr('fill-opacity', (point) =>
-      point.isFallbackRating && point.id !== interactions.activePointId
+      point.isFallbackRating && !isEmphasized(point)
         ? FALLBACK_POINT_FILL_OPACITY
         : 1
     )
@@ -948,7 +979,9 @@ function createPointMarkBatches(
   const batches = new Map()
 
   for (const point of points) {
-    const isActive = point.id === interactions.activePointId
+    const isActive =
+      point.id === interactions.activePointId ||
+      interactions.selectedPointIds?.includes(point.id)
     const isSecondaryActive =
       isActive && isSecondaryRatingActive(point, interactions)
     const style = {
@@ -1030,7 +1063,7 @@ function bindBatchedPointInteractions(hitBatch, points, scales, interactions) {
       if (interactions.shouldSuppressClick?.()) {
         return
       }
-      interactions.onSelect(point)
+      interactions.onSelect(point, event)
     })
 }
 
@@ -1127,7 +1160,7 @@ function bindPointInteractions(points, interactions) {
       if (interactions.shouldSuppressClick?.()) {
         return
       }
-      interactions.onSelect(point)
+      interactions.onSelect(point, event)
     })
 }
 

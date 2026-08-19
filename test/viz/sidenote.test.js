@@ -55,6 +55,22 @@ describe('createSidenote', () => {
     expect(root.querySelector('[data-sidenote-nav="previous"]')).toBe(previous)
     expect(root.querySelector('[data-sidenote-nav="next"]')).toBe(next)
     expect(document.activeElement).toBe(previous)
+
+    sidenote.renderNavigator({
+      mode: 'comparison',
+      label: 'Episode comparison',
+      previousAvailable: false,
+      nextAvailable: false
+    })
+    expect(root.querySelector('.sidenote-nav').hidden).toBe(true)
+
+    sidenote.renderNavigator({
+      mode: 'point',
+      label: 'S02E01',
+      previousAvailable: true,
+      nextAvailable: true
+    })
+    expect(root.querySelector('.sidenote-nav').hidden).toBe(false)
   })
 
   it('only suggests selecting a trendline when one is available', () => {
@@ -124,6 +140,107 @@ describe('createSidenote', () => {
 
     sidenote.renderPoint(point)
     expect(root.querySelector('.sidenote-rank')).toBeNull()
+  })
+
+  it('arms and cancels comparison from ordinary episode details', () => {
+    const root = document.createElement('section')
+    const onStartComparison = vi.fn()
+    const onCancelComparison = vi.fn()
+    const sidenote = createSidenote({
+      root,
+      onStartComparison,
+      onCancelComparison
+    })
+    const point = {
+      id: 'episode-1',
+      title: 'Pilot',
+      season: 1,
+      episode: 1,
+      date: null,
+      plot: null,
+      rating: 8,
+      ratingSource: 'test',
+      ratings: [{ source: 'test', rating: 8 }]
+    }
+
+    sidenote.renderPoint(point, { comparisonMode: 'available' })
+    root.querySelector('[data-comparison-action="start"]').click()
+    expect(onStartComparison).toHaveBeenCalledOnce()
+
+    sidenote.renderPoint(point, { comparisonMode: 'armed' })
+    expect(root.textContent).toContain(
+      'Choose a second episode to compare with S01E01.'
+    )
+    root.querySelector('[data-comparison-action="cancel"]').click()
+    expect(onCancelComparison).toHaveBeenCalledOnce()
+  })
+
+  it('renders chronological comparison details and routes endpoint actions', () => {
+    const root = document.createElement('section')
+    const onCancelComparison = vi.fn()
+    const onSelectPoint = vi.fn()
+    const sidenote = createSidenote({
+      root,
+      onCancelComparison,
+      onSelectPoint
+    })
+    const earlier = {
+      id: 'episode-2',
+      title: 'Earlier',
+      season: 1,
+      episode: 2,
+      date: '2020-01-01',
+      rating: 7.5,
+      ratingSource: 'omdb',
+      ratings: [{ source: 'omdb', rating: 7.5, votes: 100 }]
+    }
+    const later = {
+      id: 'episode-8',
+      title: 'Later',
+      season: 2,
+      episode: 3,
+      date: '2020-02-01',
+      rating: 8.4,
+      ratingSource: 'omdb',
+      ratings: [{ source: 'omdb', rating: 8.4, votes: 200 }]
+    }
+
+    sidenote.renderComparison({
+      earlier: {
+        point: earlier,
+        seriesRank: { rank: 8, total: 12, source: 'omdb' }
+      },
+      later: {
+        point: later,
+        seriesRank: { rank: 2, total: 12, source: 'omdb' }
+      },
+      ratingDelta: 0.9,
+      ratingSource: 'omdb',
+      airDateGapDays: 31,
+      span: {
+        episodeCount: 7,
+        ratedCount: 6,
+        ratingSource: 'omdb',
+        top: { point: later },
+        bottom: { point: earlier }
+      }
+    })
+
+    expect(
+      Array.from(
+        root.querySelectorAll('.sidenote-comparison-episode .eyebrow'),
+        (label) => label.textContent
+      )
+    ).toEqual(['Earlier', 'Later'])
+    expect(
+      root.querySelector('.sidenote-comparison-metrics').textContent
+    ).toContain('+0.9 · IMDb')
+    expect(root.querySelectorAll('[data-provider-rating]')).toHaveLength(0)
+
+    root.querySelector('[data-comparison-point-id="episode-8"]').click()
+    expect(onSelectPoint).toHaveBeenCalledWith('episode-8')
+    root.querySelector('[data-comparison-action="cancel"]').click()
+    expect(onCancelComparison).toHaveBeenCalledOnce()
   })
 
   it('removes delegated listeners when destroyed', () => {
