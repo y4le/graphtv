@@ -52,6 +52,26 @@ The production asset budget defaults to 92,000 gzip bytes total and 79,000
 gzip bytes for the entry JavaScript chunk. Set `MAX_TOTAL_GZIP_BYTES` or
 `MAX_ENTRY_GZIP_BYTES` when intentionally revising those limits.
 
+## Project card
+
+`.yalethomas/card.svg` is generated from a real show's ratings by
+`scripts/build-card-svg.mjs`, which fetches ratings from the app's providers,
+runs the app's chart model and mark scaling, then draws them in the monotone
+palette with a single selection:
+
+```bash
+npm run build:card                                    # Game of Thrones
+node scripts/build-card-svg.mjs --show "The Wire"
+node scripts/build-card-svg.mjs --season 4            # select a season instead
+```
+
+The selection goes to the detected series breakpoint when the show has one the
+app would call high confidence — the two regimes and the marker between them.
+Shows without one fall back to the season with the steepest trendline; pass
+`--season` to override the automatic selection. `.env.local` credentials add
+TMDB and IMDb ratings to TVmaze's; without them the card is built from TVmaze
+alone and carries no provider spread.
+
 ## GitHub Pages
 
 This repo includes a GitHub Pages workflow at [.github/workflows/deploy-pages.yml](.github/workflows/deploy-pages.yml).

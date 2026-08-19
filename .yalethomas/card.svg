@@ -7,26 +7,22 @@
 >
   <title id="graphtv-card-title">graphtv</title>
   <desc id="graphtv-card-description">
-    The graphtv wordmark over a scrolling episode-rating series: seasons in
-    their own colors, marked off on an axis and carrying their own trendlines,
-    hairlines where providers disagree, and one selected episode marked on the
-    plot and the season axis.
+    The graphtv wordmark over Game of Thrones: every episode of the run
+    scrolling past in one ink tone on a season axis, hairlines where TVmaze,
+    TMDB and IMDb disagree, season trendlines under a dashed full-series
+    trendline, and the detected series breakpoint selected: the run splits into
+    two spot-colored regimes either side of a dashed marker at S08E01, where the
+    median rating moves from 8.9 to 6.7 — a 2.2-point drop the app scores 86 out
+    of 100. No episode is selected.
   </desc>
   <style>
     :root {
       color-scheme: light dark;
-      --card-ink: light-dark(#1a1814, #e8e3d5);
-      --card-muted: light-dark(#6f6a5e, #8a857a);
-      --card-trend-micro: light-dark(#a3a3a3, #777269);
-      --card-spot: light-dark(#c1432e, #d9644d);
-      /*
-        The app's default maximin palette: the first four season colors it
-        picks in each theme, greedily spread apart in OKLab.
-      */
-      --card-season-1: light-dark(oklch(52% 0.15 255), oklch(72% 0.15 240));
-      --card-season-2: light-dark(oklch(62% 0.15 135), oklch(82% 0.15 75));
-      --card-season-3: light-dark(oklch(62% 0.21 345), oklch(62% 0.21 345));
-      --card-season-4: light-dark(oklch(42% 0.09 45), oklch(62% 0.15 135));
+      --card-ink: light-dark(#1a1a1a, #e8e3d5); /* --textPrimary */
+      --card-muted: light-dark(#6f6f6f, #8a857a); /* --textSecondary */
+      --card-trend-macro: light-dark(#d1d1d1, #56534d); /* --trendMacro */
+      --card-trend-micro: light-dark(#a3a3a3, #777269); /* --trendMicro */
+      --card-spot: light-dark(#c1432e, #d9644d); /* --spotColor */
     }
 
     :root[data-color-scheme="light"] {
@@ -46,12 +42,12 @@
     }
 
     #graphtv-card .gtv-scroll {
-      animation: gtv-scroll 12s linear infinite;
+      animation: gtv-scroll 10s linear infinite;
     }
 
     @keyframes gtv-scroll {
       to {
-        transform: translateX(-3200px);
+        transform: translateX(-9400px);
       }
     }
 
@@ -67,127 +63,227 @@
     </clipPath>
 
     <!--
-      One scroll period, 3200 wide: four seasons of episodes on a 120 pitch,
-      separated by a 200 season gap. The period is wider than the 1618 viewBox,
-      so the single selected episode and its season can never appear twice in
-      the card at once. Each season takes its own maximin color, as in the
-      app's default palette. Marks stay above y=400 to clear the wordmark.
-      Points sit at the sparse end of the app's mark scaling (large points
-      over thin trendlines) and the selected episode grows by 1.5x.
+      One scroll period: Game of Thrones (2011), 73 rated of 73 episodes
+      across 8 seasons, rated by TVmaze, TMDB and IMDb and plotted on IMDb.
+      The period is wider than the 1618 viewBox, so the one selection can
+      never appear twice in the card at once, and plotted marks stay above
+      y=390 to clear the wordmark. Rebuild it, or rebuild it around another
+      show, with scripts/build-card-svg.mjs.
 
       Referenced content is painted with presentation attributes: document CSS
       rules do not reach into a <use> shadow tree, but custom properties
       inherit into it.
     -->
     <g id="graphtv-card-period">
-      <!-- Season axis: rail, season boundary ticks, and the selected season. -->
-      <g stroke="var(--card-muted)" stroke-width="3">
-        <line x1="0" y1="790" x2="3200" y2="790" stroke-opacity="0.45" />
-        <line x1="700" y1="790" x2="700" y2="764" stroke-opacity="0.7" />
-        <line x1="1620" y1="790" x2="1620" y2="764" stroke-opacity="0.7" />
-        <line x1="2300" y1="790" x2="2300" y2="764" stroke-opacity="0.7" />
-        <line x1="3100" y1="790" x2="3100" y2="764" stroke-opacity="0.7" />
+      <!-- Season axis: rail and season boundary ticks. -->
+      <g>
+        <line x1="0" y1="790" x2="9400" y2="790" stroke="var(--card-muted)" stroke-opacity="0.45" stroke-width="3.5" />
+        <line x1="0" y1="790" x2="0" y2="772.5" stroke="var(--card-muted)" stroke-opacity="0.7" stroke-width="3.5" />
+        <line x1="1180" y1="790" x2="1180" y2="772.5" stroke="var(--card-muted)" stroke-opacity="0.7" stroke-width="3.5" />
+        <line x1="2460" y1="790" x2="2460" y2="772.5" stroke="var(--card-muted)" stroke-opacity="0.7" stroke-width="3.5" />
+        <line x1="3740" y1="790" x2="3740" y2="772.5" stroke="var(--card-muted)" stroke-opacity="0.7" stroke-width="3.5" />
+        <line x1="5020" y1="790" x2="5020" y2="772.5" stroke="var(--card-muted)" stroke-opacity="0.7" stroke-width="3.5" />
+        <line x1="6300" y1="790" x2="6300" y2="772.5" stroke="var(--card-muted)" stroke-opacity="0.7" stroke-width="3.5" />
+        <line x1="7580" y1="790" x2="7580" y2="772.5" stroke="var(--card-muted)" stroke-opacity="0.7" stroke-width="3.5" />
+        <line x1="8500" y1="790" x2="8500" y2="772.5" stroke="var(--card-muted)" stroke-opacity="0.7" stroke-width="3.5" />
+        <line x1="9200" y1="790" x2="9200" y2="772.5" stroke="var(--card-muted)" stroke-opacity="0.7" stroke-width="3.5" />
       </g>
-      <line
-        x1="740"
-        y1="790"
-        x2="1580"
-        y2="790"
-        stroke="var(--card-spot)"
-        stroke-width="6"
-      />
 
-      <g
-        font-family="Geist, Inter, 'Helvetica Neue', Arial, sans-serif"
-        font-size="52"
-        font-weight="600"
-        letter-spacing="0.06em"
-        text-anchor="middle"
-      >
-        <text x="300" y="864" fill="var(--card-ink)" fill-opacity="0.72">S1</text>
-        <text x="1160" y="864" fill="var(--card-spot)">S2</text>
-        <text x="1960" y="864" fill="var(--card-ink)" fill-opacity="0.72">S3</text>
-        <text x="2700" y="864" fill="var(--card-ink)" fill-opacity="0.72">S4</text>
+      <g font-family="'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace" font-size="42" text-anchor="middle">
+        <text x="590" y="864" fill="var(--card-muted)">Season 1</text>
+        <text x="1820" y="864" fill="var(--card-muted)">Season 2</text>
+        <text x="3100" y="864" fill="var(--card-muted)">Season 3</text>
+        <text x="4380" y="864" fill="var(--card-muted)">Season 4</text>
+        <text x="5660" y="864" fill="var(--card-muted)">Season 5</text>
+        <text x="6940" y="864" fill="var(--card-muted)">Season 6</text>
+        <text x="8040" y="864" fill="var(--card-muted)">Season 7</text>
+        <text x="8850" y="864" fill="var(--card-muted)">Season 8</text>
       </g>
+
+      <!-- Full-series trendline, fitted across every rated episode. -->
+      <line x1="0" y1="134.79" x2="9200" y2="178.46" stroke="var(--card-trend-macro)" stroke-width="7.7" stroke-dasharray="17.5 17.5" />
 
       <!-- Season trendlines, fitted to each season's own episodes. -->
-      <g
-        stroke="var(--card-trend-micro)"
-        stroke-width="7"
-        stroke-linecap="round"
-      >
-        <line x1="0" y1="328.1" x2="600" y2="259.2" />
-        <line x1="800" y1="252.7" x2="1520" y2="135.2" />
-        <line x1="1720" y1="207.4" x2="2200" y2="317" />
-        <line x1="2400" y1="292.1" x2="3000" y2="141.8" />
+      <g stroke="var(--card-trend-micro)" stroke-width="7.7">
+        <line x1="0" y1="164.68" x2="1080" y2="130.59" />
+        <line x1="1280" y1="174.16" x2="2360" y2="135.36" />
+        <line x1="2560" y1="164.08" x2="3640" y2="134.5" />
+        <line x1="3840" y1="150.08" x2="4920" y2="123.67" />
+        <line x1="5120" y1="184.31" x2="6200" y2="133.68" />
+        <line x1="6400" y1="163.03" x2="7480" y2="131.42" />
+        <line x1="7680" y1="157.19" x2="8400" y2="133.24" />
+        <line x1="8600" y1="177.14" x2="9200" y2="330.89" />
       </g>
 
       <!-- Provider disagreement, drawn as a spread hairline through the point. -->
-      <g
-        stroke="var(--card-muted)"
-        stroke-opacity="0.5"
-        stroke-width="5"
-        stroke-linecap="round"
-      >
-        <line x1="120" y1="248.3" x2="120" y2="324.3" />
-        <line x1="480" y1="267.3" x2="480" y2="327.3" />
-        <line x1="920" y1="152.7" x2="920" y2="244.7" />
-        <line x1="1720" y1="153.7" x2="1720" y2="221.7" />
-        <line x1="2080" y1="198.5" x2="2080" y2="286.5" />
-        <line x1="2520" y1="203.5" x2="2520" y2="259.5" />
-        <line x1="2880" y1="136.7" x2="2880" y2="216.7" />
+      <g stroke="var(--card-muted)" stroke-opacity="0.4" stroke-width="4.38" stroke-linecap="round">
+        <line x1="0" y1="181.83" x2="0" y2="150.53" />
+        <line x1="120" y1="189.32" x2="120" y2="162.95" />
+        <line x1="240" y1="187.79" x2="240" y2="167.09" />
+        <line x1="360" y1="181.41" x2="360" y2="162.95" />
+        <line x1="480" y1="167.09" x2="480" y2="146.39" />
+        <line x1="600" y1="169.53" x2="600" y2="142.25" />
+        <line x1="720" y1="161.88" x2="720" y2="142.25" />
+        <line x1="840" y1="179.51" x2="840" y2="150.53" />
+        <line x1="960" y1="150.53" x2="960" y2="121.56" />
+        <line x1="1080" y1="154.34" x2="1080" y2="129.84" />
+        <line x1="1280" y1="179.51" x2="1280" y2="162.95" />
+        <line x1="1400" y1="196.07" x2="1400" y2="175.37" />
+        <line x1="1760" y1="191.93" x2="1760" y2="162.95" />
+        <line x1="1880" y1="175.37" x2="1880" y2="150.53" />
+        <line x1="2000" y1="179.51" x2="2000" y2="154.67" />
+        <line x1="2120" y1="183.65" x2="2120" y2="162.95" />
+        <line x1="2240" y1="146.39" x2="2240" y2="117.42" />
+        <line x1="2360" y1="158.81" x2="2360" y2="133.98" />
+        <line x1="2560" y1="191.93" x2="2560" y2="162.95" />
+        <line x1="2680" y1="191.93" x2="2680" y2="171.23" />
+        <line x1="2800" y1="179.51" x2="2800" y2="158.81" />
+        <line x1="2920" y1="154.67" x2="2920" y2="125.7" />
+        <line x1="3040" y1="179.51" x2="3040" y2="150.53" />
+        <line x1="3160" y1="183.65" x2="3160" y2="158.81" />
+        <line x1="3280" y1="191.93" x2="3280" y2="162.95" />
+        <line x1="3400" y1="175.37" x2="3400" y2="150.53" />
+        <line x1="3520" y1="142.25" x2="3520" y2="109.14" />
+        <line x1="3640" y1="187.79" x2="3640" y2="142.25" />
+        <line x1="3840" y1="183.65" x2="3840" y2="146.39" />
+        <line x1="3960" y1="150.53" x2="3960" y2="117.42" />
+        <line x1="4080" y1="191.93" x2="4080" y2="158.81" />
+        <line x1="4200" y1="191.93" x2="4200" y2="158.81" />
+        <line x1="4320" y1="196.07" x2="4320" y2="162.95" />
+        <line x1="4440" y1="171.23" x2="4440" y2="117.42" />
+        <line x1="4560" y1="179.51" x2="4560" y2="146.39" />
+        <line x1="4680" y1="154.67" x2="4680" y2="117.42" />
+        <line x1="4800" y1="158.81" x2="4800" y2="121.56" />
+        <line x1="4920" y1="175.37" x2="4920" y2="121.56" />
+        <line x1="5120" y1="204.35" x2="5120" y2="175.37" />
+        <line x1="5240" y1="204.35" x2="5240" y2="175.37" />
+        <line x1="5360" y1="204.35" x2="5360" y2="191.93" />
+        <line x1="5480" y1="212.63" x2="5480" y2="167.09" />
+        <line x1="5600" y1="204.35" x2="5600" y2="167.09" />
+        <line x1="5720" y1="229.18" x2="5720" y2="191.93" />
+        <line x1="5840" y1="187.79" x2="5840" y2="154.67" />
+        <line x1="5960" y1="154.67" x2="5960" y2="113.28" />
+        <line x1="6080" y1="191.93" x2="6080" y2="129.84" />
+        <line x1="6200" y1="191.93" x2="6200" y2="142.25" />
+        <line x1="6400" y1="212.63" x2="6400" y2="171.23" />
+        <line x1="6520" y1="196.07" x2="6520" y2="138.12" />
+        <line x1="6640" y1="212.63" x2="6640" y2="162.95" />
+        <line x1="6760" y1="196.07" x2="6760" y2="146.39" />
+        <line x1="6880" y1="191.93" x2="6880" y2="117.42" />
+        <line x1="7000" y1="208.49" x2="7000" y2="175.37" />
+        <line x1="7120" y1="208.49" x2="7120" y2="167.09" />
+        <line x1="7240" y1="220.9" x2="7240" y2="175.37" />
+        <line x1="7360" y1="171.23" x2="7360" y2="109.14" />
+        <line x1="7480" y1="150.53" x2="7480" y2="109.14" />
+        <line x1="7680" y1="216.76" x2="7680" y2="167.09" />
+        <line x1="7800" y1="208.49" x2="7800" y2="154.67" />
+        <line x1="7920" y1="200.21" x2="7920" y2="142.25" />
+        <line x1="8040" y1="183.65" x2="8040" y2="117.42" />
+        <line x1="8160" y1="200.21" x2="8160" y2="158.81" />
+        <line x1="8280" y1="187.79" x2="8280" y2="146.39" />
+        <line x1="8400" y1="183.65" x2="8400" y2="129.84" />
+        <line x1="8600" y1="229.18" x2="8600" y2="204.35" />
+        <line x1="8720" y1="229.18" x2="8720" y2="191.93" />
+        <line x1="8840" y1="233.32" x2="8840" y2="208.49" />
+        <line x1="8960" y1="291.27" x2="8960" y2="266.44" />
+        <line x1="9080" y1="274.72" x2="9080" y2="262.3" />
+        <line x1="9200" y1="353.37" x2="9200" y2="299.55" />
       </g>
 
-      <!-- The selected episode's spread is emphasized and capped, as in the app. -->
-      <g stroke="var(--card-muted)" stroke-opacity="0.9" stroke-width="5">
-        <line x1="1160" y1="113.8" x2="1160" y2="217.8" />
-        <line x1="1132" y1="113.8" x2="1188" y2="113.8" />
-        <line x1="1132" y1="217.8" x2="1188" y2="217.8" />
+      <!-- Episodes in the monotone palette: one ink tone for every season. -->
+      <g fill="var(--card-ink)">
+        <circle cx="0" cy="150.53" r="23.63" />
+        <circle cx="120" cy="162.95" r="23.63" />
+        <circle cx="240" cy="167.09" r="23.63" />
+        <circle cx="360" cy="162.95" r="23.63" />
+        <circle cx="480" cy="146.39" r="23.63" />
+        <circle cx="600" cy="142.25" r="23.63" />
+        <circle cx="720" cy="142.25" r="23.63" />
+        <circle cx="840" cy="150.53" r="23.63" />
+        <circle cx="960" cy="121.56" r="23.63" />
+        <circle cx="1080" cy="129.84" r="23.63" />
+        <circle cx="1280" cy="162.95" r="23.63" />
+        <circle cx="1400" cy="175.37" r="23.63" />
+        <circle cx="1760" cy="162.95" r="23.63" />
+        <circle cx="1880" cy="150.53" r="23.63" />
+        <circle cx="2000" cy="154.67" r="23.63" />
+        <circle cx="2120" cy="162.95" r="23.63" />
+        <circle cx="2240" cy="117.42" r="23.63" />
+        <circle cx="2360" cy="133.98" r="23.63" />
+        <circle cx="2560" cy="162.95" r="23.63" />
+        <circle cx="2680" cy="171.23" r="23.63" />
+        <circle cx="2800" cy="158.81" r="23.63" />
+        <circle cx="2920" cy="125.7" r="23.63" />
+        <circle cx="3040" cy="150.53" r="23.63" />
+        <circle cx="3160" cy="158.81" r="23.63" />
+        <circle cx="3280" cy="162.95" r="23.63" />
+        <circle cx="3400" cy="150.53" r="23.63" />
+        <circle cx="3520" cy="109.14" r="23.63" />
+        <circle cx="3640" cy="142.25" r="23.63" />
+        <circle cx="3840" cy="146.39" r="23.63" />
+        <circle cx="3960" cy="117.42" r="23.63" />
+        <circle cx="4080" cy="158.81" r="23.63" />
+        <circle cx="4200" cy="158.81" r="23.63" />
+        <circle cx="4320" cy="162.95" r="23.63" />
+        <circle cx="4440" cy="117.42" r="23.63" />
+        <circle cx="4560" cy="146.39" r="23.63" />
+        <circle cx="4680" cy="117.42" r="23.63" />
+        <circle cx="4800" cy="121.56" r="23.63" />
+        <circle cx="4920" cy="121.56" r="23.63" />
+        <circle cx="5120" cy="175.37" r="23.63" />
+        <circle cx="5240" cy="175.37" r="23.63" />
+        <circle cx="5480" cy="167.09" r="23.63" />
+        <circle cx="5600" cy="167.09" r="23.63" />
+        <circle cx="5720" cy="191.93" r="23.63" />
+        <circle cx="5840" cy="154.67" r="23.63" />
+        <circle cx="5960" cy="113.28" r="23.63" />
+        <circle cx="6080" cy="129.84" r="23.63" />
+        <circle cx="6200" cy="142.25" r="23.63" />
+        <circle cx="6400" cy="171.23" r="23.63" />
+        <circle cx="6520" cy="138.12" r="23.63" />
+        <circle cx="6640" cy="162.95" r="23.63" />
+        <circle cx="6760" cy="146.39" r="23.63" />
+        <circle cx="6880" cy="117.42" r="23.63" />
+        <circle cx="7000" cy="175.37" r="23.63" />
+        <circle cx="7120" cy="167.09" r="23.63" />
+        <circle cx="7240" cy="175.37" r="23.63" />
+        <circle cx="7360" cy="109.14" r="23.63" />
+        <circle cx="7480" cy="109.14" r="23.63" />
+        <circle cx="7680" cy="167.09" r="23.63" />
+        <circle cx="7800" cy="154.67" r="23.63" />
+        <circle cx="7920" cy="142.25" r="23.63" />
+        <circle cx="8040" cy="117.42" r="23.63" />
+        <circle cx="8160" cy="158.81" r="23.63" />
+        <circle cx="8280" cy="146.39" r="23.63" />
+        <circle cx="8400" cy="129.84" r="23.63" />
+        <circle cx="8600" cy="204.35" r="23.63" />
+        <circle cx="8720" cy="191.93" r="23.63" />
+        <circle cx="8840" cy="208.49" r="23.63" />
+        <circle cx="8960" cy="291.27" r="23.63" />
+        <circle cx="9080" cy="274.72" r="23.63" />
+        <circle cx="9200" cy="353.37" r="23.63" />
       </g>
 
-      <!-- Episodes, one group per season in that season's palette color. -->
-      <g fill="var(--card-season-1)">
-        <circle cx="0" cy="330.2" r="24" />
-        <circle cx="120" cy="286.3" r="24" />
-        <circle cx="240" cy="341.2" r="24" />
-        <circle cx="360" cy="264.4" r="24" />
-        <circle cx="480" cy="297.3" r="24" />
-        <circle cx="600" cy="242.5" r="24" />
-      </g>
-      <g fill="var(--card-season-2)">
-        <circle cx="800" cy="264.4" r="24" />
-        <circle cx="920" cy="198.7" r="24" />
-        <circle cx="1040" cy="242.5" r="24" />
-        <circle cx="1280" cy="209.6" r="24" />
-        <circle cx="1400" cy="154.8" r="24" />
-        <circle cx="1520" cy="121.9" r="24" />
-      </g>
-      <g fill="var(--card-season-3)">
-        <circle cx="1720" cy="187.7" r="24" />
-        <circle cx="1840" cy="253.5" r="24" />
-        <circle cx="1960" cy="297.3" r="24" />
-        <circle cx="2080" cy="242.5" r="24" />
-        <circle cx="2200" cy="330.2" r="24" />
-      </g>
-      <g fill="var(--card-season-4)">
-        <circle cx="2400" cy="297.3" r="24" />
-        <circle cx="2520" cy="231.5" r="24" />
-        <circle cx="2640" cy="264.4" r="24" />
-        <circle cx="2760" cy="198.7" r="24" />
-        <circle cx="2880" cy="176.7" r="24" />
-        <circle cx="3000" cy="132.9" r="24" />
+      <!-- Episodes carrying a season-level fallback rating, hollowed out. -->
+      <g fill="var(--card-ink)" fill-opacity="0.2" stroke="var(--card-ink)" stroke-width="4.38">
+        <circle cx="1520" cy="179.51" r="23.63" />
+        <circle cx="1640" cy="179.51" r="23.63" />
+        <circle cx="5360" cy="204.35" r="23.63" />
       </g>
 
-      <!-- Exactly one selected episode per period, 1.5x its resting size. -->
-      <circle cx="1160" cy="165.8" r="36" fill="var(--card-spot)" />
+      <!-- Detected series breakpoint: the marker and the two regimes. -->
+      <line x1="8500" y1="105" x2="8500" y2="390" stroke="var(--card-spot)" stroke-width="5.25" stroke-dasharray="10.5 14" opacity="0.75" />
+      <g stroke="var(--card-spot)" stroke-width="8.75" stroke-linecap="round">
+        <line x1="0" y1="151.42" x2="8400" y2="144.45" />
+        <line x1="8600" y1="177.14" x2="9200" y2="330.89" />
+      </g>
     </g>
   </defs>
 
   <g clip-path="url(#graphtv-card-frame)" aria-hidden="true">
     <g class="gtv-scroll">
-      <use href="#graphtv-card-period" x="-3200" />
       <use href="#graphtv-card-period" />
-      <use href="#graphtv-card-period" x="3200" />
+      <use href="#graphtv-card-period" x="9400" />
     </g>
   </g>
 
