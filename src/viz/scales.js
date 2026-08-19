@@ -638,13 +638,9 @@ function resolveHorizontalDomain(model, domain, width, options) {
   const viewportCenter = start + viewportSpan / 2
   const resolvedCenter =
     viewportCenter + (centeredCenter - fullCenter) * centeredRatio
-  const resolvedSpan =
-    viewportSpan + (centeredSpan - fullSpan) * centeredRatio
+  const resolvedSpan = viewportSpan + (centeredSpan - fullSpan) * centeredRatio
 
-  return [
-    resolvedCenter - resolvedSpan / 2,
-    resolvedCenter + resolvedSpan / 2
-  ]
+  return [resolvedCenter - resolvedSpan / 2, resolvedCenter + resolvedSpan / 2]
 }
 
 export function resolveViewportFromDisplay(
@@ -663,24 +659,19 @@ export function resolveViewportFromDisplay(
     return { start: 1, end: model.xMax }
   }
 
-  const displaySpan = Math.max(
-    displayViewport.end - displayViewport.start,
-    0
-  )
+  const displaySpan = Math.max(displayViewport.end - displayViewport.start, 0)
   const transitionSpan = fullSpan * SPARSE_CENTER_ZOOM_TRANSITION_RATIO
   const transitionStart = fullSpan - transitionSpan
   const addedCenteredSpan = centeredSpan - fullSpan
   const viewportSpan =
     displaySpan <= transitionStart
       ? displaySpan
-      : (displaySpan +
-          (addedCenteredSpan * transitionStart) / transitionSpan) /
+      : (displaySpan + (addedCenteredSpan * transitionStart) / transitionSpan) /
         (1 + addedCenteredSpan / transitionSpan)
   const safeViewportSpan = clamp(viewportSpan, 0, fullSpan)
   const centeredRatio = getSparseCenterRatio(safeViewportSpan, fullSpan)
   const displayCenter =
-    displayViewport.start +
-    (displayViewport.end - displayViewport.start) / 2
+    displayViewport.start + (displayViewport.end - displayViewport.start) / 2
   const viewportCenter =
     displayCenter - (centeredCenter - fullCenter) * centeredRatio
 
