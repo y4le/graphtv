@@ -208,6 +208,7 @@ export function buildChartModel(seasons, options = {}) {
       ratedPointIndexById.set(point.id, index)
     }
   })
+  const seriesRankByPointId = createSeriesRankByPointId(primaryRatedPoints)
   const ratedPointsBySeason = new Map()
   for (const point of ratedPoints) {
     const seasonPoints = ratedPointsBySeason.get(point.season) ?? []
@@ -220,6 +221,7 @@ export function buildChartModel(seasons, options = {}) {
     pointById,
     ratedPoints,
     ratedPointIndexById,
+    seriesRankByPointId,
     ratedPointsBySeason,
     primaryRatedPoints,
     primaryRatingSource: primaryRating.source,
@@ -234,6 +236,33 @@ export function buildChartModel(seasons, options = {}) {
     xMax,
     totalSeasons: seasons.length
   }
+}
+
+function createSeriesRankByPointId(points) {
+  const seenIds = new Set()
+  const uniquePoints = points.filter((point) => {
+    if (seenIds.has(point.id)) {
+      return false
+    }
+    seenIds.add(point.id)
+    return true
+  })
+  const rankedPoints = uniquePoints.sort(
+    (left, right) => right.rating - left.rating || left.x - right.x
+  )
+  const ranks = new Map()
+  let previousRating = null
+  let rank = 0
+
+  rankedPoints.forEach((point, index) => {
+    if (point.rating !== previousRating) {
+      rank = index + 1
+      previousRating = point.rating
+    }
+    ranks.set(point.id, rank)
+  })
+
+  return ranks
 }
 
 function createSeriesBreakpointSummary(candidate, allPoints, source) {

@@ -264,6 +264,17 @@ export function createChart(container, seasons, options = {}) {
       : null
   }
 
+  function getSeriesRank(point) {
+    const rank = model.seriesRankByPointId.get(point?.id)
+    return rank == null
+      ? null
+      : {
+          rank,
+          total: model.seriesRankByPointId.size,
+          source: model.primaryRatingSource
+        }
+  }
+
   function clearProviderRatingState() {
     hoveredProviderRating = null
     selectedProviderRating = null
@@ -715,7 +726,8 @@ export function createChart(container, seasons, options = {}) {
           const currentPoint = getPointById(point.id)
           sidenote.renderPoint(detailCache.get(point.id) ?? currentPoint, {
             show,
-            selectedRatingSource: getSelectedRatingSource(currentPoint)
+            selectedRatingSource: getSelectedRatingSource(currentPoint),
+            seriesRank: getSeriesRank(currentPoint)
           })
         }
       }
@@ -753,7 +765,8 @@ export function createChart(container, seasons, options = {}) {
     sidenote.renderPoint(detailCache.get(point.id) ?? point, {
       loadingDetails: loadingDetailPointIds.has(point.id),
       show,
-      selectedRatingSource: getSelectedRatingSource(point)
+      selectedRatingSource: getSelectedRatingSource(point),
+      seriesRank: getSeriesRank(point)
     })
   }
 

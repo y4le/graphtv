@@ -30,6 +30,9 @@ describe('rating scale domains', () => {
 
     expect(model.pointById.get('duplicate').title).toBe(first.title)
     expect(model.ratedPointIndexById.get('duplicate')).toBe(0)
+    expect(Object.fromEntries(model.seriesRankByPointId)).toEqual({
+      duplicate: 1
+    })
   })
 
   it('excludes TMDB episode ratings below five votes', () => {
@@ -187,6 +190,11 @@ describe('rating scale domains', () => {
       true
     ])
     expect(model.primaryRatedPoints).toHaveLength(3)
+    expect(Array.from(model.seriesRankByPointId.keys())).toEqual([
+      'episode-2',
+      'episode-1',
+      'episode-0'
+    ])
     expect(model.seasonTrendlines).toHaveLength(1)
     expect(model.trendSummaries['season:1']).toMatchObject({
       label: 'Season 1',
@@ -199,6 +207,27 @@ describe('rating scale domains', () => {
       label: 'Full series',
       n: 3,
       totalEpisodes: 5
+    })
+  })
+
+  it('ranks comparable series episodes with competition ties', () => {
+    const model = buildChartModel([
+      {
+        number: 1,
+        episodes: [
+          createEpisode('first', [{ source: 'test', rating: 8.5 }]),
+          createEpisode('second', [{ source: 'test', rating: 9 }]),
+          createEpisode('third', [{ source: 'test', rating: 8.5 }]),
+          createEpisode('fourth', [{ source: 'test', rating: 7 }])
+        ]
+      }
+    ])
+
+    expect(Object.fromEntries(model.seriesRankByPointId)).toEqual({
+      first: 2,
+      second: 1,
+      third: 2,
+      fourth: 4
     })
   })
 

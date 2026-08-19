@@ -177,6 +177,15 @@ function formatList(values) {
   return `${values.slice(0, -1).join(', ')}, and ${values.at(-1)}`
 }
 
+function renderSeriesRank(seriesRank) {
+  if (!seriesRank) {
+    return ''
+  }
+
+  const source = escapeHtml(getRatingSourceLabel(seriesRank.source))
+  return `<p class="sidenote-rank">Series rank <strong>${seriesRank.rank}</strong> of ${seriesRank.total} rated ${seriesRank.total === 1 ? 'episode' : 'episodes'} · ${source}</p>`
+}
+
 export function createSidenote({
   root,
   onInteract,
@@ -283,7 +292,12 @@ export function createSidenote({
 
   function renderPoint(
     point,
-    { loadingDetails = false, show = null, selectedRatingSource = null } = {}
+    {
+      loadingDetails = false,
+      show = null,
+      selectedRatingSource = null,
+      seriesRank = null
+    } = {}
   ) {
     const markup = point
       ? `
@@ -295,6 +309,7 @@ export function createSidenote({
               </p>
             </div>
             <p class="sidenote-ratings">${formatRatingList(point, { loadingDetails, show })}</p>
+            ${renderSeriesRank(seriesRank)}
             ${
               point.plot
                 ? `<p class="sidenote-body">${escapeHtml(point.plot)}</p>`

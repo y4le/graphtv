@@ -1104,6 +1104,13 @@ button {
   font-size: var(--type-size-meta);
 }
 
+.sidenote-rank {
+  margin: 0.3rem 0 0;
+  color: var(--textSecondary);
+  font-family: var(--font-sans);
+  font-size: var(--type-size-meta);
+}
+
 .sidenote-rating-primary {
   font-weight: 700;
 }

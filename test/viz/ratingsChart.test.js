@@ -390,10 +390,16 @@ describe('createChart', () => {
       'S01E02'
     )
     expect(detailRoot.textContent).toContain('Episode 2')
+    expect(detailRoot.querySelector('.sidenote-rank').textContent).toBe(
+      'Series rank 37 of 71 rated episodes · TEST'
+    )
 
     await vi.advanceTimersByTimeAsync(250)
     expect(loadEpisodeDetails).toHaveBeenCalledTimes(1)
     expect(loadEpisodeDetails.mock.calls[0][0].id).toBe('episode-2')
+    expect(detailRoot.querySelector('.sidenote-rank').textContent).toBe(
+      'Series rank 37 of 71 rated episodes · TEST'
+    )
 
     chart.clearSelection()
     expect(chart.getDebugState()).toMatchObject({
@@ -406,6 +412,46 @@ describe('createChart', () => {
       'Full Series'
     )
     expect(detailRoot.querySelector('.trend-summary-provenance')).not.toBeNull()
+  })
+
+  it('ranks only episodes rated by the chart primary source', () => {
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+    const seasons = [
+      {
+        number: 1,
+        episodes: Array.from({ length: 5 }, (_, index) => ({
+          id: `episode-${index + 1}`,
+          title: `Episode ${index + 1}`,
+          season: 1,
+          number: index + 1,
+          ratings: [
+            { source: 'tvmaze', rating: 7 + index / 10 },
+            ...(index < 3 ? [{ source: 'omdb', rating: 8 + index / 10 }] : [])
+          ]
+        }))
+      }
+    ]
+
+    chart = createChart(container, seasons, {
+      detailRoot,
+      initialSelection: 's01e01'
+    })
+
+    expect(chart.getDebugState().ratings.primarySource).toBe('omdb')
+    expect(detailRoot.querySelector('.sidenote-rank').textContent).toBe(
+      'Series rank 3 of 3 rated episodes · IMDb'
+    )
+
+    chart.moveEpisode(3)
+
+    expect(chart.getDebugState().selectedPointId).toBe('episode-4')
+    expect(detailRoot.querySelector('.sidenote-rank')).toBeNull()
   })
 
   it('offers the browse view only when no full-series trend exists', () => {

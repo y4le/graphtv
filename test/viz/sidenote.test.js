@@ -97,6 +97,35 @@ describe('createSidenote', () => {
     expect(root.querySelector('.sidenote-card')).not.toBe(firstCard)
   })
 
+  it('renders a source-specific series rank when one is available', () => {
+    const root = document.createElement('section')
+    const sidenote = createSidenote({ root })
+    const point = {
+      id: 'episode-1',
+      title: 'Pilot',
+      season: 1,
+      episode: 1,
+      date: null,
+      plot: null,
+      rating: 8,
+      ratingSource: 'tvmaze',
+      ratings: [{ source: 'tvmaze', rating: 8 }]
+    }
+
+    sidenote.renderPoint(point, {
+      seriesRank: { rank: 2, total: 12, source: 'tvmaze' },
+      show: { externalIds: { tvmaze: 179 } }
+    })
+
+    expect(root.querySelector('.sidenote-rank').textContent).toBe(
+      'Series rank 2 of 12 rated episodes · TVmaze'
+    )
+    expect(root.querySelector('.sidenote-rank a')).toBeNull()
+
+    sidenote.renderPoint(point)
+    expect(root.querySelector('.sidenote-rank')).toBeNull()
+  })
+
   it('removes delegated listeners when destroyed', () => {
     const root = document.createElement('section')
     const firstNavigate = vi.fn()
