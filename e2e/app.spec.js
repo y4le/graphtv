@@ -146,6 +146,52 @@ test('keeps a shared chart selection across reloads', async ({ page }) => {
   await expect(page).not.toHaveURL(/[?&]select=/u)
 })
 
+test('compares two episodes with pointer and keyboard controls', async ({
+  page
+}) => {
+  await page.goto('/?show=tvmaze%3A179')
+  await expect(page.locator('.episode-point').first()).toBeVisible()
+
+  await page.locator('.episode-point').nth(1).click()
+  await page
+    .locator('.episode-point')
+    .nth(5)
+    .click({ modifiers: ['Shift'] })
+
+  const comparison = page.locator('.sidenote-comparison')
+  await expect(comparison).toBeVisible()
+  await expect(comparison).toContainText('S01E02 to S01E06')
+  await expect(comparison.locator('.sidenote-rank')).toHaveCount(2)
+  await expect(page.locator('.season-axis-comparison')).toHaveCount(1)
+  await expect(page.locator('.sidenote-nav')).toBeHidden()
+  await expect(page).toHaveURL(/[?&]select=s01e02(?:&|$)/u)
+  await expect(page).not.toHaveURL(/[?&](?:compare|pair)=/u)
+
+  await page.keyboard.press('ArrowRight')
+  await page.keyboard.press('End')
+  await expect(comparison).toBeVisible()
+  await expect(comparison).toContainText('S01E02 to S01E06')
+
+  await page.keyboard.press('Escape')
+  await expect(comparison).toHaveCount(0)
+  await expect(page.locator('.results-episode')).toContainText('Episode 2')
+
+  await page.keyboard.press('v')
+  await expect(page.locator('.results-episode')).toContainText(
+    'Choose a second episode to compare with S01E02.'
+  )
+  await page.keyboard.press('ArrowRight')
+  await page.keyboard.press('Enter')
+  await expect(comparison).toBeVisible()
+  await expect(comparison).toContainText('S01E02 to S01E03')
+  await expectNoAccessibilityViolations(page, '.results-episode')
+
+  await page.reload()
+  await expect(page.locator('.sparkline-point')).toHaveCount(72)
+  await expect(comparison).toHaveCount(0)
+  await expect(page.locator('.results-episode')).toContainText('Episode 2')
+})
+
 test('scrubs episodes across empty chart space and commits on release', async ({
   page
 }) => {
@@ -277,6 +323,41 @@ test.describe('mobile chart', () => {
 
     await expect(chartBody).not.toHaveClass(/is-scrubbing/u)
     await expect(page).toHaveURL(/[?&]select=s\d+e\d+(?:&|$)/u)
+  })
+
+  test('compares episodes through explicit touch controls', async ({
+    page
+  }) => {
+    await page.goto('/?show=tvmaze%3A179')
+    await expect(page.locator('.episode-point').first()).toBeVisible()
+
+    await page.locator('.episode-point').nth(1).tap()
+    const compareButton = page.getByRole('button', { name: 'Compare with…' })
+    await expect(compareButton).toBeVisible()
+    expect(
+      await compareButton.evaluate(
+        (button) => button.getBoundingClientRect().height
+      )
+    ).toBeGreaterThanOrEqual(44)
+    await compareButton.tap()
+    await expect(page.locator('.results-episode')).toContainText(
+      'Choose a second episode to compare with S01E02.'
+    )
+
+    await page.locator('.episode-point').nth(5).tap()
+    const comparison = page.locator('.sidenote-comparison')
+    await expect(comparison).toBeVisible()
+    await expect(comparison).toContainText('S01E02 to S01E06')
+    await expect(page.locator('.season-axis-comparison')).toHaveCount(1)
+    expect(
+      await comparison
+        .locator('.sidenote-comparison-episodes')
+        .evaluate(
+          (episodes) =>
+            getComputedStyle(episodes).gridTemplateColumns.split(' ').length
+        )
+    ).toBe(1)
+    await expectNoAccessibilityViolations(page, '.results-episode')
   })
 
   test('keeps an armed scrub active outside the plot without scrolling', async ({

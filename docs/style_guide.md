@@ -188,6 +188,8 @@ Rules:
 - Desktop detail belongs in a sidenote region adjacent to the chart.
 - Mobile detail belongs inline below the chart.
 - Keep the last meaningful detail visible until replaced or cleared.
+- Episode comparison should remain a lightweight extension of selection: emphasize both endpoints, connect their span on the season rule, keep chronological order, and state when provider differences make a rating delta invalid.
+- Ordinary episode detail should include the episode's rank within the primary provider's rated series, using competition ranks and omitting the line when that provider did not rate the episode.
 - Full keyboard navigation with simultaneous vim and conventional key support. See `docs/keyboard.md` for the complete specification.
 - Results-page keyboard navigation should target chart state directly in normal mode; chart interaction should not depend on tabbing into a dense point cloud first.
 - Global single-letter shortcuts should suspend when focus is inside native interactive controls or trapped overlays.

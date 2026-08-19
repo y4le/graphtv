@@ -79,6 +79,7 @@ The vim spatial metaphor: episodes within a season are characters within a line 
 - **Scan episodes:** With a mouse or pen, press empty plot space and drag. On touch, hold for about 300ms and then drag. The vertical line follows the pointer while the nearest rated episode is previewed by x-position; release commits that episode.
 - **Pan:** Swipe horizontally on touch, horizontally scroll with a trackpad, or drag the overview window. A touch swipe that moves before the hold completes pans instead of scanning.
 - **Zoom:** Pinch with two fingers, Ctrl-scroll with a trackpad, or resize the overview window.
+- **Compare episodes:** With one episode selected, Shift-click another episode to compare the pair. A Shift-click without an existing episode selection behaves like an ordinary single selection. On touch, select an episode, choose **Compare with…** in its detail, then tap the second episode.
 - **Cancel scanning:** Press `Escape`, begin a two-finger pinch, or let the browser cancel the pointer gesture. The prior committed selection is restored.
 - **Page scroll:** A vertical touch gesture beginning on the chart remains native page scrolling.
 
@@ -97,12 +98,18 @@ The vim spatial metaphor: episodes within a season are characters within a line 
 | Cycle primary provider    | `p`        | —            | Uses providers with usable episode ratings and preserves the chart selection |
 | Zoom out                  | `-`        | —            | Anchors on the visible selected episode, otherwise the viewport center       |
 | Zoom in                   | `=` or `+` | —            | Anchors on the visible selected episode, otherwise the viewport center       |
+| Start/exit comparison     | `v`        | —            | The selected episode becomes the anchor                                      |
+| Commit comparison         | `Enter`    | —            | Uses the episode previewed while comparison is armed                         |
+
+While comparison is armed, the arrow and `h`/`j`/`k`/`l` keys move the candidate without replacing the anchor. Boundary jumps (`Home`/`gg` and `End`/`G`) leave comparison and select the first or last episode. Once committed, episode navigation is inert until the reader exits with `v`, `Escape`, the visible exit control, or an ordinary episode selection.
 
 #### Automatic behaviors
 
 - **Sidenote populates on focus.** Moving keyboard focus to an episode populates the sidenote (desktop) or inline detail (mobile) with that episode's metadata — identical to hover. Exiting the chart does not clear the sidenote; the last-focused episode persists.
 - **Viewport follows focus.** When focus enters the outer 10% of the visible viewport, the viewport pans smoothly to preserve that edge buffer. The sparkline brush position updates to match. Keyboard users never need to separately control the sparkline.
 - **Viewport commands preserve context.** Fitting and zooming never clear the selected episode. Reset zoom centers the default-width viewport on the selected episode when it is visible; if the selection is offscreen, it preserves the viewport center.
+- **Comparison preserves chronology and provenance.** The earlier episode is always shown first and the later episode second: left-to-right on desktop and top-to-bottom on mobile. Rating change is calculated only when both displayed ratings use the same provider. The season rule connects the two endpoints, and both episode marks remain emphasized.
+- **Comparison unwinds before selection clears.** The first `Escape` returns to the anchor episode; a second returns to the full-series trend. Comparison is intentionally session-local: the URL retains only the anchor, so reloading restores an ordinary single selection.
 - **Season jump behavior.** With an episode selected, jumping to the next/previous season lands on the first episode of that season. Selecting a season trendline moves its last episode inside the 10% viewport buffer, then does the same for its first episode so the whole season is shown when it fits and the start takes priority when it does not. With a season trendline selected, `j`/`k` cycle only the available season trendlines and wrap at either end. The inline arrow buttons do the same when multiple season trendlines are available; with only one, they enter that season's episodes instead of becoming inert.
 - **No deselected state.** `Escape`, clicking empty chart space, or re-selecting the current trendline returns to the full-series trend summary. Its sidenote details stay available even when the drawn full-series line is switched off in view options; only a series too short for a trend falls back to an unselected browse view.
 - **Native-control suspension.** If focus is on a native interactive control such as a link, button, select, summary, or any editable field, page-level single-letter shortcuts are suspended. Only the focused control's own behavior and explicit overlay shortcuts apply.
@@ -178,7 +185,7 @@ Within each zone, the zone's internal navigation takes over where applicable. `T
 ### Focus indicators
 
 - Focus rings use `spotColor` in both themes, not browser defaults.
-- The active episode highlight (spotColor, enlarged radius) serves as the chart focus indicator — the same visual treatment as hover.
+- The active episode highlight (spotColor, enlarged radius) serves as the chart focus indicator — the same visual treatment as hover. During comparison, both endpoints retain that emphasis and an accent segment on the season rule connects them.
 - Results list items get a text-color shift to `spotColor` on focus, matching hover.
 
 ### Focus restoration
