@@ -23,8 +23,10 @@ export function readLimit(name, fallback, environment = process.env) {
 export function evaluateBudget({
   totalGzipBytes,
   entryGzipBytes,
+  largestJavaScriptGzipBytes,
   maxTotalGzipBytes,
-  maxEntryGzipBytes
+  maxEntryGzipBytes,
+  maxLargestJavaScriptGzipBytes
 }) {
   const violations = []
 
@@ -43,6 +45,12 @@ export function evaluateBudget({
   } else if (entryGzipBytes[0] > maxEntryGzipBytes) {
     violations.push(
       `entry gzip ${entryGzipBytes[0]} B exceeds ${maxEntryGzipBytes} B`
+    )
+  }
+
+  if (largestJavaScriptGzipBytes > maxLargestJavaScriptGzipBytes) {
+    violations.push(
+      `largest JavaScript chunk gzip ${largestJavaScriptGzipBytes} B exceeds ${maxLargestJavaScriptGzipBytes} B`
     )
   }
 
@@ -70,12 +78,17 @@ export function reportBundleSize(
 ) {
   const maxTotalGzipBytes = readLimit(
     'MAX_TOTAL_GZIP_BYTES',
-    92_000,
+    105_000,
     environment
   )
   const maxEntryGzipBytes = readLimit(
     'MAX_ENTRY_GZIP_BYTES',
-    79_000,
+    15_000,
+    environment
+  )
+  const maxLargestJavaScriptGzipBytes = readLimit(
+    'MAX_LARGEST_JAVASCRIPT_GZIP_BYTES',
+    50_000,
     environment
   )
   const assetFiles = listFiles(directory).filter((filePath) =>
@@ -85,12 +98,19 @@ export function reportBundleSize(
   let rawBytes = 0
   let gzipBytes = 0
   const entryGzipBytes = []
+  let largestJavaScriptGzipBytes = 0
 
   for (const filePath of assetFiles) {
     const content = readFileSync(filePath)
     const gzippedBytes = gzipSync(content).length
     rawBytes += statSync(filePath).size
     gzipBytes += gzippedBytes
+    if (/\.js$/u.test(filePath)) {
+      largestJavaScriptGzipBytes = Math.max(
+        largestJavaScriptGzipBytes,
+        gzippedBytes
+      )
+    }
     if (/\/index-[^/]+\.js$/u.test(filePath)) {
       entryGzipBytes.push(gzippedBytes)
     }
@@ -104,14 +124,22 @@ export function reportBundleSize(
   const violations = evaluateBudget({
     totalGzipBytes: gzipBytes,
     entryGzipBytes,
+    largestJavaScriptGzipBytes,
     maxTotalGzipBytes,
-    maxEntryGzipBytes
+    maxEntryGzipBytes,
+    maxLargestJavaScriptGzipBytes
   })
   if (violations.length > 0) {
     console.error(`Bundle budget exceeded: ${violations.join('; ')}`)
   }
 
-  return { rawBytes, gzipBytes, entryGzipBytes, violations }
+  return {
+    rawBytes,
+    gzipBytes,
+    entryGzipBytes,
+    largestJavaScriptGzipBytes,
+    violations
+  }
 }
 
 if (process.argv[1] && realpathSync(process.argv[1]) === scriptPath) {

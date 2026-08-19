@@ -1,0 +1,291 @@
+/* Dock: a non-modal panel pinned to the bottom edge. The page keeps its
+   own scroll and focus; #app grows by --dock-height so nothing hides
+   beneath the panel once the reader scrolls. */
+.dock-root[hidden] {
+  display: none;
+}
+
+.dock-root {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 15;
+  border-top: 1px solid var(--lineStrong);
+  background: var(--canvas);
+  box-shadow: 0 -0.5rem 2rem rgba(0, 0, 0, 0.08);
+  font-family: var(--font-sans);
+  font-size: var(--type-size-utility);
+}
+
+.dock-panel {
+  max-width: var(--pageMaxWidth);
+  margin: 0 auto;
+  padding: 0.55rem 1.25rem 0.75rem;
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+.dock-panel:focus-visible {
+  outline: 2px solid var(--spotColor);
+  outline-offset: -2px;
+}
+
+.dock-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.45rem;
+}
+
+.dock-title {
+  margin: 0;
+  font-size: var(--type-size-meta);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.dock-subtitle {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  color: var(--textSecondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dock-header-actions {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.dock-action {
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--lineSoft);
+  background: transparent;
+  color: var(--textSecondary);
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.dock-action:hover:not(:disabled),
+.dock-action:focus-visible {
+  border-color: var(--spotColor);
+  color: var(--spotColor);
+}
+
+.dock-action:disabled {
+  color: var(--textMuted);
+  cursor: default;
+}
+
+.dock-close {
+  display: grid;
+  width: 1.6rem;
+  height: 1.6rem;
+  place-items: center;
+  align-self: center;
+  margin-right: -0.4rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--textSecondary);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dock-close:hover,
+.dock-close:focus-visible {
+  color: var(--spotColor);
+}
+
+.dock-action:focus-visible,
+.dock-close:focus-visible {
+  outline: 2px solid var(--spotColor);
+  outline-offset: 2px;
+}
+
+/* Mark density panel */
+.density-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem 2rem;
+  align-items: center;
+}
+
+.density-control {
+  display: grid;
+  grid-template-columns: 6.5rem 3.5rem minmax(6rem, 1fr) 3.5rem;
+  gap: 0.6rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.density-control-single .density-track {
+  grid-column: 3 / 5;
+}
+
+.density-control-label {
+  color: var(--textPrimary);
+  white-space: nowrap;
+}
+
+.density-value {
+  color: var(--textSecondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.density-value-low {
+  text-align: right;
+}
+
+.density-track {
+  position: relative;
+  height: 1.6rem;
+  min-width: 0;
+}
+
+.density-track::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 2px;
+  background: var(--lineStrong);
+  transform: translateY(-50%);
+}
+
+.density-track-fill {
+  position: absolute;
+  top: 50%;
+  left: var(--low, 0%);
+  width: calc(var(--high, 100%) - var(--low, 0%));
+  height: 2px;
+  background: var(--spotColor);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.density-thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.density-thumb:focus {
+  outline: none;
+}
+
+.density-thumb::-webkit-slider-runnable-track {
+  height: 100%;
+  background: transparent;
+}
+
+.density-thumb::-moz-range-track {
+  height: 100%;
+  background: transparent;
+}
+
+.density-thumb::-webkit-slider-thumb {
+  width: 0.9rem;
+  height: 0.9rem;
+  margin-top: calc((1.6rem - 0.9rem) / 2);
+  border: 1.5px solid var(--textPrimary);
+  border-radius: 50%;
+  background: var(--canvas);
+  cursor: ew-resize;
+  pointer-events: auto;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.density-thumb::-moz-range-thumb {
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 1.5px solid var(--textPrimary);
+  border-radius: 50%;
+  background: var(--canvas);
+  cursor: ew-resize;
+  pointer-events: auto;
+}
+
+.density-thumb:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--spotColor);
+  outline-offset: 2px;
+}
+
+.density-thumb:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--spotColor);
+  outline-offset: 2px;
+}
+
+.density-marker {
+  position: absolute;
+  top: 50%;
+  left: var(--position, 0%);
+  width: 1px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.density-marker[hidden] {
+  display: none;
+}
+
+.density-marker.is-clamped {
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--textSecondary) 0 2px,
+    transparent 2px 4px
+  );
+}
+
+.density-marker-chartSlotWidth {
+  height: 1.1rem;
+  background: var(--textPrimary);
+}
+
+.density-marker-sparklineSlotWidth {
+  height: 0.7rem;
+  background: var(--textMuted);
+}
+
+.density-readout {
+  grid-column: 1 / -1;
+  margin: 0;
+  min-height: 1.2em;
+  color: var(--textSecondary);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1100px) {
+  .density-panel {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.25rem;
+  }
+}
+
+@media (max-width: 860px) {
+  .dock-panel {
+    padding-inline: 1rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .density-control {
+    grid-template-columns: 6.5rem 3rem minmax(4rem, 1fr) 3rem;
+    gap: 0.45rem;
+  }
+}

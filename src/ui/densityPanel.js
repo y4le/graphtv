@@ -6,6 +6,7 @@ import {
 } from '../viz/pointSize.js'
 import { getUiSettings, updateUiSettings } from '../viz/theme.js'
 import { escapeHtml } from '../lib/html.js'
+import '../../css/density-panel.css'
 
 export const MARK_DENSITY_DOCK_ID = 'mark-density'
 export const MARK_DENSITY_TOGGLE_KEY = 'm'

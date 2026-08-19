@@ -4,14 +4,9 @@ import {
   isEditableElement,
   isSuppressedInteractiveElement
 } from '../lib/keyboard.js'
-import {
-  openDebugOverlay,
-  openHelpOverlay,
-  openViewOptionsOverlay
-} from './overlay.js'
-import { MARK_DENSITY_TOGGLE_KEY, openMarkDensityDock } from './densityPanel.js'
 
 const KEYBOARD_ZOOM_STEP = 1.5
+const MARK_DENSITY_TOGGLE_KEY = 'm'
 
 export function createKeyboardController({
   page,
@@ -19,6 +14,57 @@ export function createKeyboardController({
   dockController = null
 }) {
   const chordTracker = createChordTracker()
+  let destroyed = false
+
+  function runLazyAction(load, action) {
+    void load()
+      .then((module) => {
+        if (!destroyed) {
+          action(module)
+        }
+      })
+      .catch((error) => {
+        if (!destroyed) {
+          console.error(error)
+        }
+      })
+  }
+
+  function openHelp() {
+    runLazyAction(
+      () => import('./helpOverlay.js'),
+      ({ openHelpOverlay }) => openHelpOverlay(overlayController, page)
+    )
+  }
+
+  function openViewOptions() {
+    runLazyAction(
+      () => import('./viewOptionsOverlay.js'),
+      ({ openViewOptionsOverlay }) =>
+        openViewOptionsOverlay(overlayController, {
+          onOpenMarkDensity: canOpenMarkDensity()
+            ? () => {
+                overlayController.close()
+                openMarkDensity()
+              }
+            : null
+        })
+    )
+  }
+
+  function openDebug() {
+    runLazyAction(
+      () => import('./debugOverlay.js'),
+      ({ openDebugOverlay }) => openDebugOverlay(overlayController, page)
+    )
+  }
+
+  function openMarkDensity() {
+    runLazyAction(
+      () => import('./densityPanel.js'),
+      ({ openMarkDensityDock }) => openMarkDensityDock(dockController, page)
+    )
+  }
 
   function onKeyDown(event) {
     if (hasCommandModifier(event) && !isChartHalfViewportShortcut(event)) {
@@ -141,19 +187,12 @@ export function createKeyboardController({
 
   function runUiAction(action) {
     if (action === 'help') {
-      openHelpOverlay(overlayController, page)
+      openHelp()
       return true
     }
 
     if (action === 'view-options') {
-      openViewOptionsOverlay(overlayController, {
-        onOpenMarkDensity: canOpenMarkDensity()
-          ? () => {
-              overlayController.close()
-              openMarkDensityDock(dockController, page)
-            }
-          : null
-      })
+      openViewOptions()
       return true
     }
 
@@ -161,7 +200,7 @@ export function createKeyboardController({
       if (!canOpenMarkDensity()) {
         return false
       }
-      openMarkDensityDock(dockController, page)
+      openMarkDensity()
       return true
     }
 
@@ -198,7 +237,7 @@ export function createKeyboardController({
 
     if (key === 'D') {
       event.preventDefault()
-      openDebugOverlay(overlayController, page)
+      openDebug()
       return true
     }
 
@@ -362,6 +401,7 @@ export function createKeyboardController({
 
   return {
     destroy() {
+      destroyed = true
       document.removeEventListener('keydown', onKeyDown)
       document.removeEventListener('click', onClick)
     }

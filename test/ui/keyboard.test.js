@@ -14,7 +14,7 @@ afterEach(() => {
 })
 
 describe('createKeyboardController', () => {
-  it('gives shortcut actions the same effects as their matching keys', () => {
+  it('gives shortcut actions the same effects as their matching keys', async () => {
     document.body.innerHTML = `
       <button type="button" data-ui-action="help">?</button>
       <button type="button" data-ui-action="view-options">o</button>
@@ -35,33 +35,35 @@ describe('createKeyboardController', () => {
     keyboardController = createKeyboardController({ page, overlayController })
 
     document.querySelector('[data-ui-action="help"]').click()
-    expect(overlayController.open).toHaveBeenLastCalledWith(
-      expect.objectContaining({ id: 'help' })
+    await vi.waitFor(() =>
+      expect(overlayController.open).toHaveBeenLastCalledWith(
+        expect.objectContaining({ id: 'help' })
+      )
     )
     pressKey('?')
-    expect(overlayController.open).toHaveBeenLastCalledWith(
-      expect.objectContaining({ id: 'help' })
+    await vi.waitFor(() =>
+      expect(overlayController.open).toHaveBeenCalledTimes(2)
     )
-    expect(overlayController.open).toHaveBeenCalledTimes(2)
 
     document.querySelector('[data-ui-action="view-options"]').click()
-    expect(overlayController.open).toHaveBeenLastCalledWith(
-      expect.objectContaining({ id: 'view-options' })
+    await vi.waitFor(() =>
+      expect(overlayController.open).toHaveBeenLastCalledWith(
+        expect.objectContaining({ id: 'view-options' })
+      )
     )
     pressKey('v')
     expect(overlayController.open).toHaveBeenCalledTimes(3)
     pressKey('o')
-    expect(overlayController.open).toHaveBeenLastCalledWith(
-      expect.objectContaining({ id: 'view-options' })
+    await vi.waitFor(() =>
+      expect(overlayController.open).toHaveBeenCalledTimes(4)
     )
-    expect(overlayController.open).toHaveBeenCalledTimes(4)
 
     document.querySelector('[data-ui-action="return-search"]').click()
     pressKey('q')
     expect(page.goBack).toHaveBeenCalledTimes(2)
   })
 
-  it('keeps global shortcuts available from native controls', () => {
+  it('keeps global shortcuts available from native controls', async () => {
     document.body.innerHTML = '<button type="button">Focused action</button>'
     const overlayController = {
       open: vi.fn(),
@@ -79,22 +81,50 @@ describe('createKeyboardController', () => {
     document.querySelector('button').focus()
 
     pressKey('?')
-    expect(overlayController.open).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'help' })
+    await vi.waitFor(() =>
+      expect(overlayController.open).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'help' })
+      )
     )
 
     pressKey('/')
     expect(page.focusSearch).toHaveBeenCalledOnce()
 
     pressKey('o')
-    expect(overlayController.open).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'view-options' })
+    await vi.waitFor(() =>
+      expect(overlayController.open).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'view-options' })
+      )
     )
 
     pressKey('D')
-    expect(overlayController.open).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'debug' })
+    await vi.waitFor(() =>
+      expect(overlayController.open).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'debug' })
+      )
     )
+  })
+
+  it('drops a lazy overlay action when the controller is destroyed', async () => {
+    await import('../../src/ui/helpOverlay.js')
+    const overlayController = {
+      open: vi.fn(),
+      close: vi.fn(),
+      isOpen: () => false,
+      getActiveId: () => null
+    }
+    keyboardController = createKeyboardController({
+      page: { kind: 'search' },
+      overlayController
+    })
+
+    pressKey('?')
+    keyboardController.destroy()
+    keyboardController = undefined
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(overlayController.open).not.toHaveBeenCalled()
   })
 
   it('routes result navigation keys while a result link has focus', () => {
@@ -198,7 +228,7 @@ describe('createKeyboardController', () => {
     expect(chart.moveSeason.mock.calls).toEqual([[1], [1], [-1], [-1]])
   })
 
-  it('closes view options with o without reopening it as the event bubbles', () => {
+  it('closes view options with o without reopening it as the event bubbles', async () => {
     const overlayController = createOverlayController()
     keyboardController = createKeyboardController({
       page: { kind: 'search' },
@@ -206,7 +236,9 @@ describe('createKeyboardController', () => {
     })
 
     pressKey('o')
-    expect(overlayController.getActiveId()).toBe('view-options')
+    await vi.waitFor(() =>
+      expect(overlayController.getActiveId()).toBe('view-options')
+    )
 
     const initialYAxis = getUiSettings().absoluteYAxis
     document.activeElement.dispatchEvent(
@@ -292,7 +324,7 @@ describe('createKeyboardController', () => {
     expect(chart.jumpBoundary).toHaveBeenCalledTimes(2)
   })
 
-  it('leaves browser and operating-system shortcuts untouched', () => {
+  it('leaves browser and operating-system shortcuts untouched', async () => {
     const chart = {
       fitSeries: vi.fn(),
       moveEpisode: vi.fn(),
@@ -326,8 +358,10 @@ describe('createKeyboardController', () => {
     expect(overlayController.open).not.toHaveBeenCalled()
 
     pressKey('D', { shiftKey: true })
-    expect(overlayController.open).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'debug' })
+    await vi.waitFor(() =>
+      expect(overlayController.open).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'debug' })
+      )
     )
   })
 })
@@ -349,7 +383,7 @@ describe('mark scaling dock shortcuts', () => {
     dockController = undefined
   })
 
-  it('toggles the mark scaling dock with m on the results page only', () => {
+  it('toggles the mark scaling dock with m on the results page only', async () => {
     document.body.innerHTML = `
       <main id="app"><button type="button" data-ui-action="mark-density">m</button></main>
     `
@@ -363,7 +397,9 @@ describe('mark scaling dock shortcuts', () => {
     })
 
     expect(pressKey('m').defaultPrevented).toBe(true)
-    expect(dockController.getActiveId()).toBe('mark-density')
+    await vi.waitFor(() =>
+      expect(dockController.getActiveId()).toBe('mark-density')
+    )
     expect(document.querySelector('#app').hasAttribute('inert')).toBe(false)
 
     // Chart shortcuts keep working while the dock is open and focus is
@@ -373,10 +409,10 @@ describe('mark scaling dock shortcuts', () => {
     expect(dockController.isOpen()).toBe(true)
 
     pressKey('m')
-    expect(dockController.isOpen()).toBe(false)
+    await vi.waitFor(() => expect(dockController.isOpen()).toBe(false))
 
     document.querySelector('[data-ui-action="mark-density"]').click()
-    expect(dockController.isOpen()).toBe(true)
+    await vi.waitFor(() => expect(dockController.isOpen()).toBe(true))
 
     // Pressing m while a dock slider has focus closes it without reopening.
     document.querySelector('[data-density-thumb]').focus()
@@ -387,7 +423,7 @@ describe('mark scaling dock shortcuts', () => {
         cancelable: true
       })
     )
-    expect(dockController.isOpen()).toBe(false)
+    await vi.waitFor(() => expect(dockController.isOpen()).toBe(false))
   })
 
   it('ignores m on the search page and without a dock controller', () => {
@@ -408,7 +444,7 @@ describe('mark scaling dock shortcuts', () => {
     expect(pressKey('m').defaultPrevented).toBe(false)
   })
 
-  it('opens the dock from the view options row and closes the overlay', () => {
+  it('opens the dock from the view options row and closes the overlay', async () => {
     document.body.innerHTML = '<main id="app"></main>'
     const overlayController = createOverlayController()
     dockController = createDockController()
@@ -419,7 +455,9 @@ describe('mark scaling dock shortcuts', () => {
     })
 
     pressKey('o')
-    expect(overlayController.getActiveId()).toBe('view-options')
+    await vi.waitFor(() =>
+      expect(overlayController.getActiveId()).toBe('view-options')
+    )
     const row = document.querySelector('[data-option="mark-density"]')
     expect(row).not.toBeNull()
 
@@ -431,8 +469,10 @@ describe('mark scaling dock shortcuts', () => {
         cancelable: true
       })
     )
+    await vi.waitFor(() =>
+      expect(dockController.getActiveId()).toBe('mark-density')
+    )
     expect(overlayController.isOpen()).toBe(false)
-    expect(dockController.getActiveId()).toBe('mark-density')
     expect(document.querySelector('#app').hasAttribute('inert')).toBe(false)
   })
 })

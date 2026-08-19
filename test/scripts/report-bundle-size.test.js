@@ -34,23 +34,28 @@ describe('bundle-size budget', () => {
       evaluateBudget({
         totalGzipBytes: 80_000,
         entryGzipBytes: [70_000],
+        largestJavaScriptGzipBytes: 70_000,
         maxTotalGzipBytes: 90_000,
-        maxEntryGzipBytes: 75_000
+        maxEntryGzipBytes: 75_000,
+        maxLargestJavaScriptGzipBytes: 75_000
       })
     ).toEqual([])
   })
 
-  it('reports total and entry budget violations', () => {
+  it('reports total, entry, and largest chunk budget violations', () => {
     expect(
       evaluateBudget({
         totalGzipBytes: 90_001,
         entryGzipBytes: [75_001],
+        largestJavaScriptGzipBytes: 80_001,
         maxTotalGzipBytes: 90_000,
-        maxEntryGzipBytes: 75_000
+        maxEntryGzipBytes: 75_000,
+        maxLargestJavaScriptGzipBytes: 80_000
       })
     ).toEqual([
       'total gzip 90001 B exceeds 90000 B',
-      'entry gzip 75001 B exceeds 75000 B'
+      'entry gzip 75001 B exceeds 75000 B',
+      'largest JavaScript chunk gzip 80001 B exceeds 80000 B'
     ])
   })
 
@@ -59,8 +64,10 @@ describe('bundle-size budget', () => {
       evaluateBudget({
         totalGzipBytes: 10,
         entryGzipBytes: [],
+        largestJavaScriptGzipBytes: 5,
         maxTotalGzipBytes: 90_000,
-        maxEntryGzipBytes: 75_000
+        maxEntryGzipBytes: 75_000,
+        maxLargestJavaScriptGzipBytes: 80_000
       })
     ).toContain(
       'no entry chunk matched index-*.js; entry budget was not evaluated'
@@ -70,8 +77,10 @@ describe('bundle-size budget', () => {
       evaluateBudget({
         totalGzipBytes: 10,
         entryGzipBytes: [5, 5],
+        largestJavaScriptGzipBytes: 5,
         maxTotalGzipBytes: 90_000,
-        maxEntryGzipBytes: 75_000
+        maxEntryGzipBytes: 75_000,
+        maxLargestJavaScriptGzipBytes: 80_000
       })
     ).toContain('2 entry chunks matched index-*.js; expected exactly one')
   })
@@ -88,6 +97,7 @@ describe('bundle-size budget', () => {
 
     expect(result.rawBytes).toBe(11)
     expect(result.entryGzipBytes).toHaveLength(1)
+    expect(result.largestJavaScriptGzipBytes).toBeGreaterThan(0)
     expect(result.violations).toEqual([])
   })
 

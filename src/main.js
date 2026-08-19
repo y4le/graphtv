@@ -1,8 +1,8 @@
-import { renderResultsPage } from './pages/results.js'
-import { renderSearchPage } from './pages/search.js'
+import '../css/styles.css'
+
 import { getUrlParams, normalizeLegacyParams } from './lib/url.js'
 import { createKeyboardController } from './ui/keyboard.js'
-import { createOverlayController } from './ui/overlay.js'
+import { createOverlayController } from './ui/overlayController.js'
 import { createDockController } from './ui/dock.js'
 import { initializeTheme } from './viz/theme.js'
 import { renderError, renderPublisherBrand } from './pages/shared.js'
@@ -28,8 +28,10 @@ async function bootstrap() {
   let pageController
 
   if (showRef) {
+    const { renderResultsPage } = await import('./pages/results.js')
     pageController = await renderResultsPage(app, showRef)
   } else {
+    const { renderSearchPage } = await import('./pages/search.js')
     pageController = renderSearchPage(app)
   }
 
