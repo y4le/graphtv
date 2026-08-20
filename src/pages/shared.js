@@ -61,5 +61,5 @@ export function formatRatingBadge(
 }
 
 function renderRatingBadgeColumns(source, ratingValue, votesValue) {
-  return `${source}${ratingValue}${votesValue}`
+  return `${source}<span class="rating-badge-score">${ratingValue} ${votesValue}</span>`
 }

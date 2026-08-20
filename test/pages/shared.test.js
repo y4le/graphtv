@@ -73,6 +73,9 @@ describe('formatRatingBadge', () => {
     expect(millions.querySelector('.vote-count-trigger').textContent).toBe(
       '(1.1m)'
     )
+    const score = millions.querySelector('.rating-badge-score')
+    expect(score.children).toHaveLength(2)
+    expect(score.childNodes.item(1).textContent).toMatch(/^\s+$/u)
     expect(thousands.querySelector('.rating-badge-value').textContent).toBe(
       '8.1'
     )

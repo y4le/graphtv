@@ -811,7 +811,7 @@ button {
 
 .show-metrics {
   display: grid;
-  grid-template-columns: max-content 2.4rem minmax(0, 1fr);
+  grid-template-columns: max-content minmax(0, 1fr);
   gap: 0.15rem 0.55rem;
   align-items: baseline;
   margin: 0.3rem 0 0;
@@ -831,6 +831,10 @@ button {
 .rating-badge-value,
 .rating-badge-votes {
   font-variant-numeric: tabular-nums;
+}
+
+.rating-badge-score {
+  white-space: nowrap;
 }
 
 .series-rating-button {
