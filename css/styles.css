@@ -1077,17 +1077,48 @@ button {
 }
 
 .sidenote-nav {
+  --sidenote-nav-button-width: 1.75rem;
+
   display: grid;
-  grid-template-columns: 1.75rem minmax(0, 1fr) 1.75rem;
+  grid-template-columns:
+    var(--sidenote-nav-button-width) minmax(0, 1fr)
+    var(--sidenote-nav-button-width);
   gap: 0.45rem;
   align-items: center;
   margin-bottom: 0.7rem;
+}
+
+.sidenote-nav.has-comparison-action {
+  grid-template-columns:
+    var(--sidenote-nav-button-width) var(--sidenote-nav-button-width)
+    minmax(0, 1fr) var(--sidenote-nav-button-width)
+    var(--sidenote-nav-button-width);
+}
+
+.sidenote-nav.has-comparison-action [data-sidenote-nav='previous'] {
+  grid-column: 1;
+}
+
+.sidenote-nav.has-comparison-action .sidenote-nav-center {
+  grid-column: 3;
+}
+
+.sidenote-nav.has-comparison-action .sidenote-nav-compare {
+  grid-column: 4;
+}
+
+.sidenote-nav.has-comparison-action [data-sidenote-nav='next'] {
+  grid-column: 5;
 }
 
 .sidenote-nav-button {
   width: 1.75rem;
   padding-inline: 0;
   touch-action: manipulation;
+}
+
+.sidenote-nav-compare[hidden] {
+  display: none;
 }
 
 .sidenote-nav-button[aria-disabled='true'] {
@@ -1980,7 +2011,7 @@ button {
   }
 
   .sidenote-nav {
-    grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+    --sidenote-nav-button-width: 2.75rem;
   }
 
   .sidenote-nav-button {

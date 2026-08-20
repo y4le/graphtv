@@ -79,7 +79,7 @@ The vim spatial metaphor: episodes within a season are characters within a line 
 - **Scan episodes:** With a mouse or pen, press empty plot space and drag. On touch, hold for about 300ms and then drag. The vertical line follows the pointer while the nearest rated episode is previewed by x-position; release commits that episode.
 - **Pan:** Swipe horizontally on touch, horizontally scroll with a trackpad, or drag the overview window. A touch swipe that moves before the hold completes pans instead of scanning.
 - **Zoom:** Pinch with two fingers, Ctrl-scroll with a trackpad, or resize the overview window.
-- **Compare episodes:** With one episode selected, Shift-click another episode to compare the pair. A Shift-click without an existing episode selection behaves like an ordinary single selection. On touch, select an episode, choose **Compare with…** in its detail, then tap the second episode.
+- **Compare episodes:** With one episode selected, Shift-click another episode to compare the pair. A Shift-click without an existing episode selection behaves like an ordinary single selection. On touch, select an episode, choose the **⚖** button beside the episode navigator's Next button, then tap the second episode.
 - **Cancel scanning:** Press `Escape`, begin a two-finger pinch, or let the browser cancel the pointer gesture. The prior committed selection is restored.
 - **Page scroll:** A vertical touch gesture beginning on the chart remains native page scrolling.
 

@@ -217,6 +217,9 @@ export function createSidenote({
           <span class="sidenote-nav-meta"></span>
         </p>
       </div>
+      <button type="button" class="sidenote-nav-button sidenote-nav-compare shortcut-action keycap" data-comparison-action="start" aria-label="Compare with another episode" hidden>
+        <span aria-hidden="true">⚖</span>
+      </button>
       <button type="button" class="sidenote-nav-button shortcut-action keycap" data-sidenote-nav="next" aria-label="Next episode" aria-disabled="true">
         <span aria-hidden="true">›</span>
       </button>
@@ -229,6 +232,7 @@ export function createSidenote({
   const navigatorLabel = root.querySelector('.sidenote-nav-label')
   const navigatorMeta = root.querySelector('.sidenote-nav-meta')
   const comparisonExitButton = root.querySelector('.sidenote-comparison-exit')
+  const comparisonStartButton = root.querySelector('.sidenote-nav-compare')
   const previousButton = root.querySelector('[data-sidenote-nav="previous"]')
   const nextButton = root.querySelector('[data-sidenote-nav="next"]')
   const trendInfoId = `trend-info-tooltip-${++trendInfoSequence}`
@@ -237,7 +241,9 @@ export function createSidenote({
   let pointerRatingButton = null
   let pointerTrendInfoControl = null
 
-  function setMarkup(markup) {
+  function setMarkup(markup, { comparisonAvailable = false } = {}) {
+    comparisonStartButton.hidden = !comparisonAvailable
+    navigatorRoot.classList.toggle('has-comparison-action', comparisonAvailable)
     if (markup === contentMarkup) {
       return
     }
@@ -361,7 +367,7 @@ export function createSidenote({
         `
       : ''
 
-    setMarkup(markup)
+    setMarkup(markup, { comparisonAvailable: comparisonMode === 'available' })
     syncSelectedProviderRating(contentRoot, point?.id, selectedRatingSource)
   }
 
@@ -682,14 +688,6 @@ export function createSidenote({
 }
 
 function renderComparisonAction(mode, point) {
-  if (mode === 'available') {
-    return `
-      <div class="sidenote-comparison-action">
-        <button type="button" class="sidenote-compare-button" data-comparison-action="start">Compare with…</button>
-      </div>
-    `
-  }
-
   if (mode === 'armed') {
     return `
       <div class="sidenote-comparison-action is-armed">

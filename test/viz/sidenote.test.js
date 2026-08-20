@@ -185,10 +185,28 @@ describe('createSidenote', () => {
     }
 
     sidenote.renderPoint(point, { comparisonMode: 'available' })
-    root.querySelector('[data-comparison-action="start"]').click()
+    const startButton = root.querySelector('[data-comparison-action="start"]')
+    expect(startButton.closest('.sidenote-nav')).not.toBeNull()
+    expect(startButton.classList).toContain('sidenote-nav-button')
+    expect(startButton.textContent.trim()).toBe('⚖')
+    expect(startButton.hidden).toBe(false)
+    expect(startButton.nextElementSibling).toBe(
+      root.querySelector('[data-sidenote-nav="next"]')
+    )
+    expect(
+      root.querySelector('.sidenote-content [data-comparison-action]')
+    ).toBeNull()
+    expect(root.querySelector('.sidenote-nav').classList).toContain(
+      'has-comparison-action'
+    )
+    startButton.click()
     expect(onStartComparison).toHaveBeenCalledOnce()
 
     sidenote.renderPoint(point, { comparisonMode: 'armed' })
+    expect(startButton.hidden).toBe(true)
+    expect(root.querySelector('.sidenote-nav').classList).not.toContain(
+      'has-comparison-action'
+    )
     expect(root.textContent).toContain(
       'Choose a second episode to compare with S01E01.'
     )

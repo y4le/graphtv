@@ -1381,7 +1381,7 @@ describe('createChart', () => {
       'No rated episode details are available.'
     )
     expect(
-      Array.from(detailRoot.querySelectorAll('.sidenote-nav-button')).every(
+      Array.from(detailRoot.querySelectorAll('[data-sidenote-nav]')).every(
         (button) => button.getAttribute('aria-disabled') === 'true'
       )
     ).toBe(true)

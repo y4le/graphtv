@@ -353,13 +353,29 @@ test.describe('mobile chart', () => {
     await expect(page.locator('.episode-point').first()).toBeVisible()
 
     await page.locator('.episode-point').nth(1).tap()
-    const compareButton = page.getByRole('button', { name: 'Compare with…' })
+    const compareButton = page.getByRole('button', {
+      name: 'Compare with another episode'
+    })
     await expect(compareButton).toBeVisible()
+    await expect(compareButton).toHaveText('⚖')
     expect(
       await compareButton.evaluate(
         (button) => button.getBoundingClientRect().height
       )
     ).toBeGreaterThanOrEqual(44)
+    expect(
+      await page.locator('.sidenote-nav').evaluate((navigator) => {
+        const navigatorBounds = navigator.getBoundingClientRect()
+        const centerBounds = navigator
+          .querySelector('.sidenote-nav-center')
+          .getBoundingClientRect()
+        return Math.abs(
+          navigatorBounds.left +
+            navigatorBounds.width / 2 -
+            (centerBounds.left + centerBounds.width / 2)
+        )
+      })
+    ).toBeLessThan(1)
     await compareButton.tap()
     await expect(page.locator('.results-episode')).toContainText(
       'Choose a second episode to compare with S01E02.'
