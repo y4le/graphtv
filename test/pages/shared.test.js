@@ -67,8 +67,18 @@ describe('formatRatingBadge', () => {
       votes: 8300
     })
 
-    expect(millions.textContent).toBe('IMDb8.71.1m votes')
-    expect(thousands.textContent).toBe('TMDB8.18.3k votes')
+    expect(millions.querySelector('.rating-badge-value').textContent).toBe(
+      '8.7'
+    )
+    expect(millions.querySelector('.vote-count-trigger').textContent).toBe(
+      '(1.1m)'
+    )
+    expect(thousands.querySelector('.rating-badge-value').textContent).toBe(
+      '8.1'
+    )
+    expect(thousands.querySelector('.vote-count-trigger').textContent).toBe(
+      '(8.3k)'
+    )
   })
 
   it('links the provider label when the series has a native source id', () => {
@@ -91,9 +101,7 @@ describe('formatRatingBadge', () => {
       { selectable: true, isPrimary: true }
     )
     const button = root.querySelector('.series-rating-button')
-    const voteButton = root.querySelector(
-      '.rating-badge-votes.series-rating-button'
-    )
+    const voteButton = root.querySelector('.vote-count-trigger')
 
     expect(button.textContent).toBe('8.1')
     expect(button.dataset.seriesRatingSource).toBe('tmdb')
@@ -101,10 +109,10 @@ describe('formatRatingBadge', () => {
       'Plot episodes using TMDB rating 8.1'
     )
     expect(button.getAttribute('aria-pressed')).toBe('true')
-    expect(voteButton.textContent).toBe('8.3k votes')
-    expect(voteButton.dataset.seriesRatingSource).toBe('tmdb')
-    expect(voteButton.getAttribute('aria-pressed')).toBe('true')
-    expect(root.querySelectorAll('.series-rating-button')).toHaveLength(2)
+    expect(voteButton.textContent).toBe('(8.3k)')
+    expect(voteButton.dataset.seriesRatingSource).toBeUndefined()
+    expect(voteButton.getAttribute('aria-expanded')).toBe('false')
+    expect(root.querySelectorAll('.series-rating-button')).toHaveLength(1)
 
     root.innerHTML = formatRatingBadge(
       { source: 'tmdb', rating: 1, votes: 2 },

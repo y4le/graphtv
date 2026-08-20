@@ -160,17 +160,35 @@ test('compares two episodes with pointer and keyboard controls', async ({
 
   const comparison = page.locator('.sidenote-comparison')
   await expect(comparison).toBeVisible()
-  await expect(comparison).toContainText('S01E02 to S01E06')
-  await expect(comparison.locator('.sidenote-rank')).toHaveCount(2)
+  await expect(page.locator('.sidenote-nav-label')).toHaveAttribute(
+    'aria-label',
+    'S01E02 - S01E06'
+  )
+  await expect(comparison.locator('.sidenote-comparison-rank')).toHaveCount(1)
   await expect(page.locator('.season-axis-comparison')).toHaveCount(1)
-  await expect(page.locator('.sidenote-nav')).toBeHidden()
-  await expect(page).toHaveURL(/[?&]select=s01e02(?:&|$)/u)
+  await expect(page.locator('.sidenote-nav')).toBeVisible()
+  await expect(page.locator('[data-sidenote-nav="next"]')).not.toBeVisible()
+  await expect(page).toHaveURL(/[?&]select=s01e02-s01e06(?:&|$)/u)
   await expect(page).not.toHaveURL(/[?&](?:compare|pair)=/u)
+
+  await page.setViewportSize({ width: 700, height: 800 })
+  expect(
+    await comparison
+      .locator('.sidenote-comparison-episodes')
+      .evaluate(
+        (episodes) =>
+          getComputedStyle(episodes).gridTemplateColumns.split(' ').length
+      )
+  ).toBe(2)
+  await page.setViewportSize({ width: 1280, height: 720 })
 
   await page.keyboard.press('ArrowRight')
   await page.keyboard.press('End')
   await expect(comparison).toBeVisible()
-  await expect(comparison).toContainText('S01E02 to S01E06')
+  await expect(page.locator('.sidenote-nav-label')).toHaveAttribute(
+    'aria-label',
+    'S01E02 - S01E06'
+  )
 
   await page.keyboard.press('Escape')
   await expect(comparison).toHaveCount(0)
@@ -183,13 +201,16 @@ test('compares two episodes with pointer and keyboard controls', async ({
   await page.keyboard.press('ArrowRight')
   await page.keyboard.press('Enter')
   await expect(comparison).toBeVisible()
-  await expect(comparison).toContainText('S01E02 to S01E03')
+  await expect(page.locator('.sidenote-nav-label')).toHaveAttribute(
+    'aria-label',
+    'S01E02 - S01E03'
+  )
   await expectNoAccessibilityViolations(page, '.results-episode')
 
   await page.reload()
   await expect(page.locator('.sparkline-point')).toHaveCount(72)
-  await expect(comparison).toHaveCount(0)
-  await expect(page.locator('.results-episode')).toContainText('Episode 2')
+  await expect(comparison).toBeVisible()
+  await expect(page.locator('.sparkline-selection-point')).toHaveCount(2)
 })
 
 test('scrubs episodes across empty chart space and commits on release', async ({
@@ -347,7 +368,10 @@ test.describe('mobile chart', () => {
     await page.locator('.episode-point').nth(5).tap()
     const comparison = page.locator('.sidenote-comparison')
     await expect(comparison).toBeVisible()
-    await expect(comparison).toContainText('S01E02 to S01E06')
+    await expect(page.locator('.sidenote-nav-label')).toHaveAttribute(
+      'aria-label',
+      'S01E02 - S01E06'
+    )
     await expect(page.locator('.season-axis-comparison')).toHaveCount(1)
     expect(
       await comparison

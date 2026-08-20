@@ -240,6 +240,40 @@ describe('createChart', () => {
     expect(onSelectionChange).not.toHaveBeenCalled()
   })
 
+  it('restores a compared episode range from canonical season coordinates', () => {
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    const onSelectionChange = vi.fn()
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+
+    chart = createChart(container, createTwoSeasons(), {
+      detailRoot,
+      initialSelection: 's01e02-s02e03',
+      onSelectionChange
+    })
+
+    expect(chart.getDebugState()).toMatchObject({
+      selectedPointId: 'season-1-episode-2',
+      comparison: {
+        pointId: 'season-2-episode-3',
+        committed: true
+      },
+      selectedTrendId: null,
+      hasUserInteracted: true
+    })
+    expect(detailRoot.querySelector('.sidenote-nav-label').textContent).toBe(
+      'S01E02-S02E03'
+    )
+    expect(
+      container.querySelectorAll('.sparkline-selection-point')
+    ).toHaveLength(2)
+    expect(onSelectionChange).not.toHaveBeenCalled()
+  })
+
   it('restores a season trend and enables it in the local view settings', () => {
     updateUiSettings({ seasonTrendlines: false })
     const container = document.createElement('div')
@@ -3205,13 +3239,17 @@ describe('createChart', () => {
   it('arms, previews, commits, and unwinds an episode comparison', () => {
     const container = document.createElement('div')
     const detailRoot = document.createElement('section')
+    const onSelectionChange = vi.fn()
     Object.defineProperty(container, 'clientWidth', {
       configurable: true,
       value: 600
     })
     document.body.append(container, detailRoot)
 
-    chart = createChart(container, createSeasons(), { detailRoot })
+    chart = createChart(container, createSeasons(), {
+      detailRoot,
+      onSelectionChange
+    })
     chart.moveEpisode(1)
     detailRoot.querySelector('[data-comparison-action="start"]').click()
 
@@ -3245,7 +3283,9 @@ describe('createChart', () => {
         .style.getPropertyValue('--reading-pane-marker')
     ).toBe('')
 
+    onSelectionChange.mockClear()
     expect(chart.commitComparison()).toBe(true)
+    expect(onSelectionChange).toHaveBeenLastCalledWith('s01e01-s01e02')
     expect(chart.getDebugState().comparison).toEqual({
       armed: false,
       pointId: 'episode-2',
@@ -3253,11 +3293,24 @@ describe('createChart', () => {
     })
     expect(
       Array.from(
-        detailRoot.querySelectorAll('.sidenote-comparison-episode .eyebrow'),
+        detailRoot.querySelectorAll(
+          '.sidenote-comparison-episode-button strong'
+        ),
         (label) => label.textContent
       )
-    ).toEqual(['Earlier · Anchor', 'Later'])
+    ).toEqual(['Episode 1', 'Episode 2'])
+    expect(detailRoot.querySelector('.sidenote-nav-label').textContent).toBe(
+      'S01E01-S01E02'
+    )
+    expect(detailRoot.querySelector('.sidenote-comparison-exit').hidden).toBe(
+      false
+    )
     expect(container.querySelector('.season-axis-comparison')).not.toBeNull()
+    expect(container.querySelectorAll('.crosshair')).toHaveLength(2)
+    expect(
+      container.querySelectorAll('.sparkline-selection-point')
+    ).toHaveLength(2)
+    expect(container.querySelector('.sparkline-selection-range')).not.toBeNull()
 
     const anchor = getRenderedPoint(container, 'episode-1')
     const comparisonPoint = getRenderedPoint(container, 'episode-2')
@@ -3266,6 +3319,15 @@ describe('createChart', () => {
     expect(Number(anchor.getAttribute('r'))).toBeGreaterThan(
       Number(unselectedPoint.getAttribute('r'))
     )
+    expect(anchor.getAttribute('fill-opacity')).toBe('1')
+    expect(comparisonPoint.getAttribute('fill-opacity')).toBe('1')
+    expect(unselectedPoint.getAttribute('fill-opacity')).toBe('0.38')
+    expect(
+      container.querySelector('.micro-trendline').getAttribute('opacity')
+    ).toBe('0.38')
+    expect(
+      detailRoot.querySelector('.sidenote-comparison-metrics').textContent
+    ).toContain('−1.0 · 6.5 span / 7.5 rest · TEST')
 
     chart.moveEpisode(1)
     expect(chart.getDebugState()).toMatchObject({
@@ -3273,7 +3335,9 @@ describe('createChart', () => {
       comparison: { armed: false, pointId: 'episode-2', committed: true }
     })
 
+    onSelectionChange.mockClear()
     expect(chart.clearSelection()).toBe(true)
+    expect(onSelectionChange).toHaveBeenLastCalledWith('s01e01')
     expect(chart.getDebugState()).toMatchObject({
       selectedPointId: 'episode-1',
       comparison: { armed: false, pointId: null, committed: false }
@@ -3311,6 +3375,62 @@ describe('createChart', () => {
     expect(chart.getDebugState()).toMatchObject(committedState)
     chart.jumpBoundary('end')
     expect(chart.getDebugState()).toMatchObject(committedState)
+  })
+
+  it('focuses the same provider rating at both comparison endpoints', () => {
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+    const seasons = createSeasons()
+    seasons[0].episodes.slice(0, 2).forEach((episode, index) => {
+      episode.ratings.push({
+        source: 'tmdb',
+        rating: 8.1 + index / 10,
+        votes: 50 + index
+      })
+    })
+
+    chart = createChart(container, seasons, { detailRoot })
+    getRenderedPoint(container, 'episode-1').dispatchEvent(
+      new MouseEvent('click', { bubbles: true })
+    )
+    getRenderedPoint(container, 'episode-2').dispatchEvent(
+      new MouseEvent('click', { bubbles: true, shiftKey: true })
+    )
+
+    const providerRow = detailRoot.querySelector(
+      '[data-rating-comparison="true"][data-rating-source="tmdb"]'
+    )
+    expect(providerRow).not.toBeNull()
+    expect(
+      detailRoot.querySelector('.sidenote-comparison .rating-source-link')
+    ).toBeNull()
+
+    providerRow.click()
+
+    expect(providerRow.getAttribute('aria-pressed')).toBe('true')
+    expect(container.querySelectorAll('.provider-rating-preview')).toHaveLength(
+      2
+    )
+    expect(
+      Array.from(
+        container.querySelectorAll('.provider-rating-preview'),
+        (preview) => preview.getAttribute('data-rating-source')
+      )
+    ).toEqual(['tmdb', 'tmdb'])
+
+    providerRow.querySelector('.vote-count-trigger').click()
+    expect(providerRow.getAttribute('aria-pressed')).toBe('true')
+    expect(providerRow.querySelector('.vote-count-tooltip').hidden).toBe(false)
+
+    providerRow.click()
+    expect(container.querySelectorAll('.provider-rating-preview')).toHaveLength(
+      0
+    )
   })
 
   it('uses shift-click as a comparison accelerator and ignores shifted misses', () => {
@@ -3401,18 +3521,21 @@ describe('createChart', () => {
 
     expect(
       Array.from(
-        detailRoot.querySelectorAll('.sidenote-comparison-episode .eyebrow'),
-        (label) => label.textContent
-      )
-    ).toEqual(['Earlier', 'Later · Anchor'])
-    expect(
-      Array.from(
         detailRoot.querySelectorAll(
-          '.sidenote-comparison-episode-button span:first-child'
+          '.sidenote-comparison-episode-button strong'
         ),
         (label) => label.textContent
       )
+    ).toEqual(['Episode 2', 'Episode 4'])
+    expect(
+      Array.from(
+        detailRoot.querySelectorAll('[data-comparison-range-side]'),
+        (label) => label.textContent
+      )
     ).toEqual(['S01E02', 'S01E04'])
+    expect(
+      detailRoot.querySelector('.sidenote-comparison-episodes').textContent
+    ).not.toContain('S01E')
     expect(
       detailRoot.querySelector('.sidenote-comparison-metrics').textContent
     ).toContain('3 episodes · 3 rated by TEST')
@@ -3481,14 +3604,10 @@ describe('createChart', () => {
       'episode-1',
       'episode-2'
     ])
-    expect(
-      Array.from(
-        detailRoot.querySelectorAll(
-          '.sidenote-comparison-episode .sidenote-ratings'
-        ),
-        (ratings) => ratings.textContent
-      )
-    ).toEqual(['TEST 6.0 (100 votes)', 'TEST 7.0 (100 votes)'])
+    expect(getComparisonRating(detailRoot, 'test')).toEqual({
+      values: ['6.0', '7.0'],
+      votes: ['(100)', '(100)']
+    })
   })
 
   it('loads both comparison endpoints while an unrelated detail request is in flight', async () => {
@@ -3540,14 +3659,10 @@ describe('createChart', () => {
       'episode-1',
       'episode-2'
     ])
-    expect(
-      Array.from(
-        detailRoot.querySelectorAll(
-          '.sidenote-comparison-episode .sidenote-ratings'
-        ),
-        (ratings) => ratings.textContent
-      )
-    ).toEqual(['TEST 6.0 (100 votes)', 'TEST 7.0 (200 votes)'])
+    expect(getComparisonRating(detailRoot, 'test')).toEqual({
+      values: ['6.0', '7.0'],
+      votes: ['(100)', '(200)']
+    })
 
     resolveUnrelatedLoad()
     await Promise.resolve()
@@ -3638,7 +3753,10 @@ describe('createChart', () => {
     chart.updateSeasons(updatedSeasons)
 
     expect(chart.getDebugState().selectedPointId).toBe(selectedPointId)
-    expect(detailRoot.textContent).toContain('TMDB 9.0 (500 votes)')
+    expect(
+      detailRoot.querySelector('[data-rating-source="tmdb"]').textContent
+    ).toBe('9.0')
+    expect(getVoteCounts(detailRoot)).toContain('(500)')
   })
 
   it('merges late episode details into the newest provider snapshot', async () => {
@@ -3683,8 +3801,9 @@ describe('createChart', () => {
     resolveDetails()
     await Promise.resolve()
 
-    expect(detailRoot.textContent).toContain('TEST 6.0 (123 votes)')
-    expect(detailRoot.textContent).toContain('TMDB 9.0 (500 votes)')
+    expect(getVoteCounts(detailRoot)).toEqual(
+      expect.arrayContaining(['(123)', '(500)'])
+    )
   })
 
   it('does not starve a pending detail load during repeated renders', async () => {
@@ -3770,7 +3889,8 @@ describe('createChart', () => {
     await vi.advanceTimersByTimeAsync(1)
     expect(loadEpisodeDetails).toHaveBeenCalledTimes(1)
     expect(loadEpisodeDetails.mock.calls[0][0].title).toBe('Episode 3')
-    expect(detailRoot.textContent).toContain('IMDb n/a (3.4k votes)')
+    expect(detailRoot.textContent).toContain('IMDb n/a')
+    expect(getVoteCounts(detailRoot)).toContain('(3.4k)')
   })
 
   it('debounces episode detail loading while hovering', async () => {
@@ -3816,7 +3936,8 @@ describe('createChart', () => {
     expect(loadEpisodeDetails).toHaveBeenCalledTimes(1)
     expect(loadEpisodeDetails.mock.calls[0][0].title).toBe('Episode 2')
     expect(container.querySelector('.sidenote-votes-loading')).toBeNull()
-    expect(container.textContent).toContain('IMDb 8.3 (4.2k votes)')
+    expect(container.textContent).toContain('IMDb 8.3')
+    expect(getVoteCounts(container)).toContain('(4.2k)')
   })
 
   it('destroys the detail loader and suppresses abort errors from an in-flight request', async () => {
@@ -3880,6 +4001,28 @@ function getPreviewedPointId(container) {
       (point) => point.__data__.title === title
     )?.__data__.id ?? null
   )
+}
+
+function getVoteCounts(root) {
+  return Array.from(
+    root.querySelectorAll('.vote-count-trigger'),
+    (trigger) => trigger.textContent
+  )
+}
+
+function getComparisonRating(root, source) {
+  const row = root.querySelector(
+    `[data-rating-comparison="true"][data-rating-source="${source}"]`
+  )
+  return {
+    values: Array.from(
+      row.querySelectorAll(
+        '.sidenote-comparison-rating-value > span:first-child'
+      ),
+      (value) => value.textContent
+    ),
+    votes: getVoteCounts(row)
+  }
 }
 
 function viewportEpisodeCount(chartInstance) {

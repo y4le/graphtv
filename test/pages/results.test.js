@@ -145,6 +145,12 @@ describe('renderResultsPage', () => {
     expect(params.get('debug')).toBe('1')
     expect(window.history.length).toBe(historyLength)
 
+    chartOptions.onSelectionChange('s03e07-s04e09')
+
+    expect(new URL(window.location.href).searchParams.get('select')).toBe(
+      's03e07-s04e09'
+    )
+
     chartOptions.onSelectionChange('series')
 
     expect(new URL(window.location.href).searchParams.has('select')).toBe(false)
@@ -252,9 +258,9 @@ describe('renderResultsPage', () => {
     ).toEqual(['IMDb', 'TVmaze', 'TMDB'])
     expect(
       ratingRows.map(
-        (row) => row.querySelector('.rating-badge-votes').textContent
+        (row) => row.querySelector('.vote-count-trigger')?.textContent ?? ''
       )
-    ).toEqual(['1.1m votes', '', '8.3k votes'])
+    ).toEqual(['(1.1m)', '', '(8.3k)'])
     expect(
       ratingRows.map((row) =>
         row.querySelector('.rating-badge-source').getAttribute('href')
@@ -281,8 +287,16 @@ describe('renderResultsPage', () => {
     ).toBe('true')
 
     container
-      .querySelector('.rating-badge-votes[data-series-rating-source="omdb"]')
+      .querySelector('[data-rating-provider="omdb"] .vote-count-trigger')
       .click()
+    expect(chart.setPrimaryRatingSource).toHaveBeenLastCalledWith('tmdb')
+    expect(
+      container.querySelector(
+        '[data-rating-provider="omdb"] .vote-count-tooltip'
+      ).hidden
+    ).toBe(false)
+
+    container.querySelector('[data-series-rating-source="omdb"]').click()
     expect(chart.setPrimaryRatingSource).toHaveBeenLastCalledWith('omdb')
     expect(
       container.querySelector('.rating-badge.is-primary').dataset.ratingProvider

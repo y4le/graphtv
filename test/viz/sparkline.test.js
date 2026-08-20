@@ -17,7 +17,9 @@ const MODEL = {
   }))
 }
 const THEME = {
-  text: '#1A1A1A'
+  text: '#1A1A1A',
+  spotColor: '#D9480F',
+  background: '#FFFFFF'
 }
 const ACTIVE_POINT_RADIUS_FOR_TEST = 1.7
 const INACTIVE_POINT_RADIUS_FOR_TEST = 1.2
@@ -94,6 +96,41 @@ describe('createSparkline', () => {
     )
     expect(Number(inactivePoint.getAttribute('opacity'))).toBeLessThanOrEqual(
       0.35
+    )
+  })
+
+  it('shows selected episode endpoints and connects a comparison range', () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    document.body.appendChild(svg)
+    const scales = createSparklineScales(MODEL, DIMENSIONS)
+    const points = [MODEL.ratedPoints[1], MODEL.ratedPoints[5]]
+    sparkline = createSparkline(svg, {
+      ...createConfig(scales, { start: 2, end: 6 }),
+      selection: {
+        points,
+        range: { start: points[0].x, end: points[1].x }
+      }
+    })
+
+    const markers = Array.from(
+      svg.querySelectorAll('.sparkline-selection-point')
+    )
+    const range = svg.querySelector('.sparkline-selection-range')
+
+    expect(markers).toHaveLength(2)
+    expect(markers.map((marker) => marker.__data__.id)).toEqual([
+      'episode-2',
+      'episode-6'
+    ])
+    expect(markers.map((marker) => marker.getAttribute('fill'))).toEqual([
+      THEME.spotColor,
+      THEME.spotColor
+    ])
+    expect(Number(range.getAttribute('x1'))).toBeCloseTo(
+      scales.xScale(points[0].x)
+    )
+    expect(Number(range.getAttribute('x2'))).toBeCloseTo(
+      scales.xScale(points[1].x)
     )
   })
 

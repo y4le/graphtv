@@ -58,11 +58,29 @@ describe('createSidenote', () => {
 
     sidenote.renderNavigator({
       mode: 'comparison',
-      label: 'Episode comparison',
+      label: 'S01E02 - S02E03',
+      rangeStart: 'S01E02',
+      rangeEnd: 'S02E03',
       previousAvailable: false,
       nextAvailable: false
     })
-    expect(root.querySelector('.sidenote-nav').hidden).toBe(true)
+    expect(root.querySelector('.sidenote-nav').hidden).toBe(false)
+    expect(root.querySelector('.sidenote-nav').getAttribute('aria-label')).toBe(
+      'Compared episode range'
+    )
+    expect(root.querySelector('.sidenote-nav-label').textContent).toBe(
+      'S01E02-S02E03'
+    )
+    expect(
+      Array.from(
+        root.querySelectorAll('[data-comparison-range-side]'),
+        (side) => side.textContent
+      )
+    ).toEqual(['S01E02', 'S02E03'])
+    expect(root.querySelector('.sidenote-comparison-exit').hidden).toBe(false)
+    expect(root.querySelector('.sidenote-nav').classList).toContain(
+      'is-comparison'
+    )
 
     sidenote.renderNavigator({
       mode: 'point',
@@ -71,6 +89,9 @@ describe('createSidenote', () => {
       nextAvailable: true
     })
     expect(root.querySelector('.sidenote-nav').hidden).toBe(false)
+    expect(root.querySelector('.sidenote-nav').classList).not.toContain(
+      'is-comparison'
+    )
   })
 
   it('only suggests selecting a trendline when one is available', () => {
@@ -179,10 +200,12 @@ describe('createSidenote', () => {
     const root = document.createElement('section')
     const onCancelComparison = vi.fn()
     const onSelectPoint = vi.fn()
+    const onSelectRating = vi.fn()
     const sidenote = createSidenote({
       root,
       onCancelComparison,
-      onSelectPoint
+      onSelectPoint,
+      onSelectRating
     })
     const earlier = {
       id: 'episode-2',
@@ -228,19 +251,109 @@ describe('createSidenote', () => {
 
     expect(
       Array.from(
-        root.querySelectorAll('.sidenote-comparison-episode .eyebrow'),
+        root.querySelectorAll('.sidenote-comparison-episode-button strong'),
         (label) => label.textContent
       )
     ).toEqual(['Earlier', 'Later'])
     expect(
+      root.querySelector('.sidenote-comparison-episodes').textContent
+    ).not.toContain('S01E')
+    expect(
       root.querySelector('.sidenote-comparison-metrics').textContent
     ).toContain('+0.9 · IMDb')
-    expect(root.querySelectorAll('[data-provider-rating]')).toHaveLength(0)
+    expect(root.querySelectorAll('[data-provider-rating]')).toHaveLength(1)
+    expect(
+      Array.from(
+        root.querySelectorAll(
+          '.sidenote-comparison-rating-value > span:first-child'
+        ),
+        (value) => value.textContent
+      )
+    ).toEqual(['7.5', '8.4'])
+    expect(
+      root.querySelector('.sidenote-comparison-rating-source').textContent
+    ).toBe('IMDb')
+    expect(
+      root
+        .querySelector('.sidenote-comparison-rank')
+        .textContent.trim()
+        .split(/\s+/u)
+    ).toEqual(['8/12', 'IMDb', '2/12'])
+    expect(
+      root.querySelector('.sidenote-comparison .rating-source-link')
+    ).toBeNull()
+
+    root.querySelector('[data-provider-rating]').click()
+    expect(onSelectRating).toHaveBeenCalledWith({
+      pointId: undefined,
+      source: 'omdb',
+      comparison: true
+    })
 
     root.querySelector('[data-comparison-point-id="episode-8"]').click()
     expect(onSelectPoint).toHaveBeenCalledWith('episode-8')
     root.querySelector('[data-comparison-action="cancel"]').click()
     expect(onCancelComparison).toHaveBeenCalledOnce()
+  })
+
+  it('keeps a provider row inert when only one endpoint has a usable rating', () => {
+    const root = document.createElement('section')
+    const sidenote = createSidenote({ root })
+
+    sidenote.renderComparison({
+      earlier: {
+        point: {
+          id: 'episode-1',
+          title: 'Earlier',
+          season: 1,
+          episode: 1,
+          rating: 8,
+          ratingSource: 'tmdb',
+          ratings: [{ source: 'tmdb', rating: 8, votes: 50 }]
+        }
+      },
+      later: {
+        point: {
+          id: 'episode-2',
+          title: 'Later',
+          season: 1,
+          episode: 2,
+          rating: 7,
+          ratingSource: 'test',
+          ratings: [{ source: 'test', rating: 7 }]
+        }
+      },
+      ratingDelta: null,
+      ratingSource: null,
+      airDateGapDays: null,
+      span: {
+        episodeCount: 2,
+        ratedCount: 1,
+        ratingSource: 'tmdb',
+        top: null,
+        bottom: null
+      }
+    })
+
+    const row = Array.from(
+      root.querySelectorAll('.sidenote-comparison-rating')
+    ).find(
+      (candidate) =>
+        candidate.querySelector('.sidenote-comparison-rating-source')
+          .textContent === 'TMDB'
+    )
+
+    expect(row.tagName).toBe('DIV')
+    expect(row.classList).toContain('is-unavailable')
+    expect(
+      Array.from(
+        row.querySelectorAll(
+          '.sidenote-comparison-rating-value > span:first-child'
+        ),
+        (value) => value.textContent
+      )
+    ).toEqual(['8.0', 'n/a'])
+    expect(row.hasAttribute('data-provider-rating')).toBe(false)
   })
 
   it('removes delegated listeners when destroyed', () => {
@@ -314,15 +427,24 @@ describe('createSidenote', () => {
     )
 
     const ratings = root.querySelector('.sidenote-ratings')
-    expect(ratings.textContent).toBe(
-      'IMDb 8.2 (4k votes) · TVmaze 7.5 · TMDB 7.8 (47 votes)'
-    )
-    expect(ratings.querySelector('strong').textContent).toBe(
-      'IMDb 8.2 (4k votes)'
-    )
+    expect(
+      Array.from(ratings.querySelectorAll('.sidenote-rating-source')).map(
+        (source) => source.textContent
+      )
+    ).toEqual(['IMDb', 'TVmaze', 'TMDB'])
+    expect(
+      Array.from(ratings.querySelectorAll('[data-provider-rating]')).map(
+        (value) => value.textContent
+      )
+    ).toEqual(['8.2', '7.5', '7.8'])
     expect(
       ratings.querySelector('.sidenote-rating-primary-value').textContent
-    ).toBe('8.2 (4k votes)')
+    ).toBe('8.2')
+    expect(
+      Array.from(ratings.querySelectorAll('.vote-count-trigger')).map(
+        (votes) => votes.textContent
+      )
+    ).toEqual(['(4k)', '(47)'])
     expect(root.querySelector('.sidenote-caption').textContent).not.toContain(
       '8.2'
     )
@@ -372,9 +494,13 @@ describe('createSidenote', () => {
 
     expect(primary.tagName).toBe('BUTTON')
     expect(primary.getAttribute('aria-label')).toBe(
-      'IMDb rating 8.2, 4k votes, plotted rating'
+      'IMDb rating 8.2, plotted rating'
     )
-    expect(secondary.textContent).toBe('7.8 (47 votes)')
+    expect(secondary.textContent).toBe('7.8')
+    expect(
+      secondary.nextElementSibling.querySelector('.vote-count-trigger')
+        .textContent
+    ).toBe('(47)')
     expect(secondary.getAttribute('aria-pressed')).toBe('false')
 
     secondary.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
@@ -389,7 +515,8 @@ describe('createSidenote', () => {
     )
     expect(onPreviewRating).toHaveBeenLastCalledWith({
       pointId: 'episode-1',
-      source: 'tmdb'
+      source: 'tmdb',
+      comparison: false
     })
 
     root.dispatchEvent(
@@ -401,7 +528,8 @@ describe('createSidenote', () => {
     expect(onInteract).toHaveBeenCalledOnce()
     expect(onSelectRating).toHaveBeenLastCalledWith({
       pointId: 'episode-1',
-      source: 'tmdb'
+      source: 'tmdb',
+      comparison: false
     })
 
     sidenote.renderPoint(point, { selectedRatingSource: 'tmdb' })
@@ -464,8 +592,12 @@ describe('createSidenote', () => {
       ratings: [{ source: 'tmdb', rating: 1, votes: 2 }]
     })
 
-    expect(root.querySelector('.sidenote-ratings').textContent).toBe(
-      'TMDB n/a (2 votes)'
+    expect(root.querySelector('.sidenote-ratings').textContent).toContain(
+      'TMDB n/a'
+    )
+    expect(root.querySelector('.vote-count-trigger').textContent).toBe('(2)')
+    expect(root.querySelector('.vote-count-tooltip').textContent).toBe(
+      '2 votes were submitted for this score.'
     )
   })
 
