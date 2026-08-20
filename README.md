@@ -48,7 +48,7 @@ keyboard/modal checks, mobile touch interaction, and an automated accessibility
 scan in Chromium. Install the local browser once with
 `npx playwright install chromium`; CI installs Chromium automatically.
 
-The production asset budget defaults to 105,000 gzip bytes across all CSS and
+The production asset budget defaults to 109,000 gzip bytes across all CSS and
 JavaScript, 15,000 gzip bytes for the entry JavaScript chunk, and 50,000 gzip
 bytes for the largest JavaScript chunk. Set `MAX_TOTAL_GZIP_BYTES`,
 `MAX_ENTRY_GZIP_BYTES`, or `MAX_LARGEST_JAVASCRIPT_GZIP_BYTES` when
