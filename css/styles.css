@@ -749,10 +749,12 @@ button {
 }
 
 .results-episode {
+  position: relative;
   grid-column: 2;
   grid-row: 2;
   min-width: 0;
   min-height: 5.5rem;
+  container: comparison-pane / inline-size;
 }
 
 .show-header {
@@ -860,9 +862,72 @@ button {
   white-space: nowrap;
 }
 
-.rating-badge-votes.series-rating-button:hover,
-.rating-badge-votes.series-rating-button:focus-visible {
+.vote-count-control {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+  color: var(--textSecondary);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.vote-count-trigger {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  line-height: inherit;
+  cursor: help;
+  touch-action: manipulation;
+}
+
+.vote-count-trigger:hover,
+.vote-count-trigger:focus-visible,
+.vote-count-trigger[aria-expanded='true'],
+.vote-count-control.is-expanded .vote-count-trigger {
   color: var(--spotColor);
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
+.vote-count-trigger:focus-visible {
+  outline: 2px solid var(--spotColor);
+  outline-offset: 2px;
+}
+
+.vote-count-tooltip {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 0.4rem);
+  left: 50%;
+  width: max-content;
+  max-width: min(17rem, calc(100vw - 2rem));
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--lineStrong);
+  border-radius: 0.25rem;
+  background: var(--canvas);
+  box-shadow: 0 0.3rem 0.9rem rgba(0, 0, 0, 0.12);
+  color: var(--textPrimary);
+  font-family: var(--font-sans);
+  font-size: var(--type-size-utility);
+  font-weight: 400;
+  line-height: 1.35;
+  pointer-events: none;
+  text-align: left;
+  transform: translateX(-50%);
+  white-space: normal;
+}
+
+.vote-count-tooltip[hidden] {
+  display: none;
+}
+
+.rating-badge-votes .vote-count-tooltip {
+  right: 0;
+  left: auto;
+  transform: none;
 }
 
 .rating-source-link {
@@ -1019,10 +1084,6 @@ button {
   margin-bottom: 0.7rem;
 }
 
-.sidenote-nav[hidden] {
-  display: none;
-}
-
 .sidenote-nav-button {
   width: 1.75rem;
   padding-inline: 0;
@@ -1036,10 +1097,29 @@ button {
   opacity: 0.48;
 }
 
+.sidenote-nav.is-comparison .sidenote-nav-button {
+  visibility: hidden;
+}
+
 .sidenote-nav-status {
   min-width: 0;
   margin: 0;
   text-align: center;
+}
+
+.sidenote-nav-center {
+  display: grid;
+  min-width: 0;
+  align-items: center;
+  justify-items: center;
+}
+
+.sidenote-comparison-exit {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  right: 0;
+  white-space: nowrap;
 }
 
 .sidenote-nav-label {
@@ -1052,6 +1132,34 @@ button {
   letter-spacing: 0.04em;
   line-height: 1.2;
   text-transform: uppercase;
+}
+
+.sidenote-nav-label.is-comparison-range {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 0.45em;
+}
+
+.sidenote-nav-label.is-comparison-range [data-comparison-range-side='earlier'] {
+  text-align: right;
+}
+
+.sidenote-nav-label.is-comparison-range [data-comparison-range-side='later'] {
+  text-align: left;
+}
+
+.sidenote-comparison-exit-compact {
+  display: none;
+}
+
+@container comparison-pane (max-width: 31.999rem) {
+  .sidenote-comparison-exit-full {
+    display: none;
+  }
+
+  .sidenote-comparison-exit-compact {
+    display: inline;
+  }
 }
 
 .sidenote-nav-meta,
@@ -1149,37 +1257,26 @@ button {
 
 .sidenote-compare-button:focus-visible,
 .sidenote-comparison-episode-button:focus-visible,
+.sidenote-comparison-rating:focus-visible,
 .sidenote-comparison-extreme:focus-visible {
   outline: 2px solid var(--spotColor);
   outline-offset: 2px;
 }
 
-.sidenote-comparison-header {
-  display: flex;
-  gap: 1rem;
-  align-items: start;
-  justify-content: space-between;
-}
-
-.sidenote-comparison-title {
-  margin: 0.15rem 0 0;
-  font-family: var(--font-editorial-serif);
-  font-size: var(--type-size-heading);
-  font-weight: 400;
-  line-height: 1.2;
+.sidenote-comparison {
+  --comparison-provider-width: 4.5rem;
+  --comparison-column-gap: clamp(0.45rem, 2cqi, 1rem);
 }
 
 .sidenote-comparison-episodes {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--columnGap);
-  margin-top: 0.9rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.85rem;
+  margin-top: 0;
 }
 
 .sidenote-comparison-episode {
   min-width: 0;
-  padding-top: 0.65rem;
-  border-top: 2px solid var(--spotColor);
 }
 
 .sidenote-comparison-episode-button {
@@ -1198,11 +1295,8 @@ button {
   touch-action: manipulation;
 }
 
-.sidenote-comparison-episode-button span {
-  flex: 0 0 auto;
-  color: var(--textSecondary);
-  font-family: var(--font-sans);
-  font-size: var(--type-size-meta);
+.sidenote-comparison-episode-button strong {
+  font-weight: 400;
 }
 
 .sidenote-comparison-episode-button:hover,
@@ -1212,9 +1306,142 @@ button {
   color: var(--spotColor);
 }
 
+.sidenote-comparison-ratings {
+  display: grid;
+  gap: 0.1rem;
+  margin-top: 0.8rem;
+}
+
+.sidenote-comparison-rating {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr) minmax(var(--comparison-provider-width), auto)
+    minmax(0, 1fr);
+  gap: var(--comparison-column-gap);
+  width: 100%;
+  min-width: 0;
+  padding: 0.3rem 0.45rem;
+  border: 0;
+  align-items: baseline;
+  background: transparent;
+  color: var(--textSecondary);
+  font-family: var(--font-sans);
+  font-size: var(--type-size-meta);
+}
+
+.sidenote-comparison-rating.is-interactive {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.sidenote-comparison-rating.is-interactive:hover,
+.sidenote-comparison-rating.is-interactive:focus-visible,
+.sidenote-comparison-rating.is-selected {
+  background: var(--lineSoft);
+}
+
+.sidenote-comparison-rating-source {
+  color: var(--textPrimary);
+  font-weight: 700;
+  text-align: center;
+}
+
+.sidenote-comparison-rating-value {
+  display: flex;
+  gap: 0.35rem;
+  min-width: 0;
+  align-items: baseline;
+  color: var(--textPrimary);
+  font-variant-numeric: tabular-nums;
+}
+
+.sidenote-comparison-rating-value[data-comparison-rating-side='earlier'] {
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+  text-align: right;
+}
+
+.sidenote-comparison-rating-value[data-comparison-rating-side='later'] {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.sidenote-comparison-rating-value > span:first-child {
+  flex: 0 0 auto;
+}
+
+.sidenote-comparison-rating-votes {
+  min-width: 0;
+  color: var(--textSecondary);
+  font-size: var(--type-size-utility);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.sidenote-comparison-rating-value[data-comparison-rating-side='earlier']
+  .vote-count-tooltip {
+  right: 0;
+  left: auto;
+  transform: none;
+}
+
+.sidenote-comparison-rating-value[data-comparison-rating-side='later']
+  .vote-count-tooltip {
+  left: 0;
+  transform: none;
+}
+
+.sidenote-comparison-rating-value.is-plotted,
+.sidenote-comparison-rating.is-selected .sidenote-comparison-rating-value,
+.sidenote-comparison-rating.is-selected .sidenote-comparison-rating-source {
+  color: var(--spotColor);
+}
+
+.sidenote-comparison-ratings.has-selection
+  .sidenote-comparison-rating:not(.is-selected)
+  .sidenote-comparison-rating-value.is-plotted {
+  color: var(--textSecondary);
+}
+
+.sidenote-comparison-rating.is-unavailable {
+  color: var(--textMuted);
+}
+
+.sidenote-comparison-rating.is-unavailable .sidenote-comparison-rating-source,
+.sidenote-comparison-rating.is-unavailable .sidenote-comparison-rating-value {
+  color: var(--textMuted);
+}
+
+.sidenote-comparison-rank {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr) minmax(var(--comparison-provider-width), auto)
+    minmax(0, 1fr);
+  gap: var(--comparison-column-gap);
+  margin: 0.45rem 0 0;
+  padding-inline: 0.45rem;
+  color: var(--textSecondary);
+  font-family: var(--font-sans);
+  font-size: var(--type-size-meta);
+  font-variant-numeric: tabular-nums;
+}
+
+.sidenote-comparison-rank strong {
+  color: var(--textPrimary);
+  text-align: center;
+}
+
+.sidenote-comparison-rank [data-comparison-rank-side='earlier'] {
+  text-align: right;
+}
+
+.sidenote-comparison-rank [data-comparison-rank-side='later'] {
+  text-align: left;
+}
+
 .sidenote-comparison-metrics {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
   gap: 0.75rem;
   margin: 1rem 0 0;
   padding-top: 0.75rem;
@@ -1239,7 +1466,7 @@ button {
   margin-top: 0.85rem;
 }
 
-.sidenote-comparison-extremes h3 {
+.sidenote-comparison-extremes h2 {
   margin: 0;
   color: var(--textSecondary);
   font-family: var(--font-sans);
@@ -1268,6 +1495,26 @@ button {
   color: var(--textSecondary);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@container comparison-pane (min-width: 32rem) {
+  .sidenote-comparison-episodes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: calc(
+      var(--comparison-provider-width) + var(--comparison-column-gap) +
+        var(--comparison-column-gap)
+    );
+  }
+
+  .sidenote-comparison-episode[data-comparison-side='earlier'] {
+    text-align: right;
+  }
+
+  .sidenote-comparison-episode[data-comparison-side='earlier']
+    .sidenote-comparison-episode-button {
+    justify-content: flex-end;
+    text-align: right;
+  }
 }
 
 .sidenote-rating-primary {
@@ -1305,6 +1552,11 @@ button {
 .sidenote-rating-value:focus-visible {
   outline: 2px solid var(--spotColor);
   outline-offset: 2px;
+}
+
+.sidenote-ratings .vote-count-control,
+.sidenote-votes-pending {
+  margin-left: 0.3em;
 }
 
 .sidenote-votes-loading {
@@ -1738,6 +1990,7 @@ button {
 
   .sidenote-compare-button,
   .sidenote-comparison-episode-button,
+  .sidenote-comparison-rating.is-interactive,
   .sidenote-comparison-extreme {
     min-height: 2.75rem;
   }
@@ -1982,17 +2235,11 @@ button {
     display: none;
   }
 
-  .sidenote-comparison-header {
-    align-items: center;
-  }
-
-  .sidenote-comparison-episodes,
   .sidenote-comparison-metrics,
   .sidenote-comparison-extremes {
     grid-template-columns: 1fr;
   }
 
-  .sidenote-comparison-episodes,
   .sidenote-comparison-extremes {
     gap: 0.85rem;
   }
@@ -2004,6 +2251,7 @@ button {
 
   .sidenote-compare-button,
   .sidenote-comparison-episode-button,
+  .sidenote-comparison-rating.is-interactive,
   .sidenote-comparison-extreme {
     min-height: 2.75rem;
   }

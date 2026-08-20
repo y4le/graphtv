@@ -4,8 +4,8 @@ import {
   orderVisibleRatings
 } from '../data/ratingProviders.js'
 import { isTrustedRating, isUsableProviderRating } from '../data/stats.js'
-import { formatCompactNumber } from '../lib/number.js'
 import { escapeHtml } from '../lib/html.js'
+import { bindVoteCountTooltips, renderVoteCount } from '../ui/voteCount.js'
 
 let trendInfoSequence = 0
 
@@ -45,10 +45,7 @@ function listenForOutsideTrendInfoDismissal(root) {
   return () => ownerDocument.removeEventListener('click', handleClick, true)
 }
 
-function formatRatingList(
-  point,
-  { loadingDetails = false, show = null, interactive = true } = {}
-) {
+function formatRatingList(point, { loadingDetails = false, show = null } = {}) {
   return orderVisibleRatings(point.ratings.filter(isTrustedRating))
     .map((rating, index) => {
       const isPrimary = rating.source === point.ratingSource
@@ -57,32 +54,22 @@ function formatRatingList(
         : null
       const votes =
         typeof rating.votes === 'number'
-          ? ` (${formatCompactNumber(rating.votes)} ${rating.votes === 1 ? 'vote' : 'votes'})`
+          ? renderVoteCount(rating.votes)
           : loadingDetails && rating.source === 'omdb'
-            ? ` (${renderVotesLoading()})`
+            ? `<span class="sidenote-votes-pending">(${renderVotesLoading()})</span>`
             : ''
-      const votesLabel =
-        typeof rating.votes === 'number'
-          ? `${formatCompactNumber(rating.votes)} ${rating.votes === 1 ? 'vote' : 'votes'}`
-          : loadingDetails && rating.source === 'omdb'
-            ? 'vote count loading'
-            : null
       const source = formatRatingSource(rating.source, {
         show,
         episode: point,
         className: 'sidenote-rating-source'
       })
       const value = formattedRating
-        ? interactive
-          ? renderProviderRatingButton(
-              point,
-              rating,
-              formattedRating,
-              votes,
-              votesLabel,
-              isPrimary
-            )
-          : `${formattedRating}${votes}`
+        ? `${renderProviderRatingButton(
+            point,
+            rating,
+            formattedRating,
+            isPrimary
+          )}${votes}`
         : `n/a${votes}`
       const content = `${source} ${value}`
       const entry = isPrimary
@@ -98,14 +85,7 @@ function formatRatingList(
     .join('')
 }
 
-function renderProviderRatingButton(
-  point,
-  rating,
-  formattedRating,
-  votes,
-  votesLabel,
-  isPrimary
-) {
+function renderProviderRatingButton(point, rating, formattedRating, isPrimary) {
   const sourceLabel = getEpisodeRatingSourceLabel(rating.source)
   const classes = [
     'sidenote-rating-value',
@@ -114,13 +94,14 @@ function renderProviderRatingButton(
     .filter(Boolean)
     .join(' ')
 
-  return `<button type="button" class="${classes}" data-provider-rating data-rating-point-id="${escapeHtml(point.id ?? '')}" data-rating-source="${escapeHtml(rating.source)}" aria-label="${escapeHtml(`${sourceLabel} rating ${formattedRating}${votesLabel ? `, ${votesLabel}` : ''}${isPrimary ? ', plotted rating' : ''}`)}" aria-pressed="false">${formattedRating}${votes}</button>`
+  return `<button type="button" class="${classes}" data-provider-rating data-rating-point-id="${escapeHtml(point.id ?? '')}" data-rating-source="${escapeHtml(rating.source)}" aria-label="${escapeHtml(`${sourceLabel} rating ${formattedRating}${isPrimary ? ', plotted rating' : ''}`)}" aria-pressed="false">${formattedRating}</button>`
 }
 
 function getProviderRatingTarget(button) {
   return {
     pointId: button.dataset.ratingPointId,
-    source: button.dataset.ratingSource
+    source: button.dataset.ratingSource,
+    comparison: button.dataset.ratingComparison === 'true'
   }
 }
 
@@ -135,6 +116,17 @@ function syncSelectedProviderRating(root, pointId, selectedRatingSource) {
       button.dataset.ratingSource !== selectedRatingSource
     button.classList.toggle('is-selected', isSelected)
     button.classList.toggle('is-superseded', isSupersededPrimary)
+    button.setAttribute('aria-pressed', String(isSelected))
+  })
+}
+
+function syncSelectedComparisonRating(root, selectedRatingSource) {
+  root
+    .querySelector('.sidenote-comparison-ratings')
+    ?.classList.toggle('has-selection', selectedRatingSource != null)
+  root.querySelectorAll('[data-rating-comparison="true"]').forEach((button) => {
+    const isSelected = button.dataset.ratingSource === selectedRatingSource
+    button.classList.toggle('is-selected', isSelected)
     button.setAttribute('aria-pressed', String(isSelected))
   })
 }
@@ -206,18 +198,25 @@ export function createSidenote({
   const eventController = new root.ownerDocument.defaultView.AbortController()
   const eventOptions = { signal: eventController.signal }
   const stopOutsideTrendInfoDismissal = listenForOutsideTrendInfoDismissal(root)
+  const stopVoteCountTooltips = bindVoteCountTooltips(root)
   const listen = (type, listener) => {
     root.addEventListener(type, listener, eventOptions)
   }
   root.innerHTML = `
+    <button type="button" class="sidenote-compare-button sidenote-comparison-exit" data-comparison-action="cancel" aria-label="Exit comparison" hidden>
+      <span class="sidenote-comparison-exit-full">Exit comparison</span>
+      <span class="sidenote-comparison-exit-compact" aria-hidden="true">Exit</span>
+    </button>
     <div class="sidenote-nav" role="group" aria-label="Episode navigation">
       <button type="button" class="sidenote-nav-button shortcut-action keycap" data-sidenote-nav="previous" aria-label="Previous episode" aria-disabled="true">
         <span aria-hidden="true">‹</span>
       </button>
-      <p class="sidenote-nav-status">
-        <span class="sidenote-nav-label">Browse episodes</span>
-        <span class="sidenote-nav-meta"></span>
-      </p>
+      <div class="sidenote-nav-center">
+        <p class="sidenote-nav-status">
+          <span class="sidenote-nav-label">Browse episodes</span>
+          <span class="sidenote-nav-meta"></span>
+        </p>
+      </div>
       <button type="button" class="sidenote-nav-button shortcut-action keycap" data-sidenote-nav="next" aria-label="Next episode" aria-disabled="true">
         <span aria-hidden="true">›</span>
       </button>
@@ -229,6 +228,7 @@ export function createSidenote({
   const navigatorRoot = root.querySelector('.sidenote-nav')
   const navigatorLabel = root.querySelector('.sidenote-nav-label')
   const navigatorMeta = root.querySelector('.sidenote-nav-meta')
+  const comparisonExitButton = root.querySelector('.sidenote-comparison-exit')
   const previousButton = root.querySelector('[data-sidenote-nav="previous"]')
   const nextButton = root.querySelector('[data-sidenote-nav="next"]')
   const trendInfoId = `trend-info-tooltip-${++trendInfoSequence}`
@@ -262,11 +262,17 @@ export function createSidenote({
   }
 
   function renderNavigator(viewModel) {
-    navigatorRoot.hidden = viewModel.mode === 'comparison'
+    comparisonExitButton.hidden = viewModel.mode !== 'comparison'
+    navigatorRoot.classList.toggle(
+      'is-comparison',
+      viewModel.mode === 'comparison'
+    )
     const key = [
       viewModel.mode,
       viewModel.navigationKind,
       viewModel.label,
+      viewModel.rangeStart,
+      viewModel.rangeEnd,
       viewModel.meta,
       viewModel.previousAvailable,
       viewModel.nextAvailable,
@@ -280,11 +286,13 @@ export function createSidenote({
 
     navigatorRoot.setAttribute(
       'aria-label',
-      (viewModel.navigationKind ?? viewModel.mode) === 'season'
-        ? 'Season trend navigation'
-        : 'Episode navigation'
+      viewModel.mode === 'comparison'
+        ? 'Compared episode range'
+        : (viewModel.navigationKind ?? viewModel.mode) === 'season'
+          ? 'Season trend navigation'
+          : 'Episode navigation'
     )
-    navigatorLabel.textContent = viewModel.label
+    renderNavigatorLabel(navigatorLabel, viewModel)
     navigatorMeta.textContent = viewModel.meta ?? ''
     updateNavigatorButton(
       previousButton,
@@ -296,6 +304,30 @@ export function createSidenote({
       viewModel.nextAvailable,
       viewModel.nextLabel ?? 'Next episode'
     )
+  }
+
+  function renderNavigatorLabel(label, viewModel) {
+    label.classList.toggle(
+      'is-comparison-range',
+      Boolean(viewModel.rangeStart && viewModel.rangeEnd)
+    )
+    if (!viewModel.rangeStart || !viewModel.rangeEnd) {
+      label.removeAttribute('aria-label')
+      label.textContent = viewModel.label
+      return
+    }
+
+    const earlier = label.ownerDocument.createElement('span')
+    const separator = label.ownerDocument.createElement('span')
+    const later = label.ownerDocument.createElement('span')
+    earlier.textContent = viewModel.rangeStart
+    earlier.dataset.comparisonRangeSide = 'earlier'
+    separator.textContent = '-'
+    separator.setAttribute('aria-hidden', 'true')
+    later.textContent = viewModel.rangeEnd
+    later.dataset.comparisonRangeSide = 'later'
+    label.setAttribute('aria-label', viewModel.label)
+    label.replaceChildren(earlier, separator, later)
   }
 
   function renderPoint(
@@ -333,24 +365,21 @@ export function createSidenote({
     syncSelectedProviderRating(contentRoot, point?.id, selectedRatingSource)
   }
 
-  function renderComparison(comparison, { show = null } = {}) {
+  function renderComparison(comparison, { selectedRatingSource = null } = {}) {
+    const rangeLabel = `${formatEpisodeLabel(comparison.earlier.point)} - ${formatEpisodeLabel(comparison.later.point)}`
     setMarkup(`
-      <article class="sidenote-comparison" aria-labelledby="episode-comparison-title">
-        <header class="sidenote-comparison-header">
-          <div>
-            <p class="eyebrow">Episode comparison</p>
-            <h2 id="episode-comparison-title" class="sidenote-comparison-title">${escapeHtml(formatEpisodeLabel(comparison.earlier.point))} to ${escapeHtml(formatEpisodeLabel(comparison.later.point))}</h2>
-          </div>
-          <button type="button" class="sidenote-compare-button" data-comparison-action="cancel">Exit comparison</button>
-        </header>
+      <article class="sidenote-comparison" aria-label="${escapeHtml(rangeLabel)} comparison details">
         <div class="sidenote-comparison-episodes">
-          ${renderComparisonEpisode('Earlier', comparison.earlier, show)}
-          ${renderComparisonEpisode('Later', comparison.later, show)}
+          ${renderComparisonEpisode('Earlier', comparison.earlier)}
+          ${renderComparisonEpisode('Later', comparison.later)}
         </div>
+        ${renderComparisonRatings(comparison)}
+        ${renderComparisonRank(comparison)}
         ${renderComparisonMetrics(comparison)}
         ${renderComparisonExtremes(comparison)}
       </article>
     `)
+    syncSelectedComparisonRating(contentRoot, selectedRatingSource)
   }
 
   function renderTrendSummary(summary, { show = null } = {}) {
@@ -459,6 +488,10 @@ export function createSidenote({
   }
 
   listen('click', (event) => {
+    if (event.target.closest?.('[data-vote-count-trigger]')) {
+      return
+    }
+
     const ratingButton = event.target.closest?.('[data-provider-rating]')
     if (ratingButton) {
       onInteract?.()
@@ -579,7 +612,7 @@ export function createSidenote({
 
   listen('focusin', (event) => {
     const ratingButton = event.target.closest?.('[data-provider-rating]')
-    if (ratingButton) {
+    if (ratingButton && !event.target.closest?.('[data-vote-count-trigger]')) {
       onPreviewRating?.(getProviderRatingTarget(ratingButton))
     }
 
@@ -641,6 +674,7 @@ export function createSidenote({
     renderRestingState,
     destroy() {
       stopOutsideTrendInfoDismissal()
+      stopVoteCountTooltips()
       eventController.abort()
       root.replaceChildren()
     }
@@ -668,23 +702,119 @@ function renderComparisonAction(mode, point) {
   return ''
 }
 
-function renderComparisonEpisode(label, entry, show) {
+function renderComparisonEpisode(label, entry) {
   const point = entry.point
   return `
-    <section class="sidenote-comparison-episode" aria-label="${label} episode">
-      <p class="eyebrow">${label}${entry.isAnchor ? ' · Anchor' : ''}</p>
+    <section class="sidenote-comparison-episode" data-comparison-side="${label.toLowerCase()}" aria-label="${label} episode">
       <button type="button" class="sidenote-comparison-episode-button" data-comparison-point-id="${escapeHtml(point.id)}" aria-label="Select only ${escapeHtml(formatEpisodeLabel(point))}, ${escapeHtml(point.title)}">
-        <span>${escapeHtml(formatEpisodeLabel(point))}</span>
         <strong>${escapeHtml(point.title)}</strong>
       </button>
       <p class="sidenote-meta">${escapeHtml(point.date ?? 'Unknown air date')}</p>
-      <p class="sidenote-ratings">${formatRatingList(point, {
-        loadingDetails: entry.loadingDetails,
-        show,
-        interactive: false
-      })}</p>
-      ${renderSeriesRank(entry.seriesRank)}
     </section>
+  `
+}
+
+function renderComparisonRatings(comparison) {
+  const entries = [comparison.earlier, comparison.later]
+  const orderedSources = orderVisibleRatings(
+    entries.flatMap(({ point }) => point.ratings.filter(isTrustedRating))
+  )
+    .map((rating) => rating.source)
+    .filter((source, index, sources) => sources.indexOf(source) === index)
+
+  if (!orderedSources.length) {
+    return ''
+  }
+
+  const rows = orderedSources
+    .map((source) => renderComparisonRatingRow(source, comparison))
+    .join('')
+
+  return `<div class="sidenote-comparison-ratings" role="group" aria-label="Provider rating comparison">${rows}</div>`
+}
+
+function renderComparisonRatingRow(source, comparison) {
+  const earlier = getComparisonRating(comparison.earlier, source)
+  const later = getComparisonRating(comparison.later, source)
+  const isAvailable = earlier.usable && later.usable
+  const tag = isAvailable ? 'button' : 'div'
+  const classes = [
+    'sidenote-comparison-rating',
+    isAvailable ? 'is-interactive' : null,
+    !isAvailable ? 'is-unavailable' : null
+  ]
+    .filter(Boolean)
+    .join(' ')
+  const attributes = isAvailable
+    ? `type="button" data-provider-rating data-rating-comparison="true" data-rating-source="${escapeHtml(source)}" aria-label="Focus ${escapeHtml(getEpisodeRatingSourceLabel(source))} ratings: ${escapeHtml(earlier.accessibleValue)} for the earlier episode and ${escapeHtml(later.accessibleValue)} for the later episode" aria-pressed="false"`
+    : `aria-label="${escapeHtml(getEpisodeRatingSourceLabel(source))}: ${escapeHtml(earlier.accessibleValue)} for the earlier episode and ${escapeHtml(later.accessibleValue)} for the later episode"`
+
+  return `
+    <${tag} class="${classes}" ${attributes}>
+      ${renderComparisonRatingValue(earlier, 'earlier')}
+      <span class="sidenote-comparison-rating-source">${escapeHtml(getEpisodeRatingSourceLabel(source))}</span>
+      ${renderComparisonRatingValue(later, 'later')}
+    </${tag}>
+  `
+}
+
+function getComparisonRating(entry, source) {
+  const rating = entry.point.ratings.find(
+    (candidate) => candidate.source === source && isTrustedRating(candidate)
+  )
+  const usable = isUsableProviderRating(rating)
+  const votes = Number.isFinite(rating?.votes) ? rating.votes : null
+  const loadingVotes = entry.loadingDetails && source === 'omdb'
+  const ratingLabel = usable ? rating.rating.toFixed(1) : 'n/a'
+
+  return {
+    ratingLabel,
+    votes,
+    loadingVotes,
+    usable,
+    plotted: usable && source === entry.point.ratingSource,
+    accessibleValue: `${ratingLabel}${votes != null ? `, ${votes.toLocaleString('en-US')} ${votes === 1 ? 'vote' : 'votes'}` : loadingVotes ? ', vote count loading' : ''}`
+  }
+}
+
+function renderComparisonRatingValue(rating, side) {
+  const classes = [
+    'sidenote-comparison-rating-value',
+    rating.plotted ? 'is-plotted' : null
+  ]
+    .filter(Boolean)
+    .join(' ')
+  const votes =
+    rating.votes != null
+      ? renderVoteCount(rating.votes, {
+          className: 'sidenote-comparison-rating-votes',
+          interactive: false
+        })
+      : rating.loadingVotes
+        ? `<span class="sidenote-comparison-rating-votes">${renderVotesLoading()}</span>`
+        : ''
+
+  return `<span class="${classes}" data-comparison-rating-side="${side}"><span>${rating.ratingLabel}</span>${votes}</span>`
+}
+
+function renderComparisonRank(comparison) {
+  const earlier = comparison.earlier.seriesRank
+  const later = comparison.later.seriesRank
+  const source = earlier?.source ?? later?.source
+  if (!source) {
+    return ''
+  }
+
+  const earlierValue = earlier ? `${earlier.rank}/${earlier.total}` : 'n/a'
+  const laterValue = later ? `${later.rank}/${later.total}` : 'n/a'
+  const sourceLabel = getRatingSourceLabel(source)
+
+  return `
+    <p class="sidenote-comparison-rank" aria-label="Series rank: earlier episode ${escapeHtml(earlierValue)}, ${escapeHtml(sourceLabel)}, later episode ${escapeHtml(laterValue)}">
+      <span data-comparison-rank-side="earlier">${escapeHtml(earlierValue)}</span>
+      <strong>${escapeHtml(sourceLabel)}</strong>
+      <span data-comparison-rank-side="later">${escapeHtml(laterValue)}</span>
+    </p>
   `
 }
 
@@ -700,6 +830,14 @@ function renderComparisonMetrics(comparison) {
         </div>
       `
     : ''
+  const spanContext = comparison.spanContext
+    ? `
+        <div>
+          <dt>Span vs rest</dt>
+          <dd><strong>${formatSignedDelta(comparison.spanContext.insideMean - comparison.spanContext.outsideMean)}</strong> · ${comparison.spanContext.insideMean.toFixed(1)} span / ${comparison.spanContext.outsideMean.toFixed(1)} rest · ${escapeHtml(getRatingSourceLabel(comparison.spanContext.ratingSource))}</dd>
+        </div>
+      `
+    : ''
 
   return `
     <dl class="sidenote-comparison-metrics">
@@ -712,6 +850,7 @@ function renderComparisonMetrics(comparison) {
         <dd>${comparison.span.episodeCount} ${comparison.span.episodeCount === 1 ? 'episode' : 'episodes'} · ${comparison.span.ratedCount} rated by ${escapeHtml(getRatingSourceLabel(comparison.span.ratingSource))}</dd>
       </div>
       ${dateGap}
+      ${spanContext}
     </dl>
   `
 }
@@ -732,7 +871,7 @@ function renderComparisonExtremes(comparison) {
 function renderComparisonExtreme(label, extreme) {
   return `
     <section>
-      <h3>${label}</h3>
+      <h2>${label}</h2>
       <button type="button" class="sidenote-comparison-extreme" data-comparison-point-id="${escapeHtml(extreme.point.id)}" aria-label="Select ${escapeHtml(formatEpisodeLabel(extreme.point))}, ${escapeHtml(extreme.point.title)}">
         <span>${escapeHtml(formatEpisodeLabel(extreme.point))}</span>
         <span>${escapeHtml(extreme.point.title)}</span>

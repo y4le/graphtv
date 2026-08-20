@@ -29,6 +29,10 @@ export function createSparkline(svgNode, config) {
     .append('g')
     .attr('class', 'sparkline-marks')
     .attr('pointer-events', 'none')
+  const selectionMarks = svg
+    .append('g')
+    .attr('class', 'sparkline-selection-marks')
+    .attr('pointer-events', 'none')
 
   let suppressBrushEvents = false
   let lastTapAt = 0
@@ -213,6 +217,41 @@ export function createSparkline(svgNode, config) {
           batch.radius
         )
       )
+
+    const selectedPoints = (config.selection?.points ?? []).filter(
+      (point) => Number.isFinite(point?.x) && Number.isFinite(point?.rating)
+    )
+    const selectionRange = config.selection?.range
+    const hasSelectionRange =
+      Number.isFinite(selectionRange?.start) &&
+      Number.isFinite(selectionRange?.end) &&
+      selectionRange.start !== selectionRange.end
+    const selectedPointRadius = Math.max(activePointRadius * 1.35, 2.5)
+
+    selectionMarks
+      .selectAll('.sparkline-selection-range')
+      .data(hasSelectionRange ? [selectionRange] : [])
+      .join('line')
+      .attr('class', 'sparkline-selection-range')
+      .attr('x1', (range) => config.scales.xScale(range.start))
+      .attr('x2', (range) => config.scales.xScale(range.end))
+      .attr('y1', config.dimensions.height - 1.5)
+      .attr('y2', config.dimensions.height - 1.5)
+      .attr('stroke', config.theme.spotColor)
+      .attr('stroke-width', 2)
+      .attr('stroke-linecap', 'round')
+
+    selectionMarks
+      .selectAll('.sparkline-selection-point')
+      .data(selectedPoints, (point) => point.id)
+      .join('circle')
+      .attr('class', 'sparkline-selection-point')
+      .attr('cx', (point) => config.scales.xScale(point.x))
+      .attr('cy', (point) => config.scales.yScale(point.rating))
+      .attr('r', selectedPointRadius)
+      .attr('fill', config.theme.spotColor)
+      .attr('stroke', config.theme.background)
+      .attr('stroke-width', 0.8)
 
     brushLayer.style('display', null)
     brush.extent([

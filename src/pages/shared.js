@@ -3,8 +3,8 @@ import {
   getRatingSourceLabel,
   getRatingSourceUrl
 } from '../data/ratingProviders.js'
-import { formatCompactNumber } from '../lib/number.js'
 import { escapeHtml } from '../lib/html.js'
+import { renderVoteCount } from '../ui/voteCount.js'
 
 export function renderLoading(
   message = 'Loading...',
@@ -48,20 +48,14 @@ export function formatRatingBadge(
     )
   }
 
-  const votes =
-    typeof rating.votes === 'number'
-      ? `${formatCompactNumber(rating.votes)} ${rating.votes === 1 ? 'vote' : 'votes'}`
-      : ''
-
   const formattedRating = rating.rating.toFixed(1)
   const selectorAttributes = `data-series-rating-source="${escapeHtml(rating.source)}" aria-pressed="${String(isPrimary)}"`
   const ratingValue = selectable
     ? `<button type="button" class="rating-badge-value series-rating-button" ${selectorAttributes} aria-label="${escapeHtml(`Plot episodes using ${sourceLabel} rating ${formattedRating}`)}">${formattedRating}</button>`
     : `<span class="rating-badge-value">${formattedRating}</span>`
-  const votesValue =
-    selectable && votes
-      ? `<button type="button" class="rating-badge-votes series-rating-button" ${selectorAttributes} aria-label="${escapeHtml(`Plot episodes using ${sourceLabel} ratings, ${votes}`)}">${votes}</button>`
-      : `<span class="rating-badge-votes">${votes}</span>`
+  const votesValue = Number.isFinite(rating.votes)
+    ? renderVoteCount(rating.votes, { className: 'rating-badge-votes' })
+    : '<span class="rating-badge-votes"></span>'
 
   return renderRatingBadgeColumns(source, ratingValue, votesValue)
 }

@@ -16,6 +16,7 @@ import { orderVisibleRatings } from '../data/ratingProviders.js'
 import { buildUrl, getUrlParams, preserveDebugParams } from '../lib/url.js'
 import { escapeHtml } from '../lib/html.js'
 import { forwardAbort, isAbortError } from '../lib/abort.js'
+import { bindVoteCountTooltips } from '../ui/voteCount.js'
 
 export function renderResultsMasthead({ interactive = false } = {}) {
   return `
@@ -62,6 +63,7 @@ export async function renderResultsPage(container, showRef, options = {}) {
   const initialSelection = getUrlParams().get('select')
   const abortController = new AbortController()
   const stopForwardingAbort = forwardAbort(options.signal, abortController)
+  const stopVoteCountTooltips = bindVoteCountTooltips(container)
   const handleSeriesRatingSelection = (event) => {
     const button = event.target.closest?.('[data-series-rating-source]')
     if (!button || !container.contains(button)) {
@@ -222,6 +224,7 @@ export async function renderResultsPage(container, showRef, options = {}) {
         abortController.abort()
         void iterator?.return?.().catch(() => {})
         container.removeEventListener('click', handleSeriesRatingSelection)
+        stopVoteCountTooltips()
         chart.destroy()
       }
     }
@@ -280,6 +283,7 @@ export async function renderResultsPage(container, showRef, options = {}) {
         abortController.abort()
         void iterator?.return?.().catch(() => {})
         container.removeEventListener('click', handleSeriesRatingSelection)
+        stopVoteCountTooltips()
       }
     }
   }

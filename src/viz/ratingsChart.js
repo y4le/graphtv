@@ -124,6 +124,8 @@ export function createChart(container, seasons, options = {}) {
   let hoverTrendId = null
   let hoveredProviderRating = null
   let selectedProviderRating = null
+  let hoveredComparisonRatingSource = null
+  let selectedComparisonRatingSource = null
   let hasUserInteracted = false
   let sourceHelpDismissed = readSourceHelpDismissed()
   let sparkline = null
@@ -235,6 +237,28 @@ export function createChart(container, seasons, options = {}) {
     return comparisonArmed || isComparisonCommitted()
   }
 
+  function getOverviewSelection() {
+    if (isComparisonMode()) {
+      const points = [getComparisonAnchor(), getComparisonPoint()]
+        .filter(Boolean)
+        .filter(
+          (point, index, candidates) =>
+            candidates.findIndex((candidate) => candidate.id === point.id) ===
+            index
+        )
+        .sort((left, right) => left.x - right.x)
+
+      return {
+        points,
+        range:
+          points.length === 2 ? { start: points[0].x, end: points[1].x } : null
+      }
+    }
+
+    const point = getPointById(selectedPointId)
+    return point ? { points: [point], range: null } : null
+  }
+
   function clearComparisonState() {
     comparisonPointId = null
     comparisonArmed = false
@@ -294,6 +318,33 @@ export function createChart(container, seasons, options = {}) {
     return resolveProviderRating(target)
   }
 
+  function resolveComparisonProviderRatings(source) {
+    const comparison = getComparisonSummary()
+    if (!comparison || !source) {
+      return []
+    }
+
+    return [comparison.earlier.point, comparison.later.point]
+      .map((point) => {
+        const rating = resolveProviderRating({ pointId: point.id, source })
+        return rating ? { point, rating } : null
+      })
+      .filter(Boolean)
+  }
+
+  function getActiveProviderRatings() {
+    if (isComparisonCommitted()) {
+      const source =
+        hoveredComparisonRatingSource ?? selectedComparisonRatingSource
+      const ratings = resolveComparisonProviderRatings(source)
+      return ratings.length === 2 ? ratings : []
+    }
+
+    const rating = getActiveProviderRating()
+    const point = getPointById(rating?.pointId)
+    return rating && point ? [{ point, rating }] : []
+  }
+
   function getSelectedRatingSource(point) {
     return selectedProviderRating?.pointId === point?.id
       ? selectedProviderRating.source
@@ -328,6 +379,9 @@ export function createChart(container, seasons, options = {}) {
     const spanRatedPoints = model.primaryRatedPoints.filter(
       (point) => point.x >= earlierPoint.x && point.x <= laterPoint.x
     )
+    const outsideRatedPoints = model.primaryRatedPoints.filter(
+      (point) => point.x < earlierPoint.x || point.x > laterPoint.x
+    )
     const rankedSpanPoints = [...spanRatedPoints].sort(
       (left, right) => right.rating - left.rating || left.x - right.x
     )
@@ -361,7 +415,15 @@ export function createChart(container, seasons, options = {}) {
         bottom: rankedSpanPoints.at(-1)
           ? { point: rankedSpanPoints.at(-1) }
           : null
-      }
+      },
+      spanContext:
+        spanRatedPoints.length > 0 && outsideRatedPoints.length > 0
+          ? {
+              insideMean: meanPointRating(spanRatedPoints),
+              outsideMean: meanPointRating(outsideRatedPoints),
+              ratingSource: model.primaryRatingSource
+            }
+          : null
     }
   }
 
@@ -392,6 +454,8 @@ export function createChart(container, seasons, options = {}) {
   function clearProviderRatingState() {
     hoveredProviderRating = null
     selectedProviderRating = null
+    hoveredComparisonRatingSource = null
+    selectedComparisonRatingSource = null
   }
 
   function notifyPrimaryRatingSource() {
@@ -404,6 +468,32 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function previewProviderRating(target) {
+    if (!target) {
+      if (!hoveredProviderRating && !hoveredComparisonRatingSource) {
+        return
+      }
+
+      hoveredProviderRating = null
+      hoveredComparisonRatingSource = null
+      render()
+      return
+    }
+
+    if (target?.comparison) {
+      const nextSource =
+        resolveComparisonProviderRatings(target.source).length === 2
+          ? target.source
+          : null
+      if (nextSource === hoveredComparisonRatingSource) {
+        return
+      }
+
+      hoveredProviderRating = null
+      hoveredComparisonRatingSource = nextSource
+      render()
+      return
+    }
+
     const nextTarget = resolveProviderRating(target)
     if (
       nextTarget?.pointId === hoveredProviderRating?.pointId &&
@@ -412,11 +502,23 @@ export function createChart(container, seasons, options = {}) {
       return
     }
 
+    hoveredComparisonRatingSource = null
     hoveredProviderRating = nextTarget
     render()
   }
 
   function selectProviderRating(target) {
+    if (target?.comparison) {
+      if (resolveComparisonProviderRatings(target.source).length !== 2) {
+        return
+      }
+
+      selectedComparisonRatingSource =
+        selectedComparisonRatingSource === target.source ? null : target.source
+      render()
+      return
+    }
+
     const rating = resolveProviderRating(target)
     const point = getPointById(rating?.pointId)
     if (!rating || point?.id !== getActivePoint()?.id) {
@@ -506,6 +608,32 @@ export function createChart(container, seasons, options = {}) {
       return
     }
 
+    const comparisonCoordinates = /^s(\d+)e(\d+)-s(\d+)e(\d+)$/u.exec(selection)
+    if (comparisonCoordinates) {
+      const anchor = model.ratedPoints.find(
+        (candidate) =>
+          candidate.season === Number(comparisonCoordinates[1]) &&
+          getEpisodeNumber(candidate) === Number(comparisonCoordinates[2])
+      )
+      const comparisonPoint = model.ratedPoints.find(
+        (candidate) =>
+          candidate.season === Number(comparisonCoordinates[3]) &&
+          getEpisodeNumber(candidate) === Number(comparisonCoordinates[4])
+      )
+      if (!anchor || !comparisonPoint || anchor.id === comparisonPoint.id) {
+        return
+      }
+
+      clearProviderRatingState()
+      clearComparisonState()
+      selectedPointId = anchor.id
+      comparisonPointId = comparisonPoint.id
+      selectedTrendId = null
+      hasUserInteracted = true
+      followViewportToX(comparisonPoint.x)
+      return
+    }
+
     const coordinate = /^s(\d+)(?:e(\d+))?$/u.exec(selection)
     if (coordinate?.[2]) {
       const point = model.ratedPoints.find(
@@ -551,6 +679,10 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function getSelectionId() {
+    const comparison = getComparisonSummary()
+    if (comparison) {
+      return `${formatEpisodeCode(comparison.earlier.point)}-${formatEpisodeCode(comparison.later.point)}`.toLowerCase()
+    }
     const point = getPointById(selectedPointId)
     if (point) {
       return formatEpisodeCode(point).toLowerCase()
@@ -597,10 +729,14 @@ export function createChart(container, seasons, options = {}) {
 
     const comparison = getComparisonSummary()
     if (comparison) {
+      const rangeStart = formatEpisodeCode(comparison.earlier.point)
+      const rangeEnd = formatEpisodeCode(comparison.later.point)
       return {
         mode: 'comparison',
-        label: 'Episode comparison',
-        meta: `${formatEpisodeCode(comparison.earlier.point)} to ${formatEpisodeCode(comparison.later.point)}`,
+        label: `${rangeStart} - ${rangeEnd}`,
+        rangeStart,
+        rangeEnd,
+        meta: '',
         previousAvailable: false,
         nextAvailable: false
       }
@@ -941,7 +1077,23 @@ export function createChart(container, seasons, options = {}) {
     if (pointToLoad) {
       scheduleDetailLoad(pointToLoad)
     }
-    sidenote.renderComparison(getComparisonDetailSummary(), { show })
+    if (
+      hoveredComparisonRatingSource &&
+      resolveComparisonProviderRatings(hoveredComparisonRatingSource).length !==
+        2
+    ) {
+      hoveredComparisonRatingSource = null
+    }
+    if (
+      selectedComparisonRatingSource &&
+      resolveComparisonProviderRatings(selectedComparisonRatingSource)
+        .length !== 2
+    ) {
+      selectedComparisonRatingSource = null
+    }
+    sidenote.renderComparison(getComparisonDetailSummary(), {
+      selectedRatingSource: selectedComparisonRatingSource
+    })
   }
 
   function updateActiveDetail() {
@@ -1029,11 +1181,13 @@ export function createChart(container, seasons, options = {}) {
     }
 
     const anchor = getComparisonAnchor()
+    clearProviderRatingState()
     clearComparisonState()
     render()
     if (announce && anchor) {
       announceSelection({ point: anchor })
     }
+    notifySelectionChange()
     return true
   }
 
@@ -1056,6 +1210,7 @@ export function createChart(container, seasons, options = {}) {
     render()
     if (committed) {
       announceSelection({ comparison: getComparisonSummary() })
+      notifySelectionChange()
     }
     return true
   }
@@ -1725,6 +1880,7 @@ export function createChart(container, seasons, options = {}) {
     })
     notifyPrimaryRatingSource()
     hoveredProviderRating = null
+    hoveredComparisonRatingSource = null
     failedDetailPointIds.clear()
     if (!getPointById(hoverPointId)) {
       hoverPointId = null
@@ -1803,6 +1959,13 @@ export function createChart(container, seasons, options = {}) {
     ) {
       selectedProviderRating = null
     }
+    if (
+      selectedComparisonRatingSource &&
+      resolveComparisonProviderRatings(selectedComparisonRatingSource)
+        .length !== 2
+    ) {
+      selectedComparisonRatingSource = null
+    }
 
     if (shouldRefreshDefaultViewport) {
       viewport = getDefaultViewport(getCurrentChartWidth())
@@ -1876,8 +2039,15 @@ export function createChart(container, seasons, options = {}) {
 
   function getTrendInteractions(densityPointCount) {
     const activeTrendId = getActiveTrendId()
+    const comparison = getComparisonSummary()
     return {
       activeTrendId,
+      comparisonRange: comparison
+        ? {
+            start: comparison.earlier.point.x,
+            end: comparison.later.point.x
+          }
+        : null,
       densityPointCount,
       hoverEnabled: finePointerQuery.matches && !isComparisonMode(),
       hitTolerance: coarsePointerQuery.matches ? 14 : 7,
@@ -1897,7 +2067,7 @@ export function createChart(container, seasons, options = {}) {
     }
   }
 
-  function getPointInteractions(activeProviderRating) {
+  function getPointInteractions(activeProviderRatings) {
     const comparison = getComparisonSummary()
     const selectedPointIds = comparison
       ? [comparison.earlier.point.id, comparison.later.point.id]
@@ -1907,7 +2077,13 @@ export function createChart(container, seasons, options = {}) {
     return {
       activePointId: getActivePoint()?.id ?? null,
       selectedPointIds,
-      activeRatingSource: activeProviderRating?.source ?? null,
+      comparisonRange: comparison
+        ? {
+            start: comparison.earlier.point.x,
+            end: comparison.later.point.x
+          }
+        : null,
+      activeRatingSource: activeProviderRatings[0]?.rating.source ?? null,
       hoverEnabled: finePointerQuery.matches && !isComparisonMode(),
       totalSeasons: model.totalSeasons,
       onHover(point) {
@@ -1990,7 +2166,13 @@ export function createChart(container, seasons, options = {}) {
     ensureViewport(chartWidth)
     const uiSettings = getUiSettings()
     const activePoint = getActivePoint()
-    const activeProviderRating = getActiveProviderRating()
+    const comparison = getComparisonSummary()
+    const selectedPoints = comparison
+      ? [comparison.earlier.point, comparison.later.point]
+      : activePoint
+        ? [activePoint]
+        : []
+    const activeProviderRatings = getActiveProviderRatings()
 
     const scaleOptions = {
       absoluteYAxis: uiSettings.absoluteYAxis,
@@ -2006,9 +2188,9 @@ export function createChart(container, seasons, options = {}) {
       },
       {
         ...scaleOptions,
-        additionalRatings: activeProviderRating
-          ? [activeProviderRating.rating]
-          : []
+        additionalRatings: activeProviderRatings.map(
+          ({ rating }) => rating.rating
+        )
       }
     )
     const sparklineScales = createSparklineScales(
@@ -2064,12 +2246,12 @@ export function createChart(container, seasons, options = {}) {
       chartTheme,
       {
         visible: uiSettings.showSourceSpread,
-        activePointId: activePoint?.id ?? null
+        activePointIds: selectedPoints.map((point) => point.id)
       }
     )
     renderCrosshair(
       mainSvg,
-      activePoint,
+      selectedPoints,
       mainScales,
       { width: chartWidth, height: chartHeight },
       chartTheme,
@@ -2081,13 +2263,12 @@ export function createChart(container, seasons, options = {}) {
       visiblePoints,
       mainScales,
       chartTheme,
-      getPointInteractions(activeProviderRating)
+      getPointInteractions(activeProviderRatings)
     )
     renderProviderRatingPreview(
       mainSvg,
       visiblePoints,
-      activePoint,
-      activeProviderRating,
+      activeProviderRatings,
       mainScales,
       chartTheme
     )
@@ -2172,6 +2353,7 @@ export function createChart(container, seasons, options = {}) {
     onViewportChange,
     onViewportReset
   ) {
+    const selection = getOverviewSelection()
     if (!sparkline) {
       sparkline = createSparkline(sparklineSvg, {
         model,
@@ -2180,6 +2362,7 @@ export function createChart(container, seasons, options = {}) {
         theme: chartTheme,
         dimensions: { width, height },
         scales: sparklineScales,
+        selection,
         onViewportChange,
         onViewportReset
       })
@@ -2193,6 +2376,7 @@ export function createChart(container, seasons, options = {}) {
       theme: chartTheme,
       dimensions: { width, height },
       scales: sparklineScales,
+      selection,
       onViewportChange,
       onViewportReset
     })
@@ -2611,6 +2795,10 @@ function formatEpisodeCode(point) {
 function formatSignedRatingDelta(value) {
   const magnitude = Math.abs(value).toFixed(1)
   return value >= 0 ? `plus ${magnitude}` : `minus ${magnitude}`
+}
+
+function meanPointRating(points) {
+  return points.reduce((sum, point) => sum + point.rating, 0) / points.length
 }
 
 function formatViewportAnnouncement(viewport, episodeCount) {

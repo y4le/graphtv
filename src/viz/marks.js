@@ -19,6 +19,7 @@ const CLIPPED_SPREAD_NUB_WIDTH = 4
 const SOURCE_SPREAD_WHISKER_WIDTH = 7
 const SOURCE_RATING_OPACITY = 0.68
 const FALLBACK_POINT_FILL_OPACITY = 0.2
+const COMPARISON_CONTEXT_OPACITY = 0.38
 const DEFAULT_POINT_RADIUS = 3
 const SEASON_AXIS_FONT_SIZE = 12
 const SEASON_AXIS_FULL_LABEL_PADDING = 12
@@ -414,6 +415,13 @@ export function renderTrendlines(
     .y((point) => scales.yScale(point.y))
   const segments = [macroTrendline, ...trendlines].filter(Boolean)
   const activeTrendId = interactions.activeTrendId ?? null
+  const comparisonRange = interactions.comparisonRange ?? null
+  const getTrendlineOpacity = (trendline) =>
+    comparisonRange &&
+    (trendline.startX < comparisonRange.start ||
+      trendline.endX > comparisonRange.end)
+      ? COMPARISON_CONTEXT_OPACITY
+      : 1
   const lineWidth = (baseWidth) =>
     interactions.densityPointCount == null
       ? baseWidth
@@ -491,6 +499,7 @@ export function renderTrendlines(
         : lineWidth(2.2)
     )
     .attr('stroke-dasharray', '5 5')
+    .attr('opacity', getTrendlineOpacity)
     .attr('pointer-events', 'none')
     .attr('d', (trendline) => generator(trendline.points))
 
@@ -512,6 +521,7 @@ export function renderTrendlines(
         ? scaleSelectedLineWidth(lineWidth(2.2), theme.markDensity)
         : lineWidth(2.2)
     )
+    .attr('opacity', getTrendlineOpacity)
     .attr('pointer-events', 'none')
     .attr('d', (trendline) => generator(trendline.points))
 }
@@ -593,7 +603,7 @@ function trendHitRank(segment) {
 
 export function renderCrosshair(
   svg,
-  point,
+  pointOrPoints,
   scales,
   dimensions,
   theme,
@@ -606,37 +616,47 @@ export function renderCrosshair(
     .join('g')
     .attr('class', 'crosshair-layer')
   const followsPointer = Number.isFinite(pointerX)
-  const spread =
-    showSourceSpread && !followsPointer
-      ? createSourceSpreadMark(point, scales)
-      : null
-  const x = followsPointer
-    ? scales.xScale(pointerX)
-    : point
-      ? scales.xScale(point.x)
-      : 0
-
-  const lines =
-    point || followsPointer
-      ? spread
-        ? [
-            {
-              key: 'vertical-before',
-              x1: x,
-              x2: x,
-              y1: 0,
-              y2: Math.min(spread.y1, spread.y2)
-            },
-            {
-              key: 'vertical-after',
-              x1: x,
-              x2: x,
-              y1: Math.max(spread.y1, spread.y2),
-              y2: dimensions.height
-            }
-          ].filter((lineData) => lineData.y2 > lineData.y1)
-        : [{ key: 'vertical', x1: x, x2: x, y1: 0, y2: dimensions.height }]
+  const points = Array.isArray(pointOrPoints)
+    ? pointOrPoints.filter(Boolean)
+    : pointOrPoints
+      ? [pointOrPoints]
       : []
+  const targets = followsPointer
+    ? [{ key: 'pointer', x: scales.xScale(pointerX), spread: null }]
+    : points.map((point, index) => ({
+        key: point.id ?? String(index),
+        x: scales.xScale(point.x),
+        spread: showSourceSpread ? createSourceSpreadMark(point, scales) : null
+      }))
+
+  const lines = targets.flatMap((target) =>
+    target.spread
+      ? [
+          {
+            key: `${target.key}:vertical-before`,
+            x1: target.x,
+            x2: target.x,
+            y1: 0,
+            y2: Math.min(target.spread.y1, target.spread.y2)
+          },
+          {
+            key: `${target.key}:vertical-after`,
+            x1: target.x,
+            x2: target.x,
+            y1: Math.max(target.spread.y1, target.spread.y2),
+            y2: dimensions.height
+          }
+        ].filter((lineData) => lineData.y2 > lineData.y1)
+      : [
+          {
+            key: `${target.key}:vertical`,
+            x1: target.x,
+            x2: target.x,
+            y1: 0,
+            y2: dimensions.height
+          }
+        ]
+  )
 
   crosshairLayer
     .selectAll('.crosshair')
@@ -658,9 +678,13 @@ export function renderSourceSpreads(
   scales,
   dimensions,
   theme,
-  { visible = true, activePointId = null } = {}
+  { visible = true, activePointId = null, activePointIds = [] } = {}
 ) {
   const [domainMin, domainMax] = scales.yDomain
+  const activeIds = new Set(
+    [activePointId, ...activePointIds].filter((pointId) => pointId != null)
+  )
+  const isActiveSpread = (spread) => activeIds.has(spread.id)
   const spreads = visible
     ? points
         .map((point) => createSourceSpreadMark(point, scales))
@@ -668,7 +692,7 @@ export function renderSourceSpreads(
     : []
   const shouldBatchSpreads = spreads.length > INDIVIDUAL_POINT_MARK_LIMIT
   const individualSpreads = shouldBatchSpreads
-    ? spreads.filter((spread) => spread.id === activePointId)
+    ? spreads.filter(isActiveSpread)
     : spreads
 
   const spreadLayer = svg
@@ -683,7 +707,7 @@ export function renderSourceSpreads(
     .data(individualSpreads, (spread) => spread.id)
     .join('line')
     .attr('class', (spread) =>
-      spread.id === activePointId ? 'source-spread is-active' : 'source-spread'
+      isActiveSpread(spread) ? 'source-spread is-active' : 'source-spread'
     )
     .attr('x1', (spread) => spread.x)
     .attr('x2', (spread) => spread.x)
@@ -691,13 +715,11 @@ export function renderSourceSpreads(
     .attr('y2', (spread) => spread.y2)
     .attr('stroke', theme.textSecondary)
     .attr('stroke-opacity', (spread) =>
-      spread.id === activePointId
+      isActiveSpread(spread)
         ? ACTIVE_SOURCE_SPREAD_OPACITY
         : SOURCE_SPREAD_OPACITY
     )
-    .attr('stroke-width', (spread) =>
-      spread.id === activePointId ? 1.5 : 1.25
-    )
+    .attr('stroke-width', (spread) => (isActiveSpread(spread) ? 1.5 : 1.25))
     .attr('stroke-linecap', 'round')
 
   spreadLayer
@@ -707,7 +729,7 @@ export function renderSourceSpreads(
         ? [
             {
               id: 'inactive',
-              spreads: spreads.filter((spread) => spread.id !== activePointId)
+              spreads: spreads.filter((spread) => !isActiveSpread(spread))
             }
           ].filter((batch) => batch.spreads.length > 0)
         : [],
@@ -730,12 +752,10 @@ export function renderSourceSpreads(
     .attr('stroke-width', 1.25)
     .attr('stroke-linecap', 'round')
 
-  const activeWhiskers = spreads
-    .filter((spread) => spread.id === activePointId)
-    .flatMap((spread) => [
-      { id: `${spread.id}:min-whisker`, x: spread.x, y: spread.y1 },
-      { id: `${spread.id}:max-whisker`, x: spread.x, y: spread.y2 }
-    ])
+  const activeWhiskers = spreads.filter(isActiveSpread).flatMap((spread) => [
+    { id: `${spread.id}:min-whisker`, x: spread.x, y: spread.y1 },
+    { id: `${spread.id}:max-whisker`, x: spread.x, y: spread.y2 }
+  ])
 
   spreadLayer
     .selectAll('.source-spread-whisker')
@@ -772,22 +792,20 @@ export function renderSourceSpreads(
     .attr('stroke-opacity', SOURCE_SPREAD_OPACITY)
     .attr('stroke-width', 1.25)
 
-  const secondaryRatings = spreads
-    .filter((spread) => spread.id === activePointId)
-    .flatMap((spread) =>
-      (spread.ratings ?? [])
-        .filter(
-          (rating) =>
-            isUsableProviderRating(rating) &&
-            rating.source !== spread.ratingSource
-        )
-        .map((rating) => ({
-          id: `${spread.id}:${rating.source}`,
-          source: rating.source,
-          x: spread.x,
-          y: scales.yScale(clamp(rating.rating, domainMin, domainMax))
-        }))
-    )
+  const secondaryRatings = spreads.filter(isActiveSpread).flatMap((spread) =>
+    (spread.ratings ?? [])
+      .filter(
+        (rating) =>
+          isUsableProviderRating(rating) &&
+          rating.source !== spread.ratingSource
+      )
+      .map((rating) => ({
+        id: `${spread.id}:${rating.source}`,
+        source: rating.source,
+        x: spread.x,
+        y: scales.yScale(clamp(rating.rating, domainMin, domainMax))
+      }))
+  )
 
   spreadLayer
     .selectAll('.source-rating-point')
@@ -873,6 +891,12 @@ export function renderPoints(svg, points, scales, theme, interactions) {
   const isEmphasized = (point) =>
     point.id === interactions.activePointId ||
     interactions.selectedPointIds?.includes(point.id)
+  const getComparisonOpacity = (point) =>
+    interactions.comparisonRange &&
+    (point.x < interactions.comparisonRange.start ||
+      point.x > interactions.comparisonRange.end)
+      ? COMPARISON_CONTEXT_OPACITY
+      : 1
   const visiblePoints = markLayer
     .selectAll('.episode-point')
     .data(individualPoints, (point) => point.id)
@@ -894,11 +918,13 @@ export function renderPoints(svg, points, scales, theme, interactions) {
       }
       return pointColor(point)
     })
-    .attr('fill-opacity', (point) =>
-      point.isFallbackRating && !isEmphasized(point)
-        ? FALLBACK_POINT_FILL_OPACITY
-        : 1
-    )
+    .attr('fill-opacity', (point) => {
+      const baseOpacity =
+        point.isFallbackRating && !isEmphasized(point)
+          ? FALLBACK_POINT_FILL_OPACITY
+          : 1
+      return baseOpacity * getComparisonOpacity(point)
+    })
     .attr('stroke', (point) => {
       if (!point.isFallbackRating) {
         return 'none'
@@ -908,7 +934,7 @@ export function renderPoints(svg, points, scales, theme, interactions) {
         : pointColor(point)
     })
     .attr('stroke-width', (point) => (point.isFallbackRating ? 1.25 : 0))
-    .attr('stroke-opacity', 1)
+    .attr('stroke-opacity', getComparisonOpacity)
     .attr('data-rating-source', (point) => point.ratingSource)
     .attr('data-rating-fallback', (point) => String(point.isFallbackRating))
 
@@ -961,7 +987,7 @@ export function renderPoints(svg, points, scales, theme, interactions) {
     .attr('fill-opacity', (batch) => batch.fillOpacity)
     .attr('stroke', (batch) => batch.stroke)
     .attr('stroke-width', (batch) => batch.strokeWidth)
-    .attr('stroke-opacity', 1)
+    .attr('stroke-opacity', (batch) => batch.strokeOpacity)
     .attr('data-rating-source', (batch) => batch.ratingSource)
     .attr('data-rating-fallback', (batch) => String(batch.isFallbackRating))
     .attr('pointer-events', 'none')
@@ -984,6 +1010,12 @@ function createPointMarkBatches(
       interactions.selectedPointIds?.includes(point.id)
     const isSecondaryActive =
       isActive && isSecondaryRatingActive(point, interactions)
+    const comparisonOpacity =
+      interactions.comparisonRange &&
+      (point.x < interactions.comparisonRange.start ||
+        point.x > interactions.comparisonRange.end)
+        ? COMPARISON_CONTEXT_OPACITY
+        : 1
     const style = {
       radius: isActive
         ? scaleSelectedPointRadius(pointRadius, theme.markDensity)
@@ -994,13 +1026,16 @@ function createPointMarkBatches(
           : theme.spotColor
         : pointColor(point),
       fillOpacity:
-        point.isFallbackRating && !isActive ? FALLBACK_POINT_FILL_OPACITY : 1,
+        (point.isFallbackRating && !isActive
+          ? FALLBACK_POINT_FILL_OPACITY
+          : 1) * comparisonOpacity,
       stroke: point.isFallbackRating
         ? isSecondaryActive
           ? theme.textSecondary
           : pointColor(point)
         : 'none',
       strokeWidth: point.isFallbackRating ? 1.25 : 0,
+      strokeOpacity: comparisonOpacity,
       ratingSource: point.ratingSource,
       isFallbackRating: point.isFallbackRating
     }
@@ -1087,8 +1122,7 @@ function resolvePointHit([x, y], points, scales, hitRadius) {
 export function renderProviderRatingPreview(
   svg,
   points,
-  activePoint,
-  providerRating,
+  providerRatings,
   scales,
   theme
 ) {
@@ -1108,19 +1142,19 @@ export function renderProviderRatingPreview(
     scales.xScale,
     theme.markDensity
   )
-  const preview =
-    activePoint &&
-    providerRating?.source !== activePoint.ratingSource &&
-    isUsableProviderRating(providerRating)
-      ? [
-          {
-            pointId: activePoint.id,
-            source: providerRating.source,
-            x: scales.xScale(activePoint.x),
-            y: scales.yScale(providerRating.rating)
-          }
-        ]
-      : []
+  const preview = providerRatings
+    .filter(
+      ({ point, rating }) =>
+        point &&
+        rating?.source !== point.ratingSource &&
+        isUsableProviderRating(rating)
+    )
+    .map(({ point, rating }) => ({
+      pointId: point.id,
+      source: rating.source,
+      x: scales.xScale(point.x),
+      y: scales.yScale(rating.rating)
+    }))
 
   layer
     .selectAll('.provider-rating-preview')
@@ -1138,7 +1172,8 @@ export function renderProviderRatingPreview(
 
 function isSecondaryRatingActive(point, interactions) {
   return (
-    point.id === interactions.activePointId &&
+    (point.id === interactions.activePointId ||
+      interactions.selectedPointIds?.includes(point.id)) &&
     interactions.activeRatingSource != null &&
     interactions.activeRatingSource !== point.ratingSource
   )
