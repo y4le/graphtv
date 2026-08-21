@@ -63,10 +63,20 @@ export function buildChartModel(seasons, options = {}) {
     const start = absoluteIndex
 
     season.episodes.forEach((episode) => {
-      const resolvedRating = resolveEpisodeRating(
+      let resolvedRating = resolveEpisodeRating(
         episode.ratings,
         primaryRating.source
       )
+      if (
+        options.strictPrimaryRatingSource &&
+        resolvedRating.ratingSource !== primaryRating.source
+      ) {
+        resolvedRating = {
+          rating: null,
+          ratingSource: null,
+          isFallbackRating: false
+        }
+      }
       const point = {
         ...episode,
         x: absoluteIndex,

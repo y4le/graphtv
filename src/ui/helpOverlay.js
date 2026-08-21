@@ -6,7 +6,11 @@ import '../../css/overlays.css'
 
 export function openHelpOverlay(overlayController, page, options = {}) {
   const sections =
-    page.kind === 'results' ? resultsHelpSections() : searchHelpSections()
+    page.kind === 'results'
+      ? resultsHelpSections()
+      : page.kind === 'comparison'
+        ? comparisonHelpSections()
+        : searchHelpSections()
   const openCredits = () => {
     overlayController.close()
     openCreditsOverlay(overlayController, page)
@@ -174,6 +178,63 @@ function searchHelpSections() {
         { keys: ['Enter', 'l'], action: 'Open result' },
         { keys: ['Home', 'gg'], action: 'First result' },
         { keys: ['End', 'G'], action: 'Last result' }
+      ]
+    }
+  ]
+}
+
+function comparisonHelpSections() {
+  return [
+    {
+      title: 'Global',
+      items: [
+        { keys: ['c'], action: 'Replace a compared show' },
+        { keys: ['/'], action: 'Return to search' },
+        { keys: ['q'], action: 'Open the first show alone' },
+        { keys: ['o'], action: 'Open view options' },
+        { keys: ['m'], action: 'Toggle mark scaling panel' },
+        { keys: ['?', 'F1'], action: 'Open help' },
+        {
+          keys: ['D'],
+          action: 'Toggle debug overlay',
+          keyAction: 'debug'
+        }
+      ]
+    },
+    {
+      title: 'Chart navigation',
+      items: [
+        { keys: ['ArrowLeft', 'h'], action: 'Previous episode' },
+        { keys: ['ArrowRight', 'l'], action: 'Next episode' },
+        { keys: ['ArrowUp', 'k'], action: 'Previous season or trendline' },
+        { keys: ['ArrowDown', 'j'], action: 'Next season or trendline' },
+        { keys: ['Shift+↑', 'Shift+K'], action: 'Activate the first show' },
+        { keys: ['Shift+↓', 'Shift+J'], action: 'Activate the second show' },
+        { keys: ['v'], action: 'Add or exit a head-to-head episode' },
+        { keys: ['Shift+click'], action: 'Add an episode from the other show' },
+        { keys: ['Home', 'gg'], action: 'First episode' },
+        { keys: ['End', 'G'], action: 'Last episode' }
+      ]
+    },
+    {
+      title: 'Viewport',
+      items: [
+        { keys: ['Ctrl-U'], action: 'Pan both shows back half a viewport' },
+        { keys: ['Ctrl-D'], action: 'Pan both shows forward half a viewport' },
+        { keys: ['f'], action: 'Fit both full series' },
+        { keys: ['r'], action: 'Reset shared zoom' },
+        { keys: ['-'], action: 'Zoom both shows out' },
+        { keys: ['=', '+'], action: 'Zoom both shows in' }
+      ]
+    },
+    {
+      title: 'Ratings',
+      items: [
+        { keys: ['p'], action: 'Cycle a provider shared by both shows' },
+        {
+          keys: ['Escape'],
+          action: 'Remove the active episode or return to comparison context'
+        }
       ]
     }
   ]

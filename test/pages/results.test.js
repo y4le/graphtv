@@ -46,13 +46,14 @@ describe('renderResultsMasthead', () => {
       container.querySelectorAll('.masthead-actions .masthead-action')
     )
     expect(mastheadActions.map((action) => action.textContent.trim())).toEqual([
+      'Compare (c)',
       'Options (o)',
       'Help (?)',
       'Back (q)'
     ])
     expect(
-      mastheadActions.slice(0, 2).map((action) => action.dataset.uiAction)
-    ).toEqual(['view-options', 'help'])
+      mastheadActions.slice(0, 3).map((action) => action.dataset.uiAction)
+    ).toEqual(['compare', 'view-options', 'help'])
     expect(container.querySelector('.masthead-hint')).toBeNull()
     expect(
       container.querySelector('.back-link').parentElement.classList

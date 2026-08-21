@@ -1,6 +1,6 @@
 # GraphTV Redesign Record
 
-Updated August 14, 2026. This is a record of the redesign decisions now represented in the application, not a backlog.
+Updated August 21, 2026. This is a record of the redesign decisions now represented in the application, not a backlog.
 
 ## Implemented experience
 
@@ -10,6 +10,7 @@ Updated August 14, 2026. This is a record of the redesign decisions now represen
 - one viewport-driven ratings chart with integrated season axis, range-frame Y-axis, full-show and season trendlines, source-spread marks, and breakpoint analysis
 - a sparkline minimap that stays synchronized with chart navigation
 - desktop sidenotes and mobile inline episode detail
+- a show-comparison route with two stacked charts, one shared overview and viewport, a common rating source when coverage permits, and direct side-by-side context
 - centralized keyboard navigation documented in [keyboard.md](keyboard.md)
 - help, credits, debug, and view-options dialogs with focus trapping, restoration, outside-click closing, and reduced-motion behavior
 - explicit focus styles in both themes
@@ -32,5 +33,7 @@ Theme and palette values are CSS-owned. JavaScript owns persisted settings and s
 6. Motion is optional; meaning never depends on animation.
 7. Mobile and desktop share model and rendering code unless a measured constraint proves they cannot.
 8. Debug surfaces expose diagnostics without becoming part of the primary product surface.
+9. Show comparison preserves run order and provenance: it never invents episode pairings, normalized-progress equivalence, or a winner.
+10. Comparison charts share a viewport and rating scale. A common provider is used only when it adequately covers both shows; unlike providers are labeled and never subtracted.
 
 For module ownership, operational constraints, and verification commands, see [execution_plan.md](execution_plan.md).

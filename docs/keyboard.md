@@ -26,14 +26,15 @@ Some vim bindings use multi-key sequences (e.g., `gg`). The implementation shoul
 
 ### Global (normal mode)
 
-| Action                  | Vim | Conventional | Notes                                  |
-| ----------------------- | --- | ------------ | -------------------------------------- |
-| Open/close help         | `?` | `F1`         | Shows context-sensitive bindings       |
-| Focus search            | `/` | —            | Enters insert mode                     |
-| Open/close view options | `o` | —            | Theme, palette settings                |
-| Toggle mark scaling     | `m` | —            | Results page only; opens a bottom dock |
-| Toggle debug panel      | `D` | —            | Shift+D to avoid accidental triggers   |
-| Return to search        | `q` | —            | From results page                      |
+| Action                  | Vim | Conventional | Notes                                           |
+| ----------------------- | --- | ------------ | ----------------------------------------------- |
+| Open/close help         | `?` | `F1`         | Shows context-sensitive bindings                |
+| Focus search            | `/` | —            | Enters insert mode                              |
+| Compare/change shows    | `c` | —            | Results and show-comparison pages               |
+| Open/close view options | `o` | —            | Theme, palette settings                         |
+| Toggle mark scaling     | `m` | —            | Results and comparison; opens a bottom dock     |
+| Toggle debug panel      | `D` | —            | Shift+D to avoid accidental triggers            |
+| Go back                 | `q` | —            | Results to search; comparison to its first show |
 
 ### Search input (insert mode)
 
@@ -102,6 +103,22 @@ The vim spatial metaphor: episodes within a season are characters within a line 
 | Commit comparison         | `Enter`    | —            | Uses the episode previewed while comparison is armed                         |
 
 While comparison is armed, the arrow and `h`/`j`/`k`/`l` keys move the candidate without replacing the anchor. Boundary jumps (`Home`/`gg` and `End`/`G`) leave comparison and select the first or last episode. Once committed, episode navigation is inert until the reader exits with `v`, `Escape`, the visible exit control, or an ordinary episode selection.
+
+### Show comparison (normal mode)
+
+The two show lanes share the results-chart bindings for episode navigation, provider cycling, pan, zoom, fit, reset, and trend visibility. Commands act on the active lane while viewport changes remain synchronized. The resting state after both charts is the show-comparison context rather than either chart’s full-series detail. A head-to-head may hold one explicitly selected episode from each lane; it compares observed ratings without drawing or calculating a cross-series episode span.
+
+| Action                | Vim           | Conventional      | Notes                                                              |
+| --------------------- | ------------- | ----------------- | ------------------------------------------------------------------ |
+| First lane            | `Shift-K`     | `Shift-ArrowUp`   | Selects the nearest rated episode at the same ordinal              |
+| Second lane           | `Shift-J`     | `Shift-ArrowDown` | Selects the nearest rated episode at the same ordinal              |
+| Arm/exit head-to-head | `v`           | —                 | Preserve the selected episode, then choose one from the other show |
+| Add with pointer      | `Shift-click` | —                 | Preserves the existing episode when selecting the other lane       |
+| Change shows          | `c`           | —                 | Opens the inline picker; each lane also has Replace                |
+| Open search           | `/`           | —                 | Returns to the search page                                         |
+| Open first show       | `q`           | —                 | Leaves comparison with the first show open alone                   |
+
+The URL records the shows as `show` and `vs` and qualifies episode selections by lane. A single selection uses `select=b:s01e02`; a head-to-head uses `select=a:s01e03,b:s02e04`. Shift-switching lanes preserves the first episode and selects the nearest rated episode in the other show. With only one selected lane, the companion chart shows a faint same-ordinal cursor.
 
 #### Automatic behaviors
 
@@ -180,6 +197,8 @@ The footer links to a separate credits and attribution panel. Its data-provider 
 
 **Results page:** search input (if visible) → show info region → overlay triggers and controls
 
+**Show comparison:** page actions → comparison picker (when open) → lane charts → show actions → context table
+
 Within each zone, the zone's internal navigation takes over where applicable. `Tab` moves to the next zone, `Shift+Tab` to the previous. The chart does not require tab-entry in normal mode; page navigation keys target chart state directly.
 
 ### Focus indicators
@@ -193,6 +212,7 @@ Within each zone, the zone's internal navigation takes over where applicable. `T
 - When closing an overlay (help, credits, view options, debug), focus returns to the element that was focused before the overlay opened.
 - When navigating from search to results, initial focus goes to the show title region, not the chart. The user can Tab into the chart when ready.
 - When navigating back to search from results, focus goes to the search input.
+- When a comparison opens, initial focus goes to its combined title. Closing the inline show picker restores focus to the action that opened it.
 
 ## Reduced motion
 

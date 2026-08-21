@@ -196,6 +196,20 @@ Rules:
 - Avoid floating tooltip systems as the primary information surface.
 - Animated transitions should be tasteful and functional — they orient the user during state changes (viewport pans, detail swaps, theme switches), not decorate. When `prefers-reduced-motion` is active, all animated transitions become instant.
 
+### Show comparison
+
+Show-to-show comparison is a pair of coordinated small multiples, not a scorecard.
+
+Rules:
+
+- Stack exactly two charts in reading order and use direct show labels. Place the shared comparison context after both lanes so readers encounter all primary evidence before detail; it replaces the resting full-series detail, and episode or trend interaction temporarily uses the same pane.
+- Use episode ordinal as the shared horizontal coordinate. Do not imply that episodes at the same position are narratively equivalent, and do not normalize unequal runs into percentages.
+- Keep one shared viewport, overview control, and rating domain so pan, zoom, and vertical position retain the same meaning in both lanes.
+- Prefer one provider that adequately covers both shows. If none does, plot each clearly labeled source on the shared scale, preserve gaps, and do not calculate cross-source differences.
+- A single selected episode belongs to one active lane and produces only a faint same-ordinal cursor in the companion lane. Explicit multi-selection may add one episode from the other show for a head-to-head; show both observations side by side, but omit connecting spans, episodes-between counts, elapsed-time calculations, and any suggestion that their positions are intrinsically paired.
+- Present descriptive context such as coverage, mean, variation, trend, votes, and detected regime changes in a neutral, mirrored A–measure–B table. Squeeze the values toward the central labels, following the episode-comparison reading pattern. Do not declare a winner or foreground deltas.
+- Let either show load, fail, retry, be replaced, or open alone without discarding the other show.
+
 ### Loading and empty states
 
 Loading and empty states are editorial content, not UI widgets. They should match the typographic and tonal quality of the rest of the app.

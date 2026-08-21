@@ -210,6 +210,27 @@ describe('rating scale domains', () => {
     })
   })
 
+  it('leaves gaps instead of mixing fallback providers in strict comparison mode', () => {
+    const model = buildChartModel(
+      [
+        {
+          number: 1,
+          episodes: [
+            createEpisode('shared', [
+              { source: 'omdb', rating: 9 },
+              { source: 'tvmaze', rating: 7 }
+            ]),
+            createEpisode('fallback-only', [{ source: 'tvmaze', rating: 8 }])
+          ]
+        }
+      ],
+      { primaryRatingSource: 'omdb', strictPrimaryRatingSource: true }
+    )
+
+    expect(model.points.map((point) => point.rating)).toEqual([9, null])
+    expect(model.ratedPoints.map((point) => point.id)).toEqual(['shared'])
+  })
+
   it('ranks comparable series episodes with competition ties', () => {
     const model = buildChartModel(
       [

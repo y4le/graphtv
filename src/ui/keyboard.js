@@ -16,6 +16,10 @@ export function createKeyboardController({
   const chordTracker = createChordTracker()
   let destroyed = false
 
+  function isChartPage() {
+    return page.kind === 'results' || page.kind === 'comparison'
+  }
+
   function runLazyAction(load, action) {
     void load()
       .then((module) => {
@@ -92,8 +96,7 @@ export function createKeyboardController({
       activeElement?.closest?.('[data-keyboard-local]')
     )
     const isChartKeyboardTarget = Boolean(
-      page.kind === 'results' &&
-      activeElement?.closest?.('[data-keyboard-chart]')
+      isChartPage() && activeElement?.closest?.('[data-keyboard-chart]')
     )
 
     if (isEditableElement(activeElement)) {
@@ -115,7 +118,7 @@ export function createKeyboardController({
 
       if (keyWorksFromInteractiveControl(event.key)) {
         const handledGlobally = handleGlobalAction(event.key, event)
-        if (!handledGlobally && page.kind === 'results') {
+        if (!handledGlobally && isChartPage()) {
           handleResultsAction(event.key, event)
         }
       }
@@ -144,7 +147,7 @@ export function createKeyboardController({
       return
     }
 
-    if (page.kind === 'results') {
+    if (isChartPage()) {
       handleResultsAction(actionKey, event)
     }
   }
@@ -156,6 +159,7 @@ export function createKeyboardController({
       'F1',
       'Escape',
       'q',
+      'c',
       'o',
       'D',
       MARK_DENSITY_TOGGLE_KEY
@@ -164,7 +168,7 @@ export function createKeyboardController({
 
   function isChartHalfViewportShortcut(event) {
     return Boolean(
-      page.kind === 'results' &&
+      isChartPage() &&
       page.chart &&
       event.ctrlKey &&
       !event.altKey &&
@@ -204,7 +208,11 @@ export function createKeyboardController({
       return true
     }
 
-    if (action === 'return-search' && page.kind === 'results') {
+    if (action === 'compare') {
+      return Boolean(page.openComparePicker?.())
+    }
+
+    if (action === 'return-search' && isChartPage()) {
       page.goBack()
       return true
     }
@@ -213,7 +221,7 @@ export function createKeyboardController({
   }
 
   function canOpenMarkDensity() {
-    return Boolean(dockController) && page.kind === 'results'
+    return Boolean(dockController) && isChartPage()
   }
 
   function handleGlobalAction(key, event) {
@@ -238,6 +246,12 @@ export function createKeyboardController({
     if (key === 'D') {
       event.preventDefault()
       openDebug()
+      return true
+    }
+
+    if (key === 'c' && isChartPage()) {
+      event.preventDefault()
+      runUiAction('compare')
       return true
     }
 
@@ -338,13 +352,31 @@ export function createKeyboardController({
       return
     }
 
-    if (key === 'k' || key === 'ArrowUp') {
+    if (
+      key === 'k' ||
+      key === 'ArrowUp' ||
+      (page.kind === 'comparison' && key === 'K')
+    ) {
+      if (page.kind === 'comparison' && (event.shiftKey || key === 'K')) {
+        event.preventDefault()
+        page.chart.switchLane?.(-1)
+        return
+      }
       event.preventDefault()
       page.chart.moveSeason(-1)
       return
     }
 
-    if (key === 'j' || key === 'ArrowDown') {
+    if (
+      key === 'j' ||
+      key === 'ArrowDown' ||
+      (page.kind === 'comparison' && key === 'J')
+    ) {
+      if (page.kind === 'comparison' && (event.shiftKey || key === 'J')) {
+        event.preventDefault()
+        page.chart.switchLane?.(1)
+        return
+      }
       event.preventDefault()
       page.chart.moveSeason(1)
       return

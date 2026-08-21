@@ -3236,6 +3236,61 @@ describe('createChart', () => {
     expect(detailRoot.childNodes).toHaveLength(0)
   })
 
+  it('can reserve its resting selection for coordinated page context', () => {
+    const container = document.createElement('div')
+    const onSelectionChange = vi.fn()
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container)
+
+    chart = createChart(container, createSeasons(), {
+      restingSelection: 'none',
+      onSelectionChange
+    })
+
+    expect(chart.getDebugState()).toMatchObject({
+      selectedTrendId: null,
+      selectedPointId: null
+    })
+
+    chart.moveEpisode(1)
+    chart.clearSelection()
+
+    expect(chart.getDebugState()).toMatchObject({
+      selectedTrendId: null,
+      selectedPointId: null
+    })
+    expect(onSelectionChange).toHaveBeenLastCalledWith('none')
+  })
+
+  it('can delegate episode comparison to a coordinated parent view', () => {
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+
+    chart = createChart(container, createSeasons(), {
+      detailRoot,
+      allowEpisodeComparison: false
+    })
+    chart.moveEpisode(1)
+
+    expect(
+      detailRoot.querySelector('[data-comparison-action="start"]').hidden
+    ).toBe(true)
+    expect(chart.toggleComparison()).toBe(false)
+    expect(chart.getDebugState().comparison).toEqual({
+      armed: false,
+      pointId: null,
+      committed: false
+    })
+  })
+
   it('arms, previews, commits, and unwinds an episode comparison', () => {
     const container = document.createElement('div')
     const detailRoot = document.createElement('section')
@@ -4249,3 +4304,56 @@ function dispatchPointer(target, type, properties) {
   target.dispatchEvent(event)
   return event
 }
+
+describe('comparison chart coordination', () => {
+  it('uses a comparison-wide x extent and publishes controlled viewport changes', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+    const onViewportChange = vi.fn()
+
+    chart = createChart(container, createSeasons(), {
+      comparisonXMax: 120,
+      hideOverview: true,
+      onViewportChange
+    })
+
+    expect(container.querySelector('.sparkline-shell').hidden).toBe(true)
+    expect(onViewportChange).toHaveBeenCalled()
+    expect(chart.setViewport({ start: 80, end: 100 })).toBe(true)
+    expect(chart.getDebugState().viewport).toEqual({ start: 80, end: 100 })
+    expect(onViewportChange).toHaveBeenLastCalledWith({ start: 80, end: 100 })
+    expect(chart.setViewport({ start: 80, end: 100 })).toBe(false)
+    expect(chart.setComparisonCursor(90)).toBe(true)
+    expect(container.querySelector('.crosshair')).not.toBeNull()
+    expect(chart.setComparisonCursor(null)).toBe(true)
+    expect(container.querySelector('.crosshair')).toBeNull()
+  })
+
+  it('uses shared ratings to keep comparison lanes on the same y domain', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons(), {
+      sharedRatings: [1, 10],
+      ariaLabel: 'Episode ratings, Example Show'
+    })
+
+    expect(
+      container.querySelector('.ratings-chart').getAttribute('aria-label')
+    ).toBe('Episode ratings, Example Show')
+    const rangeLabels = Array.from(
+      container.querySelectorAll('.range-tick text'),
+      (label) => label.textContent
+    )
+    expect(rangeLabels).toContain('10.0')
+    expect(rangeLabels).toContain('0.0')
+  })
+})

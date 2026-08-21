@@ -59,13 +59,13 @@ export function createChart(container, seasons, options = {}) {
   const shell = document.createElement('div')
   shell.className = 'chart-shell'
   shell.innerHTML = `
-    <p class="chart-source-status">
+    <p class="chart-source-status" ${options.hideSourceStatus ? 'hidden' : ''}>
       <span data-chart-source-status-text aria-live="polite"></span>
       <button type="button" class="chart-source-dismiss" data-chart-source-dismiss>Dismiss</button>
     </p>
     <p class="chart-viewport-status visually-hidden" aria-live="polite" aria-atomic="true"></p>
     <p class="chart-selection-status visually-hidden" aria-live="polite" aria-atomic="true"></p>
-    <div class="sparkline-shell">
+    <div class="sparkline-shell" ${options.hideOverview ? 'hidden' : ''}>
       <svg class="sparkline-chart" aria-hidden="true"></svg>
     </div>
     <div class="main-chart-shell">
@@ -90,6 +90,7 @@ export function createChart(container, seasons, options = {}) {
   const sparklineSvg = shell.querySelector('.sparkline-chart')
   const axisSvg = select(shell.querySelector('.chart-axis'))
   const mainSvg = select(shell.querySelector('.ratings-chart'))
+  mainSvg.attr('aria-label', options.ariaLabel ?? 'Episode ratings chart')
   const bodyShell = shell.querySelector('.chart-body-shell')
   const sourceStatus = shell.querySelector('.chart-source-status')
   const sourceDismiss = shell.querySelector('[data-chart-source-dismiss]')
@@ -105,11 +106,11 @@ export function createChart(container, seasons, options = {}) {
     options.breakpointDetector ?? createCachedSeriesBreakpointDetector()
   let currentSeasons = seasons
   let preferredPrimaryRatingSource = options.primaryRatingSource ?? null
+  let comparisonXMax = options.comparisonXMax ?? null
+  let sharedRatings = options.sharedRatings ?? []
+  let strictPrimaryRatingSource = Boolean(options.strictPrimaryRatingSource)
   let notifiedPrimaryRatingSource = Symbol('unreported-primary-rating-source')
-  let model = buildChartModel(currentSeasons, {
-    breakpointDetector,
-    primaryRatingSource: preferredPrimaryRatingSource
-  })
+  let model = createModel(currentSeasons)
   let show = options.show ?? null
   let viewport = null
   let episodeDensity = getUiSettings().episodeDensity
@@ -120,6 +121,7 @@ export function createChart(container, seasons, options = {}) {
   let hoverPointId = null
   let scrubPointId = null
   let scrubX = null
+  let comparisonCursorX = null
   let selectedTrendId = null
   let hoverTrendId = null
   let hoveredProviderRating = null
@@ -131,6 +133,7 @@ export function createChart(container, seasons, options = {}) {
   let sparkline = null
   let viewportAnnouncementTimer = null
   let selectionAnnouncementTimer = null
+  let lastNotifiedViewport = null
   let trendHoverTimer = null
   let scrollHoverSuppressionTimer = null
   let suppressStationaryHover = false
@@ -143,6 +146,18 @@ export function createChart(container, seasons, options = {}) {
   const detailErrors = []
   const failedDetailPointIds = new Set()
   const loadingDetailPointIds = new Set()
+
+  function createModel(nextSeasons) {
+    const nextModel = buildChartModel(nextSeasons, {
+      breakpointDetector,
+      primaryRatingSource: preferredPrimaryRatingSource,
+      strictPrimaryRatingSource
+    })
+
+    return Number.isFinite(comparisonXMax)
+      ? { ...nextModel, xMax: Math.max(nextModel.xMax, comparisonXMax) }
+      : nextModel
+  }
 
   const sidenote = createSidenote({
     root: options.detailRoot ?? readingPane,
@@ -184,6 +199,13 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function getChartDimensions() {
+    if (options.compact) {
+      return {
+        chartHeight: isMobile() ? 180 : 250,
+        sparklineHeight: isMobile() ? 24 : 30
+      }
+    }
+
     if (!isMobile()) {
       return {
         chartHeight: 410,
@@ -588,6 +610,10 @@ export function createChart(container, seasons, options = {}) {
     selectedPointId = null
     selectedTrendId = null
 
+    if (options.restingSelection === 'none') {
+      return
+    }
+
     if (settings.fullShowTrendline && getTrendSummary('series')) {
       selectedTrendId = 'series'
       return
@@ -708,7 +734,28 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function notifySelectionChange() {
-    options.onSelectionChange?.(getSelectionId())
+    const point = getPointById(selectedPointId)
+    const selection = getSelectionId()
+    options.onSelectionChange?.(selection)
+    options.onSelectionContextChange?.({
+      selection,
+      x: point?.x ?? null,
+      pointId: point?.id ?? null
+    })
+  }
+
+  function notifyViewportChange() {
+    if (
+      !viewport ||
+      (lastNotifiedViewport &&
+        lastNotifiedViewport.start === viewport.start &&
+        lastNotifiedViewport.end === viewport.end)
+    ) {
+      return
+    }
+
+    lastNotifiedViewport = { ...viewport }
+    options.onViewportChange?.({ ...viewport })
   }
 
   function getNavigatorViewModel() {
@@ -1105,11 +1152,13 @@ export function createChart(container, seasons, options = {}) {
       selectedRatingSource: getSelectedRatingSource(point),
       seriesRank: getSeriesRank(point),
       comparisonMode:
-        comparisonArmed && point.id === selectedPointId
-          ? 'armed'
-          : !isComparisonMode() && point.id === selectedPointId
-            ? 'available'
-            : null
+        options.allowEpisodeComparison === false
+          ? null
+          : comparisonArmed && point.id === selectedPointId
+            ? 'armed'
+            : !isComparisonMode() && point.id === selectedPointId
+              ? 'available'
+              : null
     })
   }
 
@@ -1196,7 +1245,11 @@ export function createChart(container, seasons, options = {}) {
 
   function startComparison() {
     const anchor = getComparisonAnchor()
-    if (!anchor || selectedTrendId) {
+    if (
+      options.allowEpisodeComparison === false ||
+      !anchor ||
+      selectedTrendId
+    ) {
       return false
     }
 
@@ -1271,7 +1324,11 @@ export function createChart(container, seasons, options = {}) {
       return
     }
 
-    if (event?.shiftKey && getComparisonAnchor()) {
+    if (
+      options.allowEpisodeComparison !== false &&
+      event?.shiftKey &&
+      getComparisonAnchor()
+    ) {
       if (point.id !== selectedPointId) {
         setComparisonPoint(point)
       } else {
@@ -1460,7 +1517,10 @@ export function createChart(container, seasons, options = {}) {
       }
 
       if (selection.point) {
-        selectionStatus.textContent = `${formatEpisodeCode(selection.point)} selected: ${selection.point.title}. Rating ${selection.point.rating.toFixed(1)}.`
+        const prefix = options.selectionLabel
+          ? `${options.selectionLabel}, `
+          : ''
+        selectionStatus.textContent = `${prefix}${formatEpisodeCode(selection.point)} selected: ${selection.point.title}. Rating ${selection.point.rating.toFixed(1)}.`
         return
       }
 
@@ -1803,23 +1863,29 @@ export function createChart(container, seasons, options = {}) {
 
     viewportAnnouncementTimer = setTimeout(() => {
       viewportAnnouncementTimer = null
-      viewportStatus.textContent = formatViewportAnnouncement(
-        viewport,
-        model.xMax
-      )
+      viewportStatus.textContent = options.formatViewportAnnouncement
+        ? options.formatViewportAnnouncement(viewport, {
+            xMax: model.xMax,
+            totalEpisodes: model.points.length
+          })
+        : formatViewportAnnouncement(viewport, model.xMax)
     }, VIEWPORT_ANNOUNCEMENT_DELAY_MS)
   }
 
   function getRestingTrendId() {
-    return getTrendSummary('series') ? 'series' : null
+    return options.restingSelection === 'none'
+      ? null
+      : getTrendSummary('series')
+        ? 'series'
+        : null
   }
 
   function isAtRestingSelection() {
     return !selectedPointId && selectedTrendId === getRestingTrendId()
   }
 
-  // The chart has no deselected state: leaving an episode or trend returns to
-  // the full-series trend summary (or, without one, an unselected browse view).
+  // Single-show charts return to their full-series summary. Coordinated views
+  // may reserve that resting state for page-level comparison context.
   function selectSeriesTrend({ announce = false } = {}) {
     hasUserInteracted = true
     clearProviderRatingState()
@@ -1905,17 +1971,25 @@ export function createChart(container, seasons, options = {}) {
     if (Object.hasOwn(context, 'primaryRatingSource')) {
       preferredPrimaryRatingSource = context.primaryRatingSource
     }
+    if (Object.hasOwn(context, 'comparisonXMax')) {
+      comparisonXMax = context.comparisonXMax
+    }
+    if (Object.hasOwn(context, 'sharedRatings')) {
+      sharedRatings = context.sharedRatings ?? []
+    }
+    if (Object.hasOwn(context, 'strictPrimaryRatingSource')) {
+      strictPrimaryRatingSource = Boolean(context.strictPrimaryRatingSource)
+    }
 
     const previousPoint = getPointById(selectedPointId)
     const previousComparisonPoint = getPointById(comparisonPointId)
     const wasComparisonArmed = comparisonArmed
     const previousTrend = getTrendSummary(selectedTrendId)
-    const shouldRefreshDefaultViewport = Boolean(viewport && !hasUserInteracted)
+    const shouldRefreshDefaultViewport = Boolean(
+      viewport && !hasUserInteracted && !options.externalViewportFollower
+    )
     currentSeasons = nextSeasons
-    model = buildChartModel(currentSeasons, {
-      breakpointDetector,
-      primaryRatingSource: preferredPrimaryRatingSource
-    })
+    model = createModel(currentSeasons)
     notifyPrimaryRatingSource()
     hoveredProviderRating = null
     hoveredComparisonRatingSource = null
@@ -2226,9 +2300,10 @@ export function createChart(container, seasons, options = {}) {
       },
       {
         ...scaleOptions,
-        additionalRatings: activeProviderRatings.map(
-          ({ rating }) => rating.rating
-        )
+        additionalRatings: [
+          ...sharedRatings,
+          ...activeProviderRatings.map(({ rating }) => rating.rating)
+        ]
       }
     )
     const sparklineScales = createSparklineScales(
@@ -2294,7 +2369,7 @@ export function createChart(container, seasons, options = {}) {
       { width: chartWidth, height: chartHeight },
       chartTheme,
       uiSettings.showSourceSpread,
-      gestureController?.isScrubbing() ? scrubX : null
+      gestureController?.isScrubbing() ? scrubX : comparisonCursorX
     )
     renderPoints(
       mainSvg,
@@ -2340,30 +2415,32 @@ export function createChart(container, seasons, options = {}) {
       )
     })
 
-    renderSparkline(
-      chartTheme,
-      sparklineScales,
-      displayViewport,
-      chartWidth,
-      sparklineHeight,
-      (nextDisplayViewport) => {
-        hasUserInteracted = true
-        viewport = clampViewport(
-          resolveViewportFromDisplay(
-            model,
-            nextDisplayViewport,
-            chartWidth,
-            getHorizontalScaleOptions()
-          ),
-          model
-        )
-        render()
-      },
-      () => {
-        hasUserInteracted = true
-        resetViewportWidth(chartWidth)
-      }
-    )
+    if (!options.hideOverview) {
+      renderSparkline(
+        chartTheme,
+        sparklineScales,
+        displayViewport,
+        chartWidth,
+        sparklineHeight,
+        (nextDisplayViewport) => {
+          hasUserInteracted = true
+          viewport = clampViewport(
+            resolveViewportFromDisplay(
+              model,
+              nextDisplayViewport,
+              chartWidth,
+              getHorizontalScaleOptions()
+            ),
+            model
+          )
+          render()
+        },
+        () => {
+          hasUserInteracted = true
+          resetViewportWidth(chartWidth)
+        }
+      )
+    }
   }
 
   // Lets the mark scaling panel show where the current view sits on the ramp.
@@ -2429,10 +2506,12 @@ export function createChart(container, seasons, options = {}) {
 
     shell.style.setProperty('--axis-width', `${axisWidth}px`)
     shell.style.setProperty('--chart-height', `${chartHeight}px`)
-    renderSourceStatus(sourceStatus, model, {
-      helpDismissed: sourceHelpDismissed,
-      touchOnly: coarsePointerQuery.matches && !finePointerQuery.matches
-    })
+    if (!options.hideSourceStatus) {
+      renderSourceStatus(sourceStatus, model, {
+        helpDismissed: sourceHelpDismissed,
+        touchOnly: coarsePointerQuery.matches && !finePointerQuery.matches
+      })
+    }
 
     renderChart(chartTheme, axisWidth, chartWidth, chartHeight, sparklineHeight)
 
@@ -2453,6 +2532,7 @@ export function createChart(container, seasons, options = {}) {
       )
     }
     updateActiveDetail()
+    notifyViewportChange()
   }
 
   function handleTrackpadPinch(event, surface) {
@@ -2695,6 +2775,10 @@ export function createChart(container, seasons, options = {}) {
     }
 
     if (densityChanged) {
+      if (options.externalViewportFollower) {
+        render()
+        return
+      }
       resetViewportWidth(getCurrentChartWidth(), getKeyboardViewportAnchor())
       if (selectionChanged) {
         notifySelectionChange()
@@ -2731,6 +2815,41 @@ export function createChart(container, seasons, options = {}) {
     selectSeriesBreakpoint,
     setPrimaryRatingSource,
     cyclePrimaryRatingSource,
+    selectNearestEpisode(x) {
+      if (!Number.isFinite(x)) {
+        return false
+      }
+      const point = getNearestRatedPointToX(x)
+      if (!point) {
+        return false
+      }
+      setSelectedPoint(point)
+      return true
+    },
+    setComparisonCursor(x) {
+      const nextX = Number.isFinite(x) ? x : null
+      if (comparisonCursorX === nextX) {
+        return false
+      }
+      comparisonCursorX = nextX
+      render()
+      return true
+    },
+    setViewport(nextViewport, { announce = false } = {}) {
+      if (!nextViewport) {
+        return false
+      }
+      const next = clampViewport(nextViewport, model)
+      if (viewport?.start === next.start && viewport?.end === next.end) {
+        return false
+      }
+      viewport = next
+      render()
+      if (announce) {
+        announceViewport()
+      }
+      return true
+    },
     clearSelection() {
       hasUserInteracted = true
       if (gestureController?.cancelScrub({ inert: true })) {
@@ -2752,6 +2871,33 @@ export function createChart(container, seasons, options = {}) {
       return true
     },
     updateSeasons,
+    getSelectionContext() {
+      const point = getPointById(selectedPointId)
+      return {
+        selection: getSelectionId(),
+        x: point?.x ?? null,
+        pointId: point?.id ?? null
+      }
+    },
+    getSummary() {
+      const voteCounts = model.primaryRatedPoints
+        .map(
+          (point) =>
+            point.ratings?.find(
+              (rating) => rating.source === model.primaryRatingSource
+            )?.votes
+        )
+        .filter(Number.isFinite)
+      return {
+        totalEpisodes: model.points.length,
+        ratedEpisodes: model.primaryRatedPoints.length,
+        primarySource: model.primaryRatingSource,
+        coverage: model.ratingSourceCoverage,
+        medianVotes: medianNumber(voteCounts),
+        series: model.trendSummaries.series ?? null,
+        breakpoint: model.seriesBreakpoint ?? null
+      }
+    },
     getDebugState() {
       return {
         selectedPointId,
@@ -2837,6 +2983,17 @@ function formatSignedRatingDelta(value) {
 
 function meanPointRating(points) {
   return points.reduce((sum, point) => sum + point.rating, 0) / points.length
+}
+
+function medianNumber(values) {
+  if (values.length === 0) {
+    return null
+  }
+  const ordered = [...values].sort((left, right) => left - right)
+  const midpoint = Math.floor(ordered.length / 2)
+  return ordered.length % 2
+    ? ordered[midpoint]
+    : (ordered[midpoint - 1] + ordered[midpoint]) / 2
 }
 
 function formatViewportAnnouncement(viewport, episodeCount) {

@@ -17,6 +17,7 @@ import { buildUrl, getUrlParams, preserveDebugParams } from '../lib/url.js'
 import { escapeHtml } from '../lib/html.js'
 import { forwardAbort, isAbortError } from '../lib/abort.js'
 import { bindVoteCountTooltips } from '../ui/voteCount.js'
+import { createShowPicker } from '../ui/showPicker.js'
 
 export function renderResultsMasthead({ interactive = false } = {}) {
   return `
@@ -29,6 +30,7 @@ export function renderResultsMasthead({ interactive = false } = {}) {
           ${
             interactive
               ? `
+                <button type="button" class="masthead-action" data-ui-action="compare">Compare (c)</button>
                 <button type="button" class="masthead-action" data-ui-action="view-options">Options (o)</button>
                 <button type="button" class="masthead-action" data-ui-action="help">Help (?)</button>`
               : ''
@@ -54,6 +56,7 @@ export async function renderResultsPage(container, showRef, options = {}) {
   `
 
   let chart = null
+  let comparePicker = null
   let destroyed = false
   let iterator = null
   let latestBundle = null
@@ -77,6 +80,33 @@ export async function renderResultsPage(container, showRef, options = {}) {
     ) {
       syncChartPrimaryRatingSource(source)
     }
+  }
+
+  function openComparePicker() {
+    const root = container.querySelector('.show-picker-root')
+    if (!root || !primaryProvider) {
+      return false
+    }
+    if (!comparePicker) {
+      comparePicker = createShowPicker(root, {
+        provider: primaryProvider,
+        excludedRefs: [showRef],
+        onSelect(nextShowRef) {
+          const params = getUrlParams()
+          params.set('show', showRef)
+          params.set('vs', nextShowRef)
+          params.delete('select')
+          window.location.href = buildUrl(params)
+        },
+        onClose() {
+          container
+            .querySelector('[data-ui-action="compare"]')
+            ?.focus({ preventScroll: true })
+        }
+      })
+    }
+    comparePicker.open()
+    return true
   }
 
   function syncChartPrimaryRatingSource(source) {
@@ -177,6 +207,7 @@ export async function renderResultsPage(container, showRef, options = {}) {
       debugEnabled,
       chart,
       whenSettled,
+      openComparePicker,
       focusInitial() {
         container
           .querySelector('.results-title')
@@ -225,6 +256,7 @@ export async function renderResultsPage(container, showRef, options = {}) {
         void iterator?.return?.().catch(() => {})
         container.removeEventListener('click', handleSeriesRatingSelection)
         stopVoteCountTooltips()
+        comparePicker?.destroy()
         chart.destroy()
       }
     }
@@ -257,6 +289,7 @@ export async function renderResultsPage(container, showRef, options = {}) {
       kind: 'results',
       debugEnabled: false,
       chart: null,
+      openComparePicker,
       focusInitial() {
         container
           .querySelector('.results-title')
@@ -284,6 +317,7 @@ export async function renderResultsPage(container, showRef, options = {}) {
         void iterator?.return?.().catch(() => {})
         container.removeEventListener('click', handleSeriesRatingSelection)
         stopVoteCountTooltips()
+        comparePicker?.destroy()
       }
     }
   }
@@ -294,6 +328,7 @@ function renderResultsShell(container, show) {
     <main class="document-shell results-document">
       ${renderResultsMasthead({ interactive: true })}
       <header class="results-heading"></header>
+      <section class="show-picker-root" aria-label="Choose a comparison show" hidden></section>
       <section class="results-layout">
         <section class="results-data" aria-busy="true">
           <div class="chart-root">${renderLoading('Loading episode ratings…', { announce: false })}</div>
