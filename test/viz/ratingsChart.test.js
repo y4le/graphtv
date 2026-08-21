@@ -3407,6 +3407,14 @@ describe('createChart', () => {
     )
     expect(providerRow).not.toBeNull()
     expect(
+      Array.from(
+        providerRow.querySelectorAll(
+          '.sidenote-comparison-rating-rank-trigger'
+        ),
+        (rank) => rank.textContent
+      )
+    ).toEqual(['(2/2)', '(1/2)'])
+    expect(
       detailRoot.querySelector('.sidenote-comparison .rating-source-link')
     ).toBeNull()
 
@@ -3573,7 +3581,7 @@ describe('createChart', () => {
     })
   })
 
-  it('loads supplemental details for both compared episodes', async () => {
+  it('loads supplemental vote counts for both compared episodes in parallel', async () => {
     vi.useFakeTimers()
     const container = document.createElement('div')
     const detailRoot = document.createElement('section')
@@ -3586,8 +3594,16 @@ describe('createChart', () => {
       value: 600
     })
     document.body.append(container, detailRoot)
+    const seasons = createSeasons()
+    seasons[0].episodes.slice(0, 2).forEach((episode, index) => {
+      episode.ratings.push({
+        source: 'omdb',
+        rating: 8 + index / 10,
+        votes: null
+      })
+    })
 
-    chart = createChart(container, createSeasons(), {
+    chart = createChart(container, seasons, {
       detailRoot,
       loadEpisodeDetails
     })
@@ -3597,15 +3613,21 @@ describe('createChart', () => {
     getRenderedPoint(container, 'episode-2').dispatchEvent(
       new MouseEvent('click', { bubbles: true, shiftKey: true })
     )
+    expect(detailRoot.querySelectorAll('.sidenote-votes-loading')).toHaveLength(
+      2
+    )
 
-    await vi.advanceTimersByTimeAsync(500)
+    await vi.advanceTimersByTimeAsync(249)
+    expect(loadEpisodeDetails).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
 
     expect(loadEpisodeDetails.mock.calls.map(([point]) => point.id)).toEqual([
       'episode-1',
       'episode-2'
     ])
-    expect(getComparisonRating(detailRoot, 'test')).toEqual({
-      values: ['6.0', '7.0'],
+    expect(getComparisonRating(detailRoot, 'omdb')).toEqual({
+      values: ['8.0', '8.1'],
       votes: ['(100)', '(100)']
     })
   })
@@ -3652,7 +3674,7 @@ describe('createChart', () => {
       new MouseEvent('click', { bubbles: true, shiftKey: true })
     )
 
-    await vi.advanceTimersByTimeAsync(500)
+    await vi.advanceTimersByTimeAsync(250)
 
     expect(loadEpisodeDetails.mock.calls.map(([point]) => point.id)).toEqual([
       'episode-9',
@@ -3757,6 +3779,63 @@ describe('createChart', () => {
       detailRoot.querySelector('[data-rating-source="tmdb"]').textContent
     ).toBe('9.0')
     expect(getVoteCounts(detailRoot)).toContain('(500)')
+  })
+
+  it('loads IMDb votes when provider metadata arrives after restoring an episode', async () => {
+    vi.useFakeTimers()
+    const container = document.createElement('div')
+    const detailRoot = document.createElement('section')
+    const loadEpisodeDetails = vi.fn(async (point) => ({
+      ...point,
+      ratings: point.ratings.map((rating) =>
+        rating.source === 'omdb'
+          ? { ...rating, votes: 321, votesStatus: 'loaded' }
+          : rating
+      )
+    }))
+    loadEpisodeDetails.needsLoad = (point) =>
+      Boolean(
+        point.sourceIds?.omdb &&
+        point.ratings.some(
+          (rating) => rating.source === 'omdb' && !Number.isFinite(rating.votes)
+        )
+      )
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.append(container, detailRoot)
+
+    chart = createChart(container, createSeasons(), {
+      detailRoot,
+      initialSelection: 's01e01',
+      loadEpisodeDetails
+    })
+
+    await vi.advanceTimersByTimeAsync(250)
+    expect(loadEpisodeDetails).not.toHaveBeenCalled()
+
+    const updatedSeasons = createSeasons()
+    updatedSeasons[0].episodes[0].sourceIds = { omdb: 'tt-episode-1' }
+    updatedSeasons[0].episodes[0].ratings.push({
+      source: 'omdb',
+      rating: 8.2,
+      votes: null,
+      votesStatus: 'unknown',
+      provenance: { relation: 'one-to-one', confidence: 'strong' }
+    })
+    chart.updateSeasons(updatedSeasons)
+
+    expect(chart.getDebugState().selectedPointId).toBe('episode-1')
+    expect(detailRoot.querySelector('.sidenote-votes-loading')).not.toBeNull()
+    await vi.advanceTimersByTimeAsync(249)
+    expect(loadEpisodeDetails).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
+
+    expect(loadEpisodeDetails).toHaveBeenCalledTimes(1)
+    expect(loadEpisodeDetails.mock.calls[0][0].id).toBe('episode-1')
+    expect(getVoteCounts(detailRoot)).toContain('(321)')
   })
 
   it('merges late episode details into the newest provider snapshot', async () => {

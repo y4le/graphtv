@@ -101,6 +101,21 @@ function isQuotaError(error) {
   )
 }
 
+function getPendingOmdbRating(episode, primarySource) {
+  const imdbId = episode.sourceIds?.omdb
+  const omdbRating = episode.ratings?.find((rating) => rating.source === 'omdb')
+  const trustedMatch =
+    primarySource === 'omdb' || omdbRating?.provenance?.confidence === 'strong'
+
+  return imdbId &&
+    omdbRating &&
+    trustedMatch &&
+    !Number.isFinite(omdbRating.votes) &&
+    omdbRating.votesStatus !== 'unavailable'
+    ? omdbRating
+    : null
+}
+
 export function createEpisodeDetailLoader({
   loadProvider,
   expectedSeriesId,
@@ -143,21 +158,11 @@ export function createEpisodeDetailLoader({
   }
 
   async function load(episode) {
-    const imdbId = episode.sourceIds?.omdb
-    const omdbRating = episode.ratings.find(
-      (rating) => rating.source === 'omdb'
-    )
-    const trustedMatch =
-      primarySource === 'omdb' ||
-      omdbRating?.provenance?.confidence === 'strong'
-    if (
-      !imdbId ||
-      !omdbRating ||
-      !trustedMatch ||
-      typeof omdbRating.votes === 'number'
-    ) {
+    const omdbRating = getPendingOmdbRating(episode, primarySource)
+    if (!omdbRating) {
       return episode
     }
+    const imdbId = episode.sourceIds.omdb
     if (!expectedSeriesId) {
       throw new Error(
         'An expected IMDb series ID is required for OMDb episode details.'
@@ -220,6 +225,8 @@ export function createEpisodeDetailLoader({
     dailyLimit,
     disabledReason
   })
+  load.needsLoad = (episode) =>
+    Boolean(getPendingOmdbRating(episode, primarySource))
   load.destroy = () => {
     controllers.forEach((controller) => controller.abort())
     controllers.clear()

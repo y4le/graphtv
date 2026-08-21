@@ -136,7 +136,7 @@ export function createChart(container, seasons, options = {}) {
   let suppressStationaryHover = false
   let pendingTrendHoverId = null
   let detailLoadTimer = null
-  let scheduledDetailPointId = null
+  let scheduledDetailPoints = []
   let destroyed = false
   let gestureController = null
   const detailCache = new Map()
@@ -351,15 +351,25 @@ export function createChart(container, seasons, options = {}) {
       : null
   }
 
-  function getSeriesRank(point) {
-    const rank = model.seriesRankByPointId.get(point?.id)
+  function getSeriesRank(point, source = model.primaryRatingSource) {
+    const ranking = model.seriesRankingsBySource.get(source)
+    const rank = ranking?.rankByPointId.get(point?.id)
     return rank == null
       ? null
       : {
           rank,
-          total: model.seriesRankByPointId.size,
-          source: model.primaryRatingSource
+          total: ranking.total,
+          source
         }
+  }
+
+  function getSeriesRanks(point) {
+    return Object.fromEntries(
+      Array.from(model.seriesRankingsBySource.keys(), (source) => [
+        source,
+        getSeriesRank(point, source)
+      ]).filter(([, rank]) => rank)
+    )
   }
 
   function getComparisonSummary() {
@@ -392,12 +402,14 @@ export function createChart(container, seasons, options = {}) {
       earlier: {
         point: earlierPoint,
         isAnchor: earlierPoint.id === selectedPointId,
-        seriesRank: getSeriesRank(earlierPoint)
+        seriesRank: getSeriesRank(earlierPoint),
+        seriesRanks: getSeriesRanks(earlierPoint)
       },
       later: {
         point: laterPoint,
         isAnchor: laterPoint.id === selectedPointId,
-        seriesRank: getSeriesRank(laterPoint)
+        seriesRank: getSeriesRank(laterPoint),
+        seriesRanks: getSeriesRanks(laterPoint)
       },
       ratingDelta: usesComparableRatings
         ? laterPoint.rating - earlierPoint.rating
@@ -965,60 +977,96 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function scheduleDetailLoad(point) {
-    if (scheduledDetailPointId === point.id) {
+    scheduleDetailLoads([point])
+  }
+
+  function needsDetailLoad(point) {
+    if (!options.loadEpisodeDetails) {
+      return false
+    }
+
+    const currentDetails = detailCache.get(point.id) ?? point
+    return options.loadEpisodeDetails.needsLoad
+      ? options.loadEpisodeDetails.needsLoad(currentDetails)
+      : !detailCache.has(point.id)
+  }
+
+  function scheduleDetailLoads(points) {
+    const uniquePoints = points.filter(
+      (point, index) =>
+        points.findIndex((candidate) => candidate.id === point.id) === index
+    )
+    const scheduledPointIds = new Set(
+      scheduledDetailPoints.map((point) => point.id)
+    )
+    const loadablePoints = uniquePoints.filter(
+      (point) =>
+        needsDetailLoad(point) &&
+        !failedDetailPointIds.has(point.id) &&
+        (!loadingDetailPointIds.has(point.id) ||
+          scheduledPointIds.has(point.id))
+    )
+    if (
+      detailLoadTimer &&
+      scheduledDetailPoints.length === loadablePoints.length &&
+      scheduledDetailPoints.every(
+        (point, index) => point.id === loadablePoints[index].id
+      )
+    ) {
       return
     }
     cancelScheduledDetailLoad()
 
-    if (
-      !options.loadEpisodeDetails ||
-      detailCache.has(point.id) ||
-      failedDetailPointIds.has(point.id) ||
-      loadingDetailPointIds.has(point.id)
-    ) {
+    scheduledDetailPoints = loadablePoints
+    if (!scheduledDetailPoints.length) {
       return
     }
 
-    scheduledDetailPointId = point.id
-    loadingDetailPointIds.add(point.id)
-    detailLoadTimer = setTimeout(async () => {
+    scheduledDetailPoints.forEach((point) =>
+      loadingDetailPointIds.add(point.id)
+    )
+    detailLoadTimer = setTimeout(() => {
       detailLoadTimer = null
-      scheduledDetailPointId = null
+      const pointsToLoad = scheduledDetailPoints
+      scheduledDetailPoints = []
+      pointsToLoad.forEach(loadPointDetails)
+    }, DETAIL_LOAD_DELAY_MS)
+  }
 
-      try {
-        const enrichedPoint = await options.loadEpisodeDetails(point)
-        if (destroyed) {
-          return
-        }
+  async function loadPointDetails(point) {
+    try {
+      const enrichedPoint = await options.loadEpisodeDetails(point)
+      if (destroyed) {
+        return
+      }
 
-        const currentPoint = getPointById(point.id)
-        const mergedPoint = currentPoint
-          ? mergeEpisodeDetails(currentPoint, enrichedPoint)
-          : enrichedPoint
-        detailCache.set(point.id, mergedPoint)
-      } catch (error) {
-        if (error?.name !== 'AbortError') {
-          failedDetailPointIds.add(point.id)
-          detailErrors.push({ episodeId: point.id, reason: error.message })
-          if (detailErrors.length > MAX_DETAIL_ERRORS) {
-            detailErrors.shift()
-          }
-        }
-      } finally {
-        loadingDetailPointIds.delete(point.id)
-        const comparison = getComparisonSummary()
-        const isVisibleComparisonPoint = [
-          comparison?.earlier.point.id,
-          comparison?.later.point.id
-        ].includes(point.id)
-        if (
-          !destroyed &&
-          (getActivePoint()?.id === point.id || isVisibleComparisonPoint)
-        ) {
-          updateActiveDetail()
+      const currentPoint = getPointById(point.id)
+      const mergedPoint = currentPoint
+        ? mergeEpisodeDetails(currentPoint, enrichedPoint)
+        : enrichedPoint
+      detailCache.set(point.id, mergedPoint)
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        failedDetailPointIds.add(point.id)
+        detailErrors.push({ episodeId: point.id, reason: error.message })
+        if (detailErrors.length > MAX_DETAIL_ERRORS) {
+          detailErrors.shift()
         }
       }
-    }, DETAIL_LOAD_DELAY_MS)
+    } finally {
+      loadingDetailPointIds.delete(point.id)
+      const comparison = getComparisonSummary()
+      const isVisibleComparisonPoint = [
+        comparison?.earlier.point.id,
+        comparison?.later.point.id
+      ].includes(point.id)
+      if (
+        !destroyed &&
+        (getActivePoint()?.id === point.id || isVisibleComparisonPoint)
+      ) {
+        updateActiveDetail()
+      }
+    }
   }
 
   function cancelScheduledDetailLoad() {
@@ -1028,8 +1076,10 @@ export function createChart(container, seasons, options = {}) {
 
     clearTimeout(detailLoadTimer)
     detailLoadTimer = null
-    loadingDetailPointIds.delete(scheduledDetailPointId)
-    scheduledDetailPointId = null
+    scheduledDetailPoints.forEach((point) =>
+      loadingDetailPointIds.delete(point.id)
+    )
+    scheduledDetailPoints = []
   }
 
   function updateDetail(point, { load = false } = {}) {
@@ -1064,19 +1114,7 @@ export function createChart(container, seasons, options = {}) {
   }
 
   function updateComparisonDetail(comparison) {
-    const comparisonPoints = [comparison.later.point, comparison.earlier.point]
-    const comparisonLoadInProgress = comparisonPoints.some((point) =>
-      loadingDetailPointIds.has(point.id)
-    )
-    const pointToLoad = !comparisonLoadInProgress
-      ? comparisonPoints.find(
-          (point) =>
-            !detailCache.has(point.id) && !failedDetailPointIds.has(point.id)
-        )
-      : null
-    if (pointToLoad) {
-      scheduleDetailLoad(pointToLoad)
-    }
+    scheduleDetailLoads([comparison.earlier.point, comparison.later.point])
     if (
       hoveredComparisonRatingSource &&
       resolveComparisonProviderRatings(hoveredComparisonRatingSource).length !==

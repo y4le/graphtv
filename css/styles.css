@@ -866,7 +866,7 @@ button {
   white-space: nowrap;
 }
 
-.vote-count-control {
+.inline-tooltip-control {
   position: relative;
   display: inline-flex;
   min-width: 0;
@@ -875,7 +875,7 @@ button {
   white-space: nowrap;
 }
 
-.vote-count-trigger {
+.inline-tooltip-trigger {
   padding: 0;
   border: 0;
   background: transparent;
@@ -887,21 +887,21 @@ button {
   touch-action: manipulation;
 }
 
-.vote-count-trigger:hover,
-.vote-count-trigger:focus-visible,
-.vote-count-trigger[aria-expanded='true'],
-.vote-count-control.is-expanded .vote-count-trigger {
+.inline-tooltip-trigger:hover,
+.inline-tooltip-trigger:focus-visible,
+.inline-tooltip-trigger[aria-expanded='true'],
+.inline-tooltip-control.is-expanded .inline-tooltip-trigger {
   color: var(--spotColor);
   text-decoration: underline;
   text-underline-offset: 0.12em;
 }
 
-.vote-count-trigger:focus-visible {
+.inline-tooltip-trigger:focus-visible {
   outline: 2px solid var(--spotColor);
   outline-offset: 2px;
 }
 
-.vote-count-tooltip {
+.inline-tooltip {
   position: absolute;
   z-index: 5;
   top: calc(100% + 0.4rem);
@@ -924,7 +924,7 @@ button {
   white-space: normal;
 }
 
-.vote-count-tooltip[hidden] {
+.inline-tooltip[hidden] {
   display: none;
 }
 
@@ -1372,7 +1372,7 @@ button {
 .sidenote-comparison-rating.is-interactive:hover,
 .sidenote-comparison-rating.is-interactive:focus-visible,
 .sidenote-comparison-rating.is-selected {
-  background: var(--lineSoft);
+  background: var(--canvasSubtle);
 }
 
 .sidenote-comparison-rating-source {
@@ -1405,7 +1405,8 @@ button {
   flex: 0 0 auto;
 }
 
-.sidenote-comparison-rating-votes {
+.sidenote-comparison-rating-votes,
+.sidenote-comparison-rating-rank {
   min-width: 0;
   color: var(--textSecondary);
   font-size: var(--type-size-utility);
@@ -1415,13 +1416,26 @@ button {
 
 .sidenote-comparison-rating-value[data-comparison-rating-side='earlier']
   .vote-count-tooltip {
+  left: 0;
+  transform: none;
+}
+
+.sidenote-comparison-rating-value[data-comparison-rating-side='later']
+  .vote-count-tooltip {
+  right: 0;
+  left: auto;
+  transform: none;
+}
+
+.sidenote-comparison-rating-value[data-comparison-rating-side='earlier']
+  .sidenote-comparison-rating-rank-tooltip {
   right: 0;
   left: auto;
   transform: none;
 }
 
 .sidenote-comparison-rating-value[data-comparison-rating-side='later']
-  .vote-count-tooltip {
+  .sidenote-comparison-rating-rank-tooltip {
   left: 0;
   transform: none;
 }
@@ -1445,33 +1459,6 @@ button {
 .sidenote-comparison-rating.is-unavailable .sidenote-comparison-rating-source,
 .sidenote-comparison-rating.is-unavailable .sidenote-comparison-rating-value {
   color: var(--textMuted);
-}
-
-.sidenote-comparison-rank {
-  display: grid;
-  grid-template-columns:
-    minmax(0, 1fr) minmax(var(--comparison-provider-width), auto)
-    minmax(0, 1fr);
-  gap: var(--comparison-column-gap);
-  margin: 0.45rem 0 0;
-  padding-inline: 0.45rem;
-  color: var(--textSecondary);
-  font-family: var(--font-sans);
-  font-size: var(--type-size-meta);
-  font-variant-numeric: tabular-nums;
-}
-
-.sidenote-comparison-rank strong {
-  color: var(--textPrimary);
-  text-align: center;
-}
-
-.sidenote-comparison-rank [data-comparison-rank-side='earlier'] {
-  text-align: right;
-}
-
-.sidenote-comparison-rank [data-comparison-rank-side='later'] {
-  text-align: left;
 }
 
 .sidenote-comparison-metrics {

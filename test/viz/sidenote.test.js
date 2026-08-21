@@ -291,17 +291,60 @@ describe('createSidenote', () => {
     expect(
       root.querySelector('.sidenote-comparison-rating-source').textContent
     ).toBe('IMDb')
+    const rankTriggers = root.querySelectorAll(
+      '.sidenote-comparison-rating-rank-trigger'
+    )
+    expect(Array.from(rankTriggers, (trigger) => trigger.textContent)).toEqual([
+      '(8/12)',
+      '(2/12)'
+    ])
     expect(
-      root
-        .querySelector('.sidenote-comparison-rank')
-        .textContent.trim()
-        .split(/\s+/u)
-    ).toEqual(['8/12', 'IMDb', '2/12'])
+      Array.from(
+        root.querySelectorAll('.sidenote-comparison-rating-value'),
+        (value) =>
+          Array.from(value.children, (child) => {
+            if (child.matches('[data-comparison-rating-rank]')) {
+              return 'rank'
+            }
+            if (child.matches('[data-vote-count-control]')) {
+              return 'votes'
+            }
+            return 'rating'
+          })
+      )
+    ).toEqual([
+      ['rating', 'rank', 'votes'],
+      ['rating', 'rank', 'votes']
+    ])
+    expect(
+      Array.from(
+        root.querySelectorAll('.sidenote-comparison-rating-rank-tooltip'),
+        (tooltip) => tooltip.textContent
+      )
+    ).toEqual([
+      'Rank 8 of 12 rated episodes by IMDb score, from highest to lowest.',
+      'Rank 2 of 12 rated episodes by IMDb score, from highest to lowest.'
+    ])
+    expect(
+      Array.from(root.querySelectorAll('.vote-count-tooltip'), (tooltip) =>
+        tooltip.textContent.trim()
+      )
+    ).toEqual([
+      '100 votes were submitted for this score.',
+      '200 votes were submitted for this score.'
+    ])
     expect(
       root.querySelector('.sidenote-comparison .rating-source-link')
     ).toBeNull()
 
-    root.querySelector('[data-provider-rating]').click()
+    rankTriggers[0].click()
+    expect(
+      root.querySelectorAll('.sidenote-comparison-rating-rank-tooltip')[0]
+        .hidden
+    ).toBe(false)
+    expect(onSelectRating).not.toHaveBeenCalled()
+
+    root.querySelector('.sidenote-comparison-rating-source').click()
     expect(onSelectRating).toHaveBeenCalledWith({
       pointId: undefined,
       source: 'omdb',

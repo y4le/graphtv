@@ -211,17 +211,29 @@ describe('rating scale domains', () => {
   })
 
   it('ranks comparable series episodes with competition ties', () => {
-    const model = buildChartModel([
-      {
-        number: 1,
-        episodes: [
-          createEpisode('first', [{ source: 'test', rating: 8.5 }]),
-          createEpisode('second', [{ source: 'test', rating: 9 }]),
-          createEpisode('third', [{ source: 'test', rating: 8.5 }]),
-          createEpisode('fourth', [{ source: 'test', rating: 7 }])
-        ]
-      }
-    ])
+    const model = buildChartModel(
+      [
+        {
+          number: 1,
+          episodes: [
+            createEpisode('first', [
+              { source: 'test', rating: 8.5 },
+              { source: 'other', rating: 6 }
+            ]),
+            createEpisode('second', [
+              { source: 'test', rating: 9 },
+              { source: 'other', rating: 7 }
+            ]),
+            createEpisode('third', [
+              { source: 'test', rating: 8.5 },
+              { source: 'other', rating: 7 }
+            ]),
+            createEpisode('fourth', [{ source: 'test', rating: 7 }])
+          ]
+        }
+      ],
+      { primaryRatingSource: 'test' }
+    )
 
     expect(Object.fromEntries(model.seriesRankByPointId)).toEqual({
       first: 2,
@@ -229,6 +241,16 @@ describe('rating scale domains', () => {
       third: 2,
       fourth: 4
     })
+    expect(
+      Object.fromEntries(
+        model.seriesRankingsBySource.get('other').rankByPointId
+      )
+    ).toEqual({
+      first: 3,
+      second: 1,
+      third: 1
+    })
+    expect(model.seriesRankingsBySource.get('other').total).toBe(3)
   })
 
   it('honors an available explicit primary source before falling back per episode', () => {

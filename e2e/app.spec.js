@@ -164,7 +164,22 @@ test('compares two episodes with pointer and keyboard controls', async ({
     'aria-label',
     'S01E02 - S01E06'
   )
-  await expect(comparison.locator('.sidenote-comparison-rank')).toHaveCount(1)
+  await expect(
+    comparison.locator('.sidenote-comparison-rating-rank')
+  ).toHaveCount(2)
+  const firstRank = comparison
+    .locator('.sidenote-comparison-rating-rank')
+    .first()
+  const rankTooltip = firstRank.locator(
+    '.sidenote-comparison-rating-rank-tooltip'
+  )
+  await firstRank.locator('.sidenote-comparison-rating-rank-trigger').click()
+  await expect(rankTooltip).toBeVisible()
+  await expect(rankTooltip).toContainText(
+    /Rank \d+ of 72 rated episodes by TVmaze score, from highest to lowest\./u
+  )
+  await firstRank.locator('.sidenote-comparison-rating-rank-trigger').click()
+  await expect(rankTooltip).not.toBeVisible()
   await expect(page.locator('.season-axis-comparison')).toHaveCount(1)
   await expect(page.locator('.sidenote-nav')).toBeVisible()
   await expect(page.locator('[data-sidenote-nav="next"]')).not.toBeVisible()

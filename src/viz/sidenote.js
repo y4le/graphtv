@@ -380,7 +380,6 @@ export function createSidenote({
           ${renderComparisonEpisode('Later', comparison.later)}
         </div>
         ${renderComparisonRatings(comparison)}
-        ${renderComparisonRank(comparison)}
         ${renderComparisonMetrics(comparison)}
         ${renderComparisonExtremes(comparison)}
       </article>
@@ -494,7 +493,7 @@ export function createSidenote({
   }
 
   listen('click', (event) => {
-    if (event.target.closest?.('[data-vote-count-trigger]')) {
+    if (event.target.closest?.('[data-inline-tooltip-trigger]')) {
       return
     }
 
@@ -618,7 +617,10 @@ export function createSidenote({
 
   listen('focusin', (event) => {
     const ratingButton = event.target.closest?.('[data-provider-rating]')
-    if (ratingButton && !event.target.closest?.('[data-vote-count-trigger]')) {
+    if (
+      ratingButton &&
+      !event.target.closest?.('[data-inline-tooltip-trigger]')
+    ) {
       onPreviewRating?.(getProviderRatingTarget(ratingButton))
     }
 
@@ -749,9 +751,9 @@ function renderComparisonRatingRow(source, comparison) {
 
   return `
     <${tag} class="${classes}" ${attributes}>
-      ${renderComparisonRatingValue(earlier, 'earlier')}
+      ${renderComparisonRatingValue(earlier, 'earlier', source)}
       <span class="sidenote-comparison-rating-source">${escapeHtml(getEpisodeRatingSourceLabel(source))}</span>
-      ${renderComparisonRatingValue(later, 'later')}
+      ${renderComparisonRatingValue(later, 'later', source)}
     </${tag}>
   `
 }
@@ -764,18 +766,22 @@ function getComparisonRating(entry, source) {
   const votes = Number.isFinite(rating?.votes) ? rating.votes : null
   const loadingVotes = entry.loadingDetails && source === 'omdb'
   const ratingLabel = usable ? rating.rating.toFixed(1) : 'n/a'
+  const seriesRank =
+    entry.seriesRanks?.[source] ??
+    (entry.seriesRank?.source === source ? entry.seriesRank : null)
 
   return {
     ratingLabel,
     votes,
     loadingVotes,
+    seriesRank,
     usable,
     plotted: usable && source === entry.point.ratingSource,
-    accessibleValue: `${ratingLabel}${votes != null ? `, ${votes.toLocaleString('en-US')} ${votes === 1 ? 'vote' : 'votes'}` : loadingVotes ? ', vote count loading' : ''}`
+    accessibleValue: `${ratingLabel}${votes != null ? `, ${votes.toLocaleString('en-US')} ${votes === 1 ? 'vote' : 'votes'}` : loadingVotes ? ', vote count loading' : ''}${seriesRank ? `, series rank ${seriesRank.rank} of ${seriesRank.total}` : ''}`
   }
 }
 
-function renderComparisonRatingValue(rating, side) {
+function renderComparisonRatingValue(rating, side, source) {
   const classes = [
     'sidenote-comparison-rating-value',
     rating.plotted ? 'is-plotted' : null
@@ -791,28 +797,24 @@ function renderComparisonRatingValue(rating, side) {
       : rating.loadingVotes
         ? `<span class="sidenote-comparison-rating-votes">${renderVotesLoading()}</span>`
         : ''
+  const rank = renderComparisonRatingRank(rating.seriesRank, source)
 
-  return `<span class="${classes}" data-comparison-rating-side="${side}"><span>${rating.ratingLabel}</span>${votes}</span>`
+  return `<span class="${classes}" data-comparison-rating-side="${side}"><span>${rating.ratingLabel}</span>${rank}${votes}</span>`
 }
 
-function renderComparisonRank(comparison) {
-  const earlier = comparison.earlier.seriesRank
-  const later = comparison.later.seriesRank
-  const source = earlier?.source ?? later?.source
-  if (!source) {
+function renderComparisonRatingRank(rank, source) {
+  if (!rank) {
     return ''
   }
 
-  const earlierValue = earlier ? `${earlier.rank}/${earlier.total}` : 'n/a'
-  const laterValue = later ? `${later.rank}/${later.total}` : 'n/a'
-  const sourceLabel = getRatingSourceLabel(source)
+  const value = `${rank.rank}/${rank.total}`
+  const tooltip = `Rank ${rank.rank} of ${rank.total} rated episodes by ${getRatingSourceLabel(source)} score, from highest to lowest.`
 
   return `
-    <p class="sidenote-comparison-rank" aria-label="Series rank: earlier episode ${escapeHtml(earlierValue)}, ${escapeHtml(sourceLabel)}, later episode ${escapeHtml(laterValue)}">
-      <span data-comparison-rank-side="earlier">${escapeHtml(earlierValue)}</span>
-      <strong>${escapeHtml(sourceLabel)}</strong>
-      <span data-comparison-rank-side="later">${escapeHtml(laterValue)}</span>
-    </p>
+    <span class="inline-tooltip-control sidenote-comparison-rating-rank" data-inline-tooltip-control data-comparison-rating-rank>
+      <span class="inline-tooltip-trigger sidenote-comparison-rating-rank-trigger" data-inline-tooltip-trigger aria-hidden="true">(${escapeHtml(value)})</span>
+      <span class="inline-tooltip sidenote-comparison-rating-rank-tooltip" data-inline-tooltip role="tooltip" hidden>${escapeHtml(tooltip)}</span>
+    </span>
   `
 }
 

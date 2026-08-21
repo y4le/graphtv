@@ -62,6 +62,30 @@ function createEpisode() {
 }
 
 describe('episode detail loading', () => {
+  it('reports whether an episode still needs an IMDb vote count', () => {
+    const loader = createEpisodeDetailLoader({
+      loadProvider: vi.fn(),
+      expectedSeriesId: 'tt4955642',
+      storage: createStorage()
+    })
+    const loadedEpisode = createEpisode()
+    loadedEpisode.ratings[1].votes = 3379
+    loadedEpisode.ratings[1].votesStatus = 'loaded'
+    const unavailableEpisode = createEpisode()
+    unavailableEpisode.ratings[1].votesStatus = 'unavailable'
+    const untrustedEpisode = createEpisode()
+    untrustedEpisode.ratings[1].provenance.confidence = 'moderate'
+    const unmatchedEpisode = createEpisode()
+    delete unmatchedEpisode.sourceIds.omdb
+
+    expect(loader.needsLoad(createEpisode())).toBe(true)
+    expect(loader.needsLoad(loadedEpisode)).toBe(false)
+    expect(loader.needsLoad(unavailableEpisode)).toBe(false)
+    expect(loader.needsLoad(untrustedEpisode)).toBe(false)
+    expect(loader.needsLoad(unmatchedEpisode)).toBe(false)
+    expect(loader.needsLoad({ ratings: [] })).toBe(false)
+  })
+
   it('delegates caching to the transport without charging cache hits to the budget', async () => {
     const getEpisodeVoteCount = createCachedVoteGetter(3379)
     const loadProvider = vi.fn().mockResolvedValue({ getEpisodeVoteCount })

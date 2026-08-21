@@ -17,13 +17,13 @@ export function renderVoteCount(
       : `${preciseVotes} votes were submitted for this score.`
   const classes = ['vote-count-control', className].filter(Boolean).join(' ')
   const trigger = interactive
-    ? `<button type="button" class="vote-count-trigger" data-vote-count-trigger aria-label="${escapeHtml(`${compactVotes} ${votes === 1 ? 'vote' : 'votes'}. ${tooltip}`)}" aria-expanded="false"><span aria-hidden="true">(${escapeHtml(compactVotes)})</span></button>`
-    : `<span class="vote-count-trigger" data-vote-count-trigger aria-hidden="true">(${escapeHtml(compactVotes)})</span>`
+    ? `<button type="button" class="inline-tooltip-trigger vote-count-trigger" data-inline-tooltip-trigger data-vote-count-trigger aria-label="${escapeHtml(`${compactVotes} ${votes === 1 ? 'vote' : 'votes'}. ${tooltip}`)}" aria-expanded="false"><span aria-hidden="true">(${escapeHtml(compactVotes)})</span></button>`
+    : `<span class="inline-tooltip-trigger vote-count-trigger" data-inline-tooltip-trigger data-vote-count-trigger aria-hidden="true">(${escapeHtml(compactVotes)})</span>`
 
   return `
-    <span class="${classes}" data-vote-count-control>
+    <span class="inline-tooltip-control ${classes}" data-inline-tooltip-control data-vote-count-control>
       ${trigger}
-      <span class="vote-count-tooltip" role="tooltip" hidden>${escapeHtml(tooltip)}</span>
+      <span class="inline-tooltip vote-count-tooltip" data-inline-tooltip role="tooltip" hidden>${escapeHtml(tooltip)}</span>
     </span>
   `
 }
@@ -32,7 +32,7 @@ export function bindVoteCountTooltips(root) {
   const ownerDocument = root.ownerDocument
 
   function getControl(target) {
-    const control = target.closest?.('[data-vote-count-control]') ?? null
+    const control = target.closest?.('[data-inline-tooltip-control]') ?? null
     return control && root.contains(control) ? control : null
   }
 
@@ -41,11 +41,11 @@ export function bindVoteCountTooltips(root) {
       (state) => control.dataset[state] === 'true'
     )
     control.classList.toggle('is-expanded', expanded)
-    const trigger = control.querySelector('[data-vote-count-trigger]')
+    const trigger = control.querySelector('[data-inline-tooltip-trigger]')
     if (trigger?.tagName === 'BUTTON') {
       trigger.setAttribute('aria-expanded', String(expanded))
     }
-    const tooltip = control.querySelector('.vote-count-tooltip')
+    const tooltip = control.querySelector('[data-inline-tooltip]')
     if (tooltip) {
       tooltip.hidden = !expanded
     }
@@ -59,15 +59,21 @@ export function bindVoteCountTooltips(root) {
   }
 
   function dismissOthers(activeControl = null) {
-    root.querySelectorAll('[data-vote-count-control]').forEach((control) => {
-      if (control !== activeControl) {
-        dismiss(control)
-      }
-    })
+    root
+      .querySelectorAll('[data-inline-tooltip-control]')
+      .forEach((control) => {
+        if (control !== activeControl) {
+          dismiss(control)
+        }
+      })
   }
 
   function handleClick(event) {
-    const trigger = event.target.closest?.('[data-vote-count-trigger]')
+    if (event.defaultPrevented) {
+      return
+    }
+
+    const trigger = event.target.closest?.('[data-inline-tooltip-trigger]')
     const control = trigger ? getControl(trigger) : null
     if (!control) {
       return

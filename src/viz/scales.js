@@ -4,6 +4,7 @@ import {
   SERIES_BREAKPOINT_ID,
   detectSeriesBreakpoint,
   getRatingSpread,
+  isUsableProviderRating,
   isUsableRating,
   linearRegressionFromPoints,
   resolveEpisodeRating,
@@ -209,6 +210,7 @@ export function buildChartModel(seasons, options = {}) {
     }
   })
   const seriesRankByPointId = createSeriesRankByPointId(primaryRatedPoints)
+  const seriesRankingsBySource = createSeriesRankingsBySource(points)
   const ratedPointsBySeason = new Map()
   for (const point of ratedPoints) {
     const seasonPoints = ratedPointsBySeason.get(point.season) ?? []
@@ -222,6 +224,7 @@ export function buildChartModel(seasons, options = {}) {
     ratedPoints,
     ratedPointIndexById,
     seriesRankByPointId,
+    seriesRankingsBySource,
     ratedPointsBySeason,
     primaryRatedPoints,
     primaryRatingSource: primaryRating.source,
@@ -263,6 +266,32 @@ function createSeriesRankByPointId(points) {
   })
 
   return ranks
+}
+
+function createSeriesRankingsBySource(points) {
+  const pointsBySource = new Map()
+
+  for (const point of points) {
+    for (const rating of point.ratings.filter(isUsableProviderRating)) {
+      const sourcePoints = pointsBySource.get(rating.source) ?? []
+      sourcePoints.push({
+        id: point.id,
+        rating: rating.rating,
+        x: point.x
+      })
+      pointsBySource.set(rating.source, sourcePoints)
+    }
+  }
+
+  return new Map(
+    Array.from(pointsBySource, ([source, sourcePoints]) => [
+      source,
+      {
+        rankByPointId: createSeriesRankByPointId(sourcePoints),
+        total: new Set(sourcePoints.map((point) => point.id)).size
+      }
+    ])
+  )
 }
 
 function createSeriesBreakpointSummary(candidate, allPoints, source) {
