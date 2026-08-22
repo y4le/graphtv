@@ -1216,13 +1216,17 @@ describe('createChart', () => {
   it('restores the committed selection as soon as an episode hover ends', () => {
     const container = document.createElement('div')
     const detailRoot = document.createElement('section')
+    const onPointHoverContextChange = vi.fn()
     Object.defineProperty(container, 'clientWidth', {
       configurable: true,
       value: 600
     })
     document.body.append(container, detailRoot)
 
-    chart = createChart(container, createSeasons(), { detailRoot })
+    chart = createChart(container, createSeasons(), {
+      detailRoot,
+      onPointHoverContextChange
+    })
     chart.moveEpisode(1)
     const selectedPointId = chart.getDebugState().selectedPointId
     const hoveredPoint = Array.from(
@@ -1231,12 +1235,20 @@ describe('createChart', () => {
 
     hoveredPoint.dispatchEvent(new MouseEvent('mousemove'))
     expect(chart.getDebugState().hoverPointId).toBe(hoveredPoint.__data__.id)
+    expect(onPointHoverContextChange).toHaveBeenLastCalledWith({
+      x: hoveredPoint.__data__.x,
+      pointId: hoveredPoint.__data__.id
+    })
 
     hoveredPoint.dispatchEvent(new MouseEvent('mouseleave'))
 
     expect(chart.getDebugState()).toMatchObject({
       selectedPointId,
       hoverPointId: null
+    })
+    expect(onPointHoverContextChange).toHaveBeenLastCalledWith({
+      x: null,
+      pointId: null
     })
     expect(detailRoot.querySelector('.sidenote-nav-label').textContent).toBe(
       'S01E01'
@@ -2051,6 +2063,30 @@ describe('createChart', () => {
 
     expect(chart.getDebugState().selectedTrendId).toBe('series')
     expect(container.querySelector('.micro-trendline.is-active')).toBeNull()
+  })
+
+  it('delegates empty plot clicks when a coordinated view handles clearing', () => {
+    const container = document.createElement('div')
+    const onClearSelectionRequest = vi.fn(() => true)
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasons(), {
+      onClearSelectionRequest
+    })
+    chart.moveEpisode(1)
+    const selectedPointId = chart.getDebugState().selectedPointId
+
+    dispatchSurfaceClick(container.querySelector('.chart-hit-surface'), {
+      x: 10,
+      y: 0
+    })
+
+    expect(onClearSelectionRequest).toHaveBeenCalledTimes(1)
+    expect(chart.getDebugState().selectedPointId).toBe(selectedPointId)
   })
 
   it('waits before previewing a trendline on fine-pointer hover', async () => {
@@ -4306,6 +4342,41 @@ function dispatchPointer(target, type, properties) {
 }
 
 describe('comparison chart coordination', () => {
+  it('uses shared displayed episode spacing to size long and short series equally', () => {
+    const shortContainer = document.createElement('div')
+    const longContainer = document.createElement('div')
+    for (const container of [shortContainer, longContainer]) {
+      Object.defineProperty(container, 'clientWidth', {
+        configurable: true,
+        value: 600
+      })
+    }
+    document.body.append(shortContainer, longContainer)
+
+    const sharedOptions = { comparisonXMax: 120, hideOverview: true }
+    const shortChart = createChart(
+      shortContainer,
+      createSeasonLengths([8]),
+      sharedOptions
+    )
+    chart = createChart(
+      longContainer,
+      createSeasonLengths([120]),
+      sharedOptions
+    )
+
+    expect(shortChart.getDensityMetrics().chartSlotWidth).toBeCloseTo(
+      chart.getDensityMetrics().chartSlotWidth
+    )
+    expect(
+      Number(shortContainer.querySelector('.episode-point').getAttribute('r'))
+    ).toBe(
+      Number(longContainer.querySelector('.episode-point').getAttribute('r'))
+    )
+
+    shortChart.destroy()
+  })
+
   it('uses a comparison-wide x extent and publishes controlled viewport changes', () => {
     const container = document.createElement('div')
     Object.defineProperty(container, 'clientWidth', {

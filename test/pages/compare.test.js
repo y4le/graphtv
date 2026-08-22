@@ -97,6 +97,20 @@ describe('renderComparisonPage', () => {
     optionsByTitle['First Show'].onViewportChange({ start: 2, end: 4 })
     expect(charts[1].setViewport).toHaveBeenCalledWith({ start: 2, end: 4 })
 
+    optionsByTitle['First Show'].onPointHoverContextChange({
+      x: 2,
+      pointId: 'first-2'
+    })
+    expect(charts[0].setComparisonCursor).toHaveBeenLastCalledWith(null)
+    expect(charts[1].setComparisonCursor).toHaveBeenLastCalledWith(2)
+
+    optionsByTitle['First Show'].onPointHoverContextChange({
+      x: null,
+      pointId: null
+    })
+    expect(charts[0].setComparisonCursor).toHaveBeenLastCalledWith(null)
+    expect(charts[1].setComparisonCursor).toHaveBeenLastCalledWith(null)
+
     optionsByTitle['Second Show'].onSelectionContextChange({
       selection: 's01e03',
       x: 3,
@@ -114,6 +128,32 @@ describe('renderComparisonPage', () => {
     expect(
       container.querySelector('.cross-show-multiselect-action').hidden
     ).toBe(false)
+
+    optionsByTitle['First Show'].onPointHoverContextChange({
+      x: 2,
+      pointId: 'first-2'
+    })
+    expect(charts[0].setComparisonCursor).toHaveBeenLastCalledWith(null)
+    expect(charts[1].setComparisonCursor).toHaveBeenLastCalledWith(2)
+    optionsByTitle['First Show'].onPointHoverContextChange({
+      x: null,
+      pointId: null
+    })
+    expect(charts[0].setComparisonCursor).toHaveBeenLastCalledWith(3)
+    expect(charts[1].setComparisonCursor).toHaveBeenLastCalledWith(null)
+
+    expect(optionsByTitle['First Show'].onClearSelectionRequest()).toBe(true)
+    expect(charts[0].clearSelection).toHaveBeenCalled()
+    expect(charts[1].clearSelection).toHaveBeenCalled()
+    expect(new URL(window.location.href).searchParams.has('select')).toBe(false)
+    expect(container.querySelector('.comparison-context').hidden).toBe(false)
+    expect(container.querySelector('.comparison-detail').hidden).toBe(true)
+
+    optionsByTitle['Second Show'].onSelectionContextChange({
+      selection: 's01e03',
+      x: 3,
+      pointId: 'second-3'
+    })
 
     container.querySelector('[data-comparison-action="head-to-head"]').click()
     expect(

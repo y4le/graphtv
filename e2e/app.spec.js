@@ -349,6 +349,27 @@ test('adds a second show and keeps comparison navigation synchronized', async ({
   await expect(page.locator('.comparison-context')).toBeVisible()
   await expect(page.locator('.comparison-detail')).toBeHidden()
 
+  const firstLane = page.locator('.comparison-lane[data-comparison-slot="a"]')
+  const secondLane = page.locator('.comparison-lane[data-comparison-slot="b"]')
+  await firstLane.locator('.episode-point').first().hover()
+  await expect(firstLane.locator('.crosshair')).toHaveCount(1)
+  await expect(secondLane.locator('.crosshair')).toHaveCount(1)
+  expect(
+    Number(await firstLane.locator('.crosshair').getAttribute('x1'))
+  ).toBeCloseTo(
+    Number(await secondLane.locator('.crosshair').getAttribute('x1'))
+  )
+  await page.mouse.move(0, 0)
+  await expect(page.locator('.comparison-data .crosshair')).toHaveCount(0)
+
+  await page.keyboard.press('ArrowRight')
+  await expect(page).toHaveURL(/[?&]select=a%3As01e01(?:&|$)/u)
+  await secondLane.locator('.chart-hit-surface').click({
+    position: { x: 10, y: 5 }
+  })
+  await expect(page).not.toHaveURL(/[?&]select=/u)
+  await expect(page.locator('.comparison-context')).toBeVisible()
+  await firstLane.locator('.comparison-lane-heading').click()
   await page.keyboard.press('ArrowRight')
   await expect(page).toHaveURL(/[?&]select=a%3As01e01(?:&|$)/u)
   await page.keyboard.press('Shift+ArrowDown')

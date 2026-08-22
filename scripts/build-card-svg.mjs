@@ -543,17 +543,9 @@ function createLayout(model) {
   })
   // The card scales marks at the sparse end of the app's density ramp, where
   // points are largest against thin trendlines, then magnifies them.
-  const sparseScale = {
-    range: () => [
-      0,
-      MARK_DENSITY_CONFIG.ramp.sparseSlotWidth * model.ratedPoints.length
-    ]
-  }
-  const trendWidth = scaleLineWidthForDensity(
-    APP.trendWidth,
-    model.ratedPoints.length,
-    sparseScale
-  )
+  const sparseScale = (value) =>
+    value * MARK_DENSITY_CONFIG.ramp.sparseSlotWidth
+  const trendWidth = scaleLineWidthForDensity(APP.trendWidth, sparseScale)
 
   return {
     scales,
@@ -577,11 +569,7 @@ function createLayout(model) {
     ),
     marks: {
       pointRadius: toCardUnits(
-        scalePointRadiusForDensity(
-          APP.pointRadius,
-          model.ratedPoints.length,
-          sparseScale
-        )
+        scalePointRadiusForDensity(APP.pointRadius, sparseScale)
       ),
       trendWidth: toCardUnits(trendWidth),
       selectedTrendWidth: toCardUnits(scaleSelectedLineWidth(trendWidth)),

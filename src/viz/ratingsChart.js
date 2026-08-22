@@ -744,6 +744,13 @@ export function createChart(container, seasons, options = {}) {
     })
   }
 
+  function notifyPointHoverChange(point = null) {
+    options.onPointHoverContextChange?.({
+      x: point?.x ?? null,
+      pointId: point?.id ?? null
+    })
+  }
+
   function notifyViewportChange() {
     if (
       !viewport ||
@@ -900,6 +907,7 @@ export function createChart(container, seasons, options = {}) {
 
     const previousHoverPointId = hoverPointId
     hoverPointId = null
+    notifyPointHoverChange()
     if (getActivePoint()?.id !== previousHoverPointId) {
       cancelScheduledDetailLoad()
     }
@@ -965,7 +973,6 @@ export function createChart(container, seasons, options = {}) {
 
     cancelTrendHover()
     if (immediate) {
-      hoverPointId = null
       hoverTrendId = nextId
       cancelScheduledDetailLoad()
       render()
@@ -988,7 +995,6 @@ export function createChart(container, seasons, options = {}) {
         return
       }
 
-      hoverPointId = null
       hoverTrendId = nextId
       cancelScheduledDetailLoad()
       render()
@@ -1257,7 +1263,7 @@ export function createChart(container, seasons, options = {}) {
     clearProviderRatingState()
     clearComparisonState()
     cancelTrendHover()
-    hoverPointId = null
+    clearPointHover()
     hoverTrendId = null
     comparisonPointId = null
     comparisonArmed = true
@@ -1292,7 +1298,7 @@ export function createChart(container, seasons, options = {}) {
     clearProviderRatingState()
     clearComparisonState()
     cancelTrendHover()
-    hoverPointId = null
+    clearPointHover()
     hoverTrendId = null
     selectedTrendId = null
     comparisonPointId = point.id
@@ -1354,7 +1360,7 @@ export function createChart(container, seasons, options = {}) {
     clearComparisonState()
 
     if (source === 'keyboard') {
-      hoverPointId = null
+      clearPointHover()
     }
 
     cancelTrendHover()
@@ -1442,7 +1448,7 @@ export function createChart(container, seasons, options = {}) {
     clearComparisonState()
     cancelTrendHover()
     hoverTrendId = null
-    hoverPointId = null
+    clearPointHover()
     selectedPointId = null
     selectedTrendId = id
     if (summary.kind === 'season') {
@@ -1891,7 +1897,7 @@ export function createChart(container, seasons, options = {}) {
     clearProviderRatingState()
     clearComparisonState()
     cancelTrendHover()
-    hoverPointId = null
+    clearPointHover()
     selectedPointId = null
     hoverTrendId = null
     selectedTrendId = getRestingTrendId()
@@ -1902,6 +1908,14 @@ export function createChart(container, seasons, options = {}) {
     }
     render()
     notifySelectionChange()
+  }
+
+  function clearSelectionFromBackground() {
+    hasUserInteracted = true
+    if (options.onClearSelectionRequest?.() === true) {
+      return
+    }
+    selectSeriesTrend()
   }
 
   function toggleSeriesTrend() {
@@ -1994,8 +2008,8 @@ export function createChart(container, seasons, options = {}) {
     hoveredProviderRating = null
     hoveredComparisonRatingSource = null
     failedDetailPointIds.clear()
-    if (!getPointById(hoverPointId)) {
-      hoverPointId = null
+    if (hoverPointId && !getPointById(hoverPointId)) {
+      clearPointHover()
     }
     if (!getTrendSummary(hoverTrendId)) {
       hoverTrendId = null
@@ -2149,7 +2163,7 @@ export function createChart(container, seasons, options = {}) {
     render()
   }
 
-  function getTrendInteractions(densityPointCount) {
+  function getTrendInteractions() {
     const activeTrendId = getActiveTrendId()
     const comparison = getComparisonSummary()
     return {
@@ -2160,7 +2174,6 @@ export function createChart(container, seasons, options = {}) {
             end: comparison.later.point.x
           }
         : null,
-      densityPointCount,
       hoverEnabled: finePointerQuery.matches && !isComparisonMode(),
       hitTolerance: coarsePointerQuery.matches ? 14 : 7,
       onHover: previewTrend,
@@ -2171,7 +2184,7 @@ export function createChart(container, seasons, options = {}) {
         if (trendline) {
           setSelectedTrend(trendline.id)
         } else {
-          selectSeriesTrend()
+          clearSelectionFromBackground()
         }
       },
       shouldSuppressClick: () =>
@@ -2204,7 +2217,10 @@ export function createChart(container, seasons, options = {}) {
         }
         cancelTrendHover()
         hoverTrendId = null
-        hoverPointId = point.id
+        if (hoverPointId !== point.id) {
+          hoverPointId = point.id
+          notifyPointHoverChange(point)
+        }
         updateDetail(point, { load: true })
         render()
       },
@@ -2214,7 +2230,7 @@ export function createChart(container, seasons, options = {}) {
         }
       },
       onSelect(point, event) {
-        hoverPointId = null
+        clearPointHover()
         selectPointFromPointer(point, event)
       },
       shouldSuppressClick: () =>
@@ -2315,7 +2331,6 @@ export function createChart(container, seasons, options = {}) {
       scaleOptions
     )
     const visiblePoints = getVisiblePoints(model, viewport)
-    const visibleRatedPoints = getVisibleRatedPoints(model, viewport)
     const [displayStart, displayEnd] = mainScales.xScale.domain()
     const displayViewport = { start: displayStart, end: displayEnd }
 
@@ -2349,7 +2364,7 @@ export function createChart(container, seasons, options = {}) {
       mainScales,
       { width: chartWidth, height: chartHeight },
       chartTheme,
-      getTrendInteractions(visibleRatedPoints.length)
+      getTrendInteractions()
     )
     renderSourceSpreads(
       mainSvg,
@@ -2405,14 +2420,8 @@ export function createChart(container, seasons, options = {}) {
     )
 
     publishDensityMetrics({
-      chartSlotWidth: getSlotWidth(
-        visibleRatedPoints.length,
-        mainScales.xScale
-      ),
-      sparklineSlotWidth: getSlotWidth(
-        model.ratedPoints.length,
-        sparklineScales.xScale
-      )
+      chartSlotWidth: getSlotWidth(mainScales.xScale),
+      sparklineSlotWidth: getSlotWidth(sparklineScales.xScale)
     })
 
     if (!options.hideOverview) {
@@ -2680,7 +2689,7 @@ export function createChart(container, seasons, options = {}) {
     },
     onPrepareScrub() {
       cancelTrendHover()
-      hoverPointId = null
+      clearPointHover()
       hoverTrendId = null
       hoveredProviderRating = null
     },
@@ -2712,7 +2721,7 @@ export function createChart(container, seasons, options = {}) {
       return
     }
 
-    selectSeriesTrend()
+    clearSelectionFromBackground()
   })
 
   function handleDocumentMouseMove(event) {

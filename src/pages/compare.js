@@ -59,6 +59,7 @@ export async function renderComparisonPage(
   let pickerSlot = 'b'
   let preserveNextSelection = false
   let multiSelectArmed = false
+  let hoveredComparisonPoint = null
   const activeDetailStates = {
     a: createComparisonDetailState(initialSelectionBySlot.a ?? 'series'),
     b: createComparisonDetailState(initialSelectionBySlot.b ?? 'series')
@@ -233,6 +234,29 @@ export async function renderComparisonPage(
     syncSelectionUrl()
   }
 
+  function clearAllComparisonSelections() {
+    if (syncingSelection || destroyed) {
+      return false
+    }
+
+    preserveNextSelection = false
+    multiSelectArmed = false
+    for (const slot of COMPARISON_SLOT_IDS) {
+      activeDetailStates[slot] = createComparisonDetailState('none')
+    }
+
+    syncingSelection = true
+    for (const slot of COMPARISON_SLOT_IDS) {
+      slots[slot].chart?.clearSelection()
+    }
+    syncingSelection = false
+
+    syncComparisonMarkers()
+    syncSelectionUrl()
+    activateSlot(activeSlot)
+    return true
+  }
+
   function syncSelectionUrl() {
     const params = getUrlParams()
     const serializedSelection = formatComparisonSelections(
@@ -256,10 +280,30 @@ export async function renderComparisonPage(
     const singleSelection =
       selectedSlots.length === 1 ? activeDetailStates[selectedSlots[0]] : null
     for (const slot of COMPARISON_SLOT_IDS) {
-      slots[slot].chart?.setComparisonCursor?.(
-        singleSelection && slot !== selectedSlots[0] ? singleSelection.x : null
-      )
+      const cursorX = hoveredComparisonPoint
+        ? slot === hoveredComparisonPoint.slot
+          ? null
+          : hoveredComparisonPoint.x
+        : singleSelection && slot !== selectedSlots[0]
+          ? singleSelection.x
+          : null
+      slots[slot].chart?.setComparisonCursor?.(cursorX)
     }
+  }
+
+  function syncPointHover(slot, hoverContext = {}) {
+    if (destroyed) {
+      return
+    }
+
+    if (Number.isFinite(hoverContext.x)) {
+      hoveredComparisonPoint = { slot, x: hoverContext.x }
+    } else if (hoveredComparisonPoint?.slot === slot) {
+      hoveredComparisonPoint = null
+    } else {
+      return
+    }
+    syncComparisonMarkers()
   }
 
   function getResolvedComparisonState() {
@@ -364,6 +408,9 @@ export async function renderComparisonPage(
           formatComparisonViewportAnnouncement(viewport, slots),
         onSelectionContextChange: ({ selection, ...selectionContext }) =>
           syncSelection(slot, selection, selectionContext),
+        onPointHoverContextChange: (hoverContext) =>
+          syncPointHover(slot, hoverContext),
+        onClearSelectionRequest: clearAllComparisonSelections,
         onViewportChange: (viewport) => syncViewport(slot, viewport)
       })
       attachComparisonOverview(container, chartRoot, state)
