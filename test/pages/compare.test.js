@@ -85,6 +85,28 @@ describe('renderComparisonPage', () => {
     expect(container.querySelector('.comparison-summary thead')).toBeNull()
     expect(container.querySelectorAll('.artwork-missing')).toHaveLength(2)
     expect(container.textContent).not.toContain('No art')
+    expect(
+      container.querySelector('.comparison-context').textContent
+    ).not.toContain('Plotted on')
+    const identityActions = Array.from(
+      container.querySelectorAll(
+        '.comparison-context .comparison-identity-actions button'
+      )
+    )
+    expect(identityActions.map((button) => button.textContent)).toEqual([
+      'Replace',
+      'Open alone',
+      'Replace',
+      'Open alone'
+    ])
+    expect(
+      identityActions.map((button) => button.getAttribute('aria-label'))
+    ).toEqual([
+      'Replace First Show',
+      'Open First Show alone',
+      'Replace Second Show',
+      'Open Second Show alone'
+    ])
     expect(container.querySelector('.comparison-context').hidden).toBe(false)
     expect(container.querySelector('.comparison-detail').hidden).toBe(true)
     expect(
@@ -251,6 +273,15 @@ describe('renderComparisonPage', () => {
         (row) => row.dataset.comparisonSlot
       )
     ).toEqual(['a', 'b'])
+    expect(
+      Array.from(
+        container.querySelectorAll('.comparison-overview-label'),
+        (label) => [label.textContent, label.title]
+      )
+    ).toEqual([
+      ['First Show', 'First Show'],
+      ['Second Show', 'Second Show']
+    ])
 
     page.destroy()
   })
@@ -323,6 +354,12 @@ describe('renderComparisonPage', () => {
     expect(container.querySelector('.comparison-subtitle').textContent).toBe(
       'Episode order · shared scale · rating sources differ'
     )
+    expect(
+      Array.from(
+        container.querySelectorAll('.comparison-identity p'),
+        (paragraph) => paragraph.textContent
+      ).filter((text) => text.startsWith('Plotted on'))
+    ).toEqual(['Plotted on IMDb', 'Plotted on TVmaze'])
 
     page.destroy()
   })

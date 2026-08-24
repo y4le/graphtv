@@ -968,8 +968,11 @@ button {
 }
 
 .sparkline-shell.comparison-overview-row {
+  --overview-axis-width: 56px;
+  --overview-axis-gap: var(--chartColumnGap);
+  --overview-label-width: clamp(3.5rem, 16vw, 4.5rem);
   grid-template-columns:
-    calc(56px + var(--chartColumnGap))
+    calc(var(--overview-axis-width) + var(--overview-axis-gap))
     minmax(0, 1fr);
   gap: 0;
   align-items: center;
@@ -982,9 +985,11 @@ button {
 
 .comparison-overview-label {
   grid-column: 1;
+  width: min(var(--overview-label-width), 100%);
   overflow: hidden;
+  justify-self: end;
   color: var(--textSecondary);
-  font-size: 0.625rem;
+  font-size: max(0.7rem, 11px);
   letter-spacing: -0.04em;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1379,7 +1384,7 @@ button {
   width: 100%;
   margin-top: 1.5rem;
   border-collapse: collapse;
-  font-size: 0.72rem;
+  font-size: var(--type-size-utility);
   font-variant-numeric: tabular-nums;
   table-layout: fixed;
 }
@@ -1419,6 +1424,80 @@ button {
   font-size: 0.7rem;
   line-height: 1.5;
   text-align: center;
+}
+
+@container comparison-pane (max-width: 34rem) {
+  .comparison-identities {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: start;
+  }
+
+  .comparison-identity,
+  .comparison-identity-a,
+  .comparison-identity-b {
+    grid-column: 1;
+    grid-template-columns: 2.25rem minmax(0, 1fr);
+    gap: 0.5rem;
+    text-align: left;
+  }
+
+  .comparison-identity-a .comparison-poster,
+  .comparison-identity-a .comparison-poster-fallback {
+    grid-column: 1;
+  }
+
+  .comparison-identity-a > div {
+    grid-column: 2;
+  }
+
+  .comparison-identity-a .comparison-identity-actions {
+    justify-content: flex-start;
+  }
+
+  .comparison-identity-axis {
+    grid-column: 1;
+    grid-row: auto;
+    margin-left: 2.75rem;
+    text-align: left;
+  }
+
+  .comparison-poster,
+  .comparison-poster-fallback {
+    width: 2.25rem;
+  }
+
+  .comparison-summary-measure-column {
+    width: clamp(6.5rem, 34vw, 8.5rem);
+  }
+
+  .cross-show-multiselect-action {
+    align-items: stretch;
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .cross-show-multiselect-action .sidenote-compare-button {
+    min-height: var(--touch-target);
+  }
+
+  .cross-show-episode-headings {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 0.55rem;
+  }
+
+  .cross-show-episode-axis {
+    font-size: 0;
+  }
+
+  .cross-show-episode-axis::after {
+    content: 'vs';
+    font-size: 0.65rem;
+  }
+
+  .cross-show-rating-source-column {
+    width: clamp(5.5rem, 27vw, 7rem);
+  }
 }
 
 .show-header {
@@ -2661,11 +2740,16 @@ button {
 @media (pointer: coarse) {
   .masthead-action,
   .show-picker-close,
-  .show-picker-form button {
+  .show-picker-form button,
+  .comparison-identity-actions button {
     display: inline-flex;
     min-height: var(--touch-target);
     padding-inline: 0.75rem;
     align-items: center;
+  }
+
+  .comparison-identity-actions {
+    gap: 0.35rem;
   }
 
   .chart-shell,
@@ -2976,91 +3060,13 @@ button {
     width: calc(100% - 2rem);
   }
 
+  .sparkline-shell.comparison-overview-row {
+    --overview-axis-gap: 0.35rem;
+  }
+
   .comparison-lane-heading,
   .comparison-lane-status {
     padding-inline: 1rem;
-  }
-
-  .sparkline-shell.comparison-overview-row {
-    grid-template-columns: calc(56px + 0.35rem) minmax(0, 1fr);
-  }
-
-  .comparison-overview-label {
-    font-size: 0;
-    letter-spacing: 0;
-  }
-
-  .comparison-overview-row-a .comparison-overview-label::after,
-  .comparison-overview-row-b .comparison-overview-label::after {
-    font-size: 0.65rem;
-  }
-
-  .comparison-overview-row-a .comparison-overview-label::after {
-    content: 'A';
-  }
-
-  .comparison-overview-row-b .comparison-overview-label::after {
-    content: 'B';
-  }
-
-  .comparison-identities {
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    gap: 0.55rem;
-  }
-
-  .cross-show-multiselect-action {
-    align-items: stretch;
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .cross-show-multiselect-action .sidenote-compare-button {
-    min-height: 2.75rem;
-  }
-
-  .cross-show-episode-headings {
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    gap: 0.55rem;
-  }
-
-  .cross-show-episode-axis {
-    font-size: 0;
-  }
-
-  .cross-show-episode-axis::after {
-    content: 'vs';
-    font-size: 0.65rem;
-  }
-
-  .cross-show-rating-source-column {
-    width: clamp(5.5rem, 27vw, 7rem);
-  }
-
-  .comparison-identity-axis {
-    font-size: 0;
-  }
-
-  .comparison-identity-axis::after {
-    content: 'vs';
-    font-size: 0.65rem;
-  }
-
-  .comparison-identity {
-    grid-template-columns: 2.25rem minmax(0, 1fr);
-    gap: 0.5rem;
-  }
-
-  .comparison-identity-a {
-    grid-template-columns: minmax(0, 1fr) 2.25rem;
-  }
-
-  .comparison-poster,
-  .comparison-poster-fallback {
-    width: 2.25rem;
-  }
-
-  .comparison-summary-measure-column {
-    width: clamp(6.5rem, 34vw, 8.5rem);
   }
 
   .chart-kicker {
@@ -3080,13 +3086,17 @@ button {
 
 @media (max-width: 767px) {
   .sparkline-shell.comparison-overview-row {
-    grid-template-columns: calc(40px + 0.35rem) minmax(0, 1fr);
+    --overview-axis-width: 40px;
   }
 }
 
 @media (max-width: 600px) {
   .masthead {
     flex-wrap: wrap;
+  }
+
+  .comparison-title {
+    font-size: clamp(1.35rem, 4vw, 3rem);
   }
 
   .results-masthead {

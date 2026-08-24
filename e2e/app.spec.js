@@ -199,13 +199,20 @@ test('adds a second show and keeps comparison navigation synchronized', async ({
   ).toBeFocused()
   await expect(page.locator('.comparison-lane')).toHaveCount(2)
   await expect(page.locator('.comparison-overview-row')).toHaveCount(2)
-  expect(
-    await page
-      .locator('.comparison-overview-label')
-      .evaluateAll((labels) =>
-        labels.every((label) => label.scrollWidth <= label.clientWidth)
-      )
-  ).toBe(true)
+  const overviewLabels = await page
+    .locator('.comparison-overview-label')
+    .evaluateAll((labels) =>
+      labels.map((label) => ({
+        clipped: label.scrollWidth > label.clientWidth,
+        text: label.textContent,
+        title: label.title
+      }))
+    )
+  expect(overviewLabels.map(({ text, title }) => [text, title])).toEqual([
+    ['The Wire', 'The Wire'],
+    ['The Sopranos', 'The Sopranos']
+  ])
+  expect(overviewLabels.some(({ clipped }) => clipped)).toBe(true)
   await expect(
     page.locator('.comparison-overview .viewport-brush')
   ).toHaveCount(2)
@@ -685,6 +692,78 @@ test.describe('mobile chart', () => {
     await expect(
       page.getByRole('heading', { name: 'The Wire · The Sopranos' })
     ).toBeVisible()
+    await expect(page.locator('.comparison-overview-label')).toHaveText([
+      'The Wire',
+      'The Sopranos'
+    ])
+    expect(
+      await page
+        .locator('.comparison-overview-label')
+        .evaluateAll((labels) =>
+          labels.every(
+            (label) =>
+              Number.parseFloat(getComputedStyle(label).fontSize) >= 11 &&
+              getComputedStyle(label, '::after').content === 'none' &&
+              label.getBoundingClientRect().left >= 0 &&
+              label.getBoundingClientRect().right <= window.innerWidth
+          )
+        )
+    ).toBe(true)
+    expect(
+      await page
+        .locator('.comparison-title')
+        .evaluate((title) =>
+          Number.parseFloat(getComputedStyle(title).fontSize)
+        )
+    ).toBeLessThanOrEqual(22)
+    expect(
+      await page
+        .locator('.comparison-identities')
+        .evaluate(
+          (identities) =>
+            getComputedStyle(identities).gridTemplateColumns.split(' ').length
+        )
+    ).toBe(1)
+    const identityBounds = await page
+      .locator('.comparison-identity')
+      .evaluateAll((identities) =>
+        identities.map((identity) => {
+          const bounds = identity.getBoundingClientRect()
+          return { top: bounds.top, bottom: bounds.bottom }
+        })
+      )
+    expect(identityBounds[1].top).toBeGreaterThan(identityBounds[0].bottom)
+    await expect(
+      page.locator('.comparison-context .comparison-identity-actions button')
+    ).toHaveCount(4)
+    await expect(
+      page.locator('.comparison-context [data-comparison-action="remove"]')
+    ).toHaveCount(0)
+    await expect(page.locator('.comparison-context')).not.toContainText(
+      'Plotted on'
+    )
+    expect(
+      await page
+        .locator('.comparison-context .comparison-identity-actions button')
+        .evaluateAll((buttons) =>
+          buttons.map((button) => ({
+            height: button.getBoundingClientRect().height,
+            label: button.getAttribute('aria-label')
+          }))
+        )
+    ).toEqual([
+      { height: 44, label: 'Replace The Wire' },
+      { height: 44, label: 'Open The Wire alone' },
+      { height: 44, label: 'Replace The Sopranos' },
+      { height: 44, label: 'Open The Sopranos alone' }
+    ])
+    expect(
+      await page
+        .locator('.comparison-summary')
+        .evaluate((summary) =>
+          Number.parseFloat(getComputedStyle(summary).fontSize)
+        )
+    ).toBeGreaterThanOrEqual(12)
     expect(
       await page
         .locator('.comparison-layout')

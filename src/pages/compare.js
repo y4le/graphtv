@@ -935,9 +935,13 @@ function updateComparisonPresentation(container, slots, comparison) {
         : ''
     }
     <div class="comparison-identities">
-      ${renderComparisonIdentity(slots.a, comparison.sourceBySlot.a)}
+      ${renderComparisonIdentity(slots.a, comparison.sourceBySlot.a, {
+        showSource: !comparison.comparable
+      })}
       <p class="comparison-identity-axis" aria-hidden="true">compared with</p>
-      ${renderComparisonIdentity(slots.b, comparison.sourceBySlot.b)}
+      ${renderComparisonIdentity(slots.b, comparison.sourceBySlot.b, {
+        showSource: !comparison.comparable
+      })}
     </div>
     ${renderComparisonTable(slots)}
     ${
@@ -948,7 +952,7 @@ function updateComparisonPresentation(container, slots, comparison) {
   `
 }
 
-function renderComparisonIdentity(state, source) {
+function renderComparisonIdentity(state, source, { showSource = true } = {}) {
   if (!state.show) {
     return `<section class="comparison-identity comparison-identity-${state.slot}">${renderLoading('Loading show…', { announce: false })}</section>`
   }
@@ -962,11 +966,10 @@ function renderComparisonIdentity(state, source) {
       <div>
         <h3>${escapeHtml(state.show.title)}</h3>
         <p>${escapeHtml(state.show.genres.join(' · '))}</p>
-        ${source ? `<p>Plotted on ${escapeHtml(getRatingSourceLabel(source))}</p>` : ''}
+        ${showSource && source ? `<p>Plotted on ${escapeHtml(getRatingSourceLabel(source))}</p>` : ''}
         <p class="comparison-identity-actions">
-          <button type="button" data-comparison-action="replace" data-comparison-slot="${state.slot}">Replace</button>
-          <button type="button" data-comparison-action="remove" data-comparison-slot="${state.slot}">Remove</button>
-          <button type="button" data-comparison-action="open-alone" data-comparison-slot="${state.slot}">Open alone</button>
+          <button type="button" data-comparison-action="replace" data-comparison-slot="${state.slot}" aria-label="Replace ${escapeHtml(state.show.title)}">Replace</button>
+          <button type="button" data-comparison-action="open-alone" data-comparison-slot="${state.slot}" aria-label="Open ${escapeHtml(state.show.title)} alone">Open alone</button>
         </p>
       </div>
     </section>
