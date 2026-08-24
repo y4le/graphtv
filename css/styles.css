@@ -277,6 +277,18 @@ button {
   margin: 0 auto;
 }
 
+.document-shell-search .document-title {
+  font-size: clamp(2rem, 5.5vw, 4.4rem);
+}
+
+.search-document:not(.search-document-empty) .document-title {
+  font-size: clamp(1.35rem, 2.6vw, 1.8rem);
+}
+
+.search-document:not(.search-document-empty) .document-lede {
+  display: none;
+}
+
 .search-document-empty {
   padding-top: clamp(1rem, 4svh, 3rem);
 }
@@ -3130,6 +3142,14 @@ button {
 
   .document-shell-search .search-document-empty {
     padding-top: 0;
+  }
+
+  .document-shell-search .document-title {
+    font-size: clamp(1.7rem, 4vw, 3rem);
+  }
+
+  .document-shell-search .document-lede {
+    display: none;
   }
 
   .document-shell-search .search-form {

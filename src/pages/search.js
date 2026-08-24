@@ -65,9 +65,10 @@ export function renderSearchPage(container) {
   container.innerHTML = `
     <main class="document-shell document-shell-search">
       ${renderSearchMasthead()}
-      <h1 class="visually-hidden">Explore TV episode ratings</h1>
       <div class="search-landing-content">
         <section class="search-document ${query ? '' : 'search-document-empty'}">
+          <h1 class="document-title">Every episode, plotted in order</h1>
+          <p class="document-lede">Search a series to see its ratings season by season, with trends and possible turning points. Ratings from IMDb, TMDB, and TVmaze stay labeled and separate; compare two shows on one scale.</p>
           <form class="search-form" role="search" aria-label="Search shows">
             <div class="search-row">
               <div class="search-field">

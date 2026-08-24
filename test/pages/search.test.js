@@ -123,11 +123,15 @@ describe('renderSearchPage', () => {
 
     expect(masthead.parentElement).toBe(shell)
     expect(shell.querySelector('h1').textContent).toBe(
-      'Explore TV episode ratings'
+      'Every episode, plotted in order'
     )
     expect(landingContent.parentElement).toBe(shell)
     expect(landingContent.contains(masthead)).toBe(false)
-    expect(landingContent.querySelector('.search-document')).not.toBeNull()
+    const searchDocument = landingContent.querySelector('.search-document')
+    expect(searchDocument.querySelector('h1')).toBe(shell.querySelector('h1'))
+    expect(searchDocument.querySelector('.document-lede').textContent).toBe(
+      'Search a series to see its ratings season by season, with trends and possible turning points. Ratings from IMDb, TMDB, and TVmaze stay labeled and separate; compare two shows on one scale.'
+    )
     expect(landingContent.querySelector('.collection-rails')).not.toBeNull()
 
     page.destroy()
