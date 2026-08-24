@@ -1,12 +1,13 @@
 # GraphTV Architecture Status
 
-Updated August 14, 2026. The redesign plan is complete; this document records the implemented architecture and the checks that protect it.
+Updated August 21, 2026. The redesign plan is complete; this document records the implemented architecture and the checks that protect it.
 
 ## Product architecture
 
 - Vite builds a static, client-side application with D3 used only for visualization primitives.
 - Provider transports normalize TVmaze, TMDB, and OMDb responses into one schema. Cross-provider alignment is conservative and provenance-aware.
 - Results load as a stream: the primary provider renders first and configured supplemental providers update the same chart model as they settle.
+- Show comparison is a lazy route (`?show=…&vs=…`). Each show streams and fails independently, while a page-level coordinator owns the shared source, rating domain, episode-ordinal viewport, active lane, and slot-qualified selection URL.
 - Provider work is bounded, abortable, cached, and cancelled when its stream ends or its caller aborts.
 - One responsive SVG chart uses a shared viewport model on desktop and mobile. The sparkline, chart navigation, pointer gestures, and keyboard commands all update that model; the abandoned separate scrolling renderer was removed.
 - Theme state is owned by `src/viz/theme.js`. CSS owns token resolution while chart code reads computed colors only when SVG attributes require literal values.
@@ -14,7 +15,7 @@ Updated August 14, 2026. The redesign plan is complete; this document records th
 
 ## Repository boundaries
 
-- `src/data/`: normalized models, merging, alignment, caches, and provider orchestration
+- `src/data/`: normalized models, merging, alignment, comparison-source policy, caches, and provider orchestration
 - `src/providers/`: provider-specific transport and normalization
 - `src/pages/`: search/results page composition and page lifecycle
 - `src/ui/`: reusable overlays, carousels, keyboard routing, and supporting UI
@@ -41,7 +42,7 @@ npm run test:e2e
 npm run audit
 ```
 
-`verify` covers linting, unit/integration and DOM tests, formatting, the production build, and bundle budgets. Browser tests cover the search-to-results journey, keyboard/modal behavior, mobile touch interaction, and an automated accessibility scan. The audit remains separate because the advisory service is network-backed.
+`verify` covers linting, unit/integration and DOM tests, formatting, the production build, and bundle budgets. Browser tests cover search-to-results, desktop and mobile show comparison, synchronized chart behavior, keyboard/modal behavior, touch interaction, and automated accessibility scans. The audit remains separate because the advisory service is network-backed.
 
 For chart-model performance measurements:
 

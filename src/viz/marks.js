@@ -423,14 +423,7 @@ export function renderTrendlines(
       ? COMPARISON_CONTEXT_OPACITY
       : 1
   const lineWidth = (baseWidth) =>
-    interactions.densityPointCount == null
-      ? baseWidth
-      : scaleLineWidthForDensity(
-          baseWidth,
-          interactions.densityPointCount,
-          scales.xScale,
-          theme.markDensity
-        )
+    scaleLineWidthForDensity(baseWidth, scales.xScale, theme.markDensity)
 
   const hitSurface = trendlineLayer
     .selectAll('.chart-hit-surface')
@@ -868,7 +861,6 @@ export function renderPoints(svg, points, scales, theme, interactions) {
     theme.seasonColor(point.seasonIndex, interactions.totalSeasons)
   const pointRadius = scalePointRadiusForDensity(
     DEFAULT_POINT_RADIUS,
-    plottedPoints.length,
     scales.xScale,
     theme.markDensity
   )
@@ -1133,12 +1125,8 @@ export function renderProviderRatingPreview(
     .attr('class', 'provider-rating-preview-layer')
     .attr('pointer-events', 'none')
     .raise()
-  const plottedPointCount = points.filter((point) =>
-    isUsableRating(point.rating)
-  ).length
   const pointRadius = scalePointRadiusForDensity(
     DEFAULT_POINT_RADIUS,
-    plottedPointCount,
     scales.xScale,
     theme.markDensity
   )

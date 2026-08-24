@@ -27,6 +27,30 @@ const episodes = Array.from({ length: 72 }, (_, index) => ({
   rating: { average: 6.5 + ((index * 7) % 30) / 10 }
 }))
 
+const comparisonShow = {
+  id: 527,
+  name: 'The Sopranos',
+  premiered: '1999-01-10',
+  summary: '<p>A New Jersey crime boss balances family and business.</p>',
+  genres: ['Crime', 'Drama'],
+  image: null,
+  rating: { average: 9.1 },
+  externals: { imdb: 'tt0141842', thetvdb: 75299 },
+  _embedded: {
+    seasons: [1, 2, 3, 4].map((number) => ({ number }))
+  }
+}
+const comparisonEpisodes = Array.from({ length: 86 }, (_, index) => ({
+  id: 2001 + index,
+  name: `Sopranos Episode ${index + 1}`,
+  season: Math.floor(index / 22) + 1,
+  number: (index % 22) + 1,
+  airdate: `199${9 - Math.min(Math.floor(index / 44), 1)}-03-${String((index % 22) + 1).padStart(2, '0')}`,
+  summary: `<p>Sopranos episode ${index + 1} summary.</p>`,
+  image: null,
+  rating: { average: 7 + ((index * 11) % 28) / 10 }
+}))
+
 test.beforeEach(async ({ page }) => {
   await page.route('https://api.themoviedb.org/**', (route) =>
     route.abort('blockedbyclient')
@@ -39,11 +63,17 @@ test.beforeEach(async ({ page }) => {
     let body
 
     if (url.pathname === '/search/shows') {
-      body = searchResults
+      body = /sopranos/iu.test(url.searchParams.get('q') ?? '')
+        ? [{ score: 1, show: comparisonShow }]
+        : searchResults
     } else if (url.pathname === '/shows/179/episodes') {
       body = episodes
     } else if (url.pathname === '/shows/179') {
       body = show
+    } else if (url.pathname === '/shows/527/episodes') {
+      body = comparisonEpisodes
+    } else if (url.pathname === '/shows/527') {
+      body = comparisonShow
     } else {
       await route.abort('failed')
       return
@@ -144,6 +174,253 @@ test('keeps a shared chart selection across reloads', async ({ page }) => {
 
   await expect(page.locator('.results-episode')).toContainText('Full Series')
   await expect(page).not.toHaveURL(/[?&]select=/u)
+})
+
+test('adds a second show and keeps comparison navigation synchronized', async ({
+  page
+}) => {
+  await page.goto('/?show=tvmaze%3A179')
+  await expect(page.getByRole('heading', { name: 'The Wire' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Compare (c)' }).click()
+  const picker = page.getByRole('region', {
+    name: 'Choose a comparison show'
+  })
+  await expect(picker).toBeVisible()
+  const pickerInput = picker.getByRole('searchbox', { name: 'Show title' })
+  await expect(pickerInput).toBeFocused()
+  await pickerInput.fill('The Sopranos')
+  await picker.getByRole('button', { name: 'Search' }).click()
+  await picker.getByRole('button', { name: /The Sopranos/u }).click()
+
+  await expect(page).toHaveURL(/show=tvmaze%3A179.*vs=tvmaze%3A527/u)
+  await expect(
+    page.getByRole('heading', { name: 'The Wire · The Sopranos' })
+  ).toBeFocused()
+  await expect(page.locator('.comparison-lane')).toHaveCount(2)
+  await expect(page.locator('.comparison-overview-row')).toHaveCount(2)
+  expect(
+    await page
+      .locator('.comparison-overview-label')
+      .evaluateAll((labels) =>
+        labels.every((label) => label.scrollWidth <= label.clientWidth)
+      )
+  ).toBe(true)
+  await expect(
+    page.locator('.comparison-overview .viewport-brush')
+  ).toHaveCount(2)
+  await expect(
+    page.locator('.comparison-overview-row-a .viewport-brush')
+  ).toBeVisible()
+  await expect(
+    page.locator('.comparison-overview-row-b .viewport-brush')
+  ).toBeHidden()
+  const sharedBrushBounds = await page.evaluate(() => {
+    const overview = document.querySelector('.comparison-overview')
+    const firstTrack = overview?.querySelector(
+      '.comparison-overview-row-a .sparkline-chart'
+    )
+    const secondTrack = overview?.querySelector(
+      '.comparison-overview-row-b .sparkline-chart'
+    )
+    const selection = overview?.querySelector(
+      '.comparison-overview-row-a .viewport-brush .selection'
+    )
+    const handles = Array.from(
+      overview?.querySelectorAll(
+        '.comparison-overview-row-a .viewport-brush .handle'
+      ) ?? []
+    )
+
+    const toBounds = (element) => {
+      const bounds = element?.getBoundingClientRect()
+      return bounds
+        ? { top: bounds.top, right: bounds.right, bottom: bounds.bottom }
+        : null
+    }
+
+    return {
+      firstTrack: toBounds(firstTrack),
+      secondTrack: toBounds(secondTrack),
+      selection: toBounds(selection),
+      handles: handles.map(toBounds)
+    }
+  })
+  expect(sharedBrushBounds.selection?.top).toBeCloseTo(
+    sharedBrushBounds.firstTrack?.top,
+    0
+  )
+  expect(
+    Math.abs(
+      sharedBrushBounds.selection?.bottom -
+        sharedBrushBounds.secondTrack?.bottom
+    )
+  ).toBeLessThan(1)
+  expect(sharedBrushBounds.handles).toHaveLength(2)
+  for (const handle of sharedBrushBounds.handles) {
+    expect(handle?.top).toBeLessThan(sharedBrushBounds.firstTrack?.top)
+    expect(handle?.bottom).toBeGreaterThan(
+      sharedBrushBounds.secondTrack?.bottom
+    )
+  }
+  const overviewTrackBox = await page
+    .locator('.comparison-overview-row-a .sparkline-chart')
+    .boundingBox()
+  const firstChartBox = await page
+    .locator('.comparison-lane[data-comparison-slot="a"] .ratings-chart')
+    .boundingBox()
+  expect(overviewTrackBox).not.toBeNull()
+  expect(firstChartBox).not.toBeNull()
+  expect(overviewTrackBox.x).toBeCloseTo(firstChartBox.x, 0)
+  expect(overviewTrackBox.width).toBeCloseTo(firstChartBox.width, 0)
+
+  await page.setViewportSize({ width: 820, height: 800 })
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const overview = document
+          .querySelector('.comparison-overview-row-a .sparkline-chart')
+          ?.getBoundingClientRect()
+        const chart = document
+          .querySelector(
+            '.comparison-lane[data-comparison-slot="a"] .ratings-chart'
+          )
+          ?.getBoundingClientRect()
+        return overview && chart
+          ? Math.max(
+              Math.abs(overview.left - chart.left),
+              Math.abs(overview.right - chart.right)
+            )
+          : Number.POSITIVE_INFINITY
+      })
+    )
+    .toBeLessThan(1)
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const overview = document
+          .querySelector('.comparison-overview-row-a .sparkline-chart')
+          ?.getBoundingClientRect()
+        const chart = document
+          .querySelector(
+            '.comparison-lane[data-comparison-slot="a"] .ratings-chart'
+          )
+          ?.getBoundingClientRect()
+        return overview && chart
+          ? Math.max(
+              Math.abs(overview.left - chart.left),
+              Math.abs(overview.right - chart.right)
+            )
+          : Number.POSITIVE_INFINITY
+      })
+    )
+    .toBeLessThan(1)
+
+  const sharedSelection = page.locator(
+    '.comparison-overview-row-a .viewport-brush .selection'
+  )
+  const initialSelectionX = Number(await sharedSelection.getAttribute('x'))
+  const selectionBox = await sharedSelection.boundingBox()
+  const secondTrackBox = await page
+    .locator('.comparison-overview-row-b .sparkline-chart')
+    .boundingBox()
+  expect(selectionBox).not.toBeNull()
+  expect(secondTrackBox).not.toBeNull()
+  await page.mouse.move(
+    selectionBox.x + selectionBox.width / 2,
+    secondTrackBox.y + secondTrackBox.height / 2
+  )
+  await page.mouse.down()
+  await page.mouse.move(
+    selectionBox.x + selectionBox.width / 2 + 30,
+    secondTrackBox.y + secondTrackBox.height / 2
+  )
+  await page.mouse.up()
+  await expect
+    .poll(async () => Number(await sharedSelection.getAttribute('x')))
+    .not.toBe(initialSelectionX)
+  await expect(page.locator('.comparison-summary')).toContainText(
+    'Rated episodes'
+  )
+  await expect(page.locator('.comparison-summary caption')).toHaveCount(0)
+  await expect(page.locator('.comparison-summary thead')).toHaveCount(0)
+  await expect(page.locator('.comparison-caution')).toHaveCount(0)
+  await expect(page.locator('.comparison-context')).toBeVisible()
+  await expect(page.locator('.comparison-detail')).toBeHidden()
+
+  const firstLane = page.locator('.comparison-lane[data-comparison-slot="a"]')
+  const secondLane = page.locator('.comparison-lane[data-comparison-slot="b"]')
+  await firstLane.locator('.episode-point').first().hover()
+  await expect(firstLane.locator('.crosshair')).toHaveCount(1)
+  await expect(secondLane.locator('.crosshair')).toHaveCount(1)
+  expect(
+    Number(await firstLane.locator('.crosshair').getAttribute('x1'))
+  ).toBeCloseTo(
+    Number(await secondLane.locator('.crosshair').getAttribute('x1'))
+  )
+  await page.mouse.move(0, 0)
+  await expect(page.locator('.comparison-data .crosshair')).toHaveCount(0)
+
+  await page.keyboard.press('ArrowRight')
+  await expect(page).toHaveURL(/[?&]select=a%3As01e01(?:&|$)/u)
+  await secondLane.locator('.chart-hit-surface').click({
+    position: { x: 10, y: 5 }
+  })
+  await expect(page).not.toHaveURL(/[?&]select=/u)
+  await expect(page.locator('.comparison-context')).toBeVisible()
+  await firstLane.locator('.comparison-lane-heading').click()
+  await page.keyboard.press('ArrowRight')
+  await expect(page).toHaveURL(/[?&]select=a%3As01e01(?:&|$)/u)
+  await page.keyboard.press('Shift+ArrowDown')
+  await expect(page).toHaveURL(/[?&]select=a%3As01e01%2Cb%3As01e01(?:&|$)/u)
+  await page.keyboard.press('ArrowRight')
+  await expect(page).toHaveURL(/[?&]select=a%3As01e01%2Cb%3As01e02(?:&|$)/u)
+  const headToHead = page.locator('.comparison-head-to-head')
+  await expect(headToHead).toContainText('The Wire · S01E01')
+  await expect(headToHead).toContainText('Episode 1')
+  await expect(headToHead).toContainText('Sopranos Episode 2')
+  await expect(headToHead).not.toContainText(/episodes between|span/iu)
+  await expect(page.locator('.comparison-context')).toBeHidden()
+  await expect(page.locator('.comparison-detail')).toBeHidden()
+  await expect(page.locator('.comparison-data .crosshair')).toHaveCount(2)
+  await expect(page.locator('.season-axis-comparison')).toHaveCount(0)
+
+  await page.reload()
+  await expect(page).toHaveURL(/[?&]select=a%3As01e01%2Cb%3As01e02(?:&|$)/u)
+  await expect(headToHead).toContainText('The Wire · S01E01')
+  await expect(headToHead).toContainText('The Sopranos · S01E02')
+
+  await page.keyboard.press('Escape')
+  await expect(page).toHaveURL(/[?&]select=a%3As01e01(?:&|$)/u)
+  await expect(page.locator('[data-comparison-detail="a"]')).toContainText(
+    'Episode 1'
+  )
+  await page.keyboard.press('Escape')
+  await expect(page).not.toHaveURL(/[?&]select=/u)
+  await expect(page.locator('.comparison-context')).toBeVisible()
+  await expect(page.locator('.comparison-detail')).toBeHidden()
+
+  const viewports = await page.evaluate(() => {
+    const brushes = Array.from(
+      document.querySelectorAll('.comparison-overview .selection')
+    )
+    return brushes.map((brush) => [
+      Number(brush.getAttribute('x')),
+      Number(brush.getAttribute('width'))
+    ])
+  })
+  expect(viewports[0][0]).toBeCloseTo(viewports[1][0], 3)
+  expect(viewports[0][1]).toBeCloseTo(viewports[1][1], 3)
+
+  await page.goto(
+    '/?show=tvmaze%3A179&vs=tvmaze%3A527&select=a%3As09e09%2Cb%3As09e09'
+  )
+  await expect(page.locator('.comparison-context')).toBeVisible()
+  await expect(page.locator('.comparison-detail')).toBeHidden()
+  await expect(page.locator('.comparison-head-to-head')).toBeHidden()
+  await expect(page).not.toHaveURL(/[?&]select=/u)
+  await expectNoAccessibilityViolations(page)
 })
 
 test('compares two episodes with pointer and keyboard controls', async ({
@@ -317,6 +594,105 @@ test.describe('mobile chart', () => {
 
     await expect(status).not.toHaveText('')
     await expect(page.locator('.ratings-chart')).toBeVisible()
+  })
+
+  test('keeps show comparison in one mobile reading column', async ({
+    page
+  }) => {
+    await page.goto('/?show=tvmaze%3A179&vs=tvmaze%3A527')
+    await expect(
+      page.getByRole('heading', { name: 'The Wire · The Sopranos' })
+    ).toBeVisible()
+    expect(
+      await page
+        .locator('.comparison-layout')
+        .evaluate(
+          (layout) =>
+            getComputedStyle(layout).gridTemplateColumns.split(' ').length
+        )
+    ).toBe(1)
+    await expect(page.locator('.comparison-lane')).toHaveCount(2)
+    await expect(page.locator('.comparison-overview-row')).toHaveCount(2)
+    const mobileBrushBounds = await page.evaluate(() => {
+      const bounds = (selector) =>
+        document.querySelector(selector)?.getBoundingClientRect()
+      const firstTrack = bounds('.comparison-overview-row-a .sparkline-chart')
+      const secondTrack = bounds('.comparison-overview-row-b .sparkline-chart')
+      const selection = bounds(
+        '.comparison-overview-row-a .viewport-brush .selection'
+      )
+      return {
+        firstTop: firstTrack?.top,
+        secondBottom: secondTrack?.bottom,
+        selectionTop: selection?.top,
+        selectionBottom: selection?.bottom
+      }
+    })
+    expect(mobileBrushBounds.selectionTop).toBeCloseTo(
+      mobileBrushBounds.firstTop,
+      0
+    )
+    expect(
+      Math.abs(
+        mobileBrushBounds.selectionBottom - mobileBrushBounds.secondBottom
+      )
+    ).toBeLessThan(1)
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth)
+    ).toBeLessThanOrEqual(390)
+
+    const secondLane = page.locator(
+      '.comparison-lane[data-comparison-slot="b"]'
+    )
+    await secondLane.scrollIntoViewIfNeeded()
+    const firstSecondLanePoint = secondLane.locator('.episode-point').first()
+    const pointBox = await firstSecondLanePoint.boundingBox()
+    expect(pointBox).not.toBeNull()
+    await page.touchscreen.tap(
+      pointBox.x + pointBox.width / 2,
+      pointBox.y + pointBox.height / 2
+    )
+    await expect(page).toHaveURL(/[?&]select=b%3As01e01(?:&|$)/u)
+    await expect(page.locator('[data-comparison-detail="b"]')).toContainText(
+      'Sopranos Episode 1'
+    )
+    await expect(page.locator('.comparison-data .crosshair')).toHaveCount(2)
+
+    const mobileHeadToHeadButton = page.getByRole('button', {
+      name: 'Compare with The Wire'
+    })
+    await page.locator('.comparison-reading-pane').scrollIntoViewIfNeeded()
+    const headToHeadButtonBox = await mobileHeadToHeadButton.boundingBox()
+    expect(headToHeadButtonBox).not.toBeNull()
+    await page.touchscreen.tap(
+      headToHeadButtonBox.x + headToHeadButtonBox.width / 2,
+      headToHeadButtonBox.y + headToHeadButtonBox.height / 2
+    )
+    const firstLane = page.locator('.comparison-lane[data-comparison-slot="a"]')
+    await firstLane.scrollIntoViewIfNeeded()
+    const firstLanePointBox = await firstLane
+      .locator('.episode-point')
+      .first()
+      .boundingBox()
+    expect(firstLanePointBox).not.toBeNull()
+    await page.touchscreen.tap(
+      firstLanePointBox.x + firstLanePointBox.width / 2,
+      firstLanePointBox.y + firstLanePointBox.height / 2
+    )
+    await expect(page).toHaveURL(/[?&]select=a%3As01e01%2Cb%3As01e01(?:&|$)/u)
+    await expect(page.locator('.comparison-head-to-head')).toContainText(
+      'The Wire · S01E01'
+    )
+    await expect(page.locator('.comparison-head-to-head')).toContainText(
+      'Episode 1'
+    )
+    await expect(page.locator('.comparison-head-to-head')).toContainText(
+      'Sopranos Episode 1'
+    )
+    await expect(page.locator('.comparison-head-to-head')).not.toContainText(
+      /episodes between|span/iu
+    )
+    await expectNoAccessibilityViolations(page)
   })
 
   test('holds before scrubbing with touch', async ({ page }) => {

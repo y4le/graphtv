@@ -17,10 +17,10 @@ describe('density-based mark sizing', () => {
     const { denseSlotWidth, sparseSlotWidth } = MARK_DENSITY_CONFIG.ramp
     const { minScale, maxScale } = MARK_DENSITY_CONFIG.pointRadius
 
-    expect(scalePointRadiusForDensity(3, 1, xScale(denseSlotWidth))).toBe(
+    expect(scalePointRadiusForDensity(3, xScale(denseSlotWidth))).toBe(
       roundMarkSize(3 * minScale)
     )
-    expect(scalePointRadiusForDensity(3, 1, xScale(sparseSlotWidth))).toBe(
+    expect(scalePointRadiusForDensity(3, xScale(sparseSlotWidth))).toBe(
       roundMarkSize(3 * maxScale)
     )
   })
@@ -32,7 +32,7 @@ describe('density-based mark sizing', () => {
     const expectedScale =
       minScale + 0.5 ** curveExponent * (maxScale - minScale)
 
-    expect(scaleLineWidthForDensity(2, 1, xScale(midpointSlotWidth))).toBe(
+    expect(scaleLineWidthForDensity(2, xScale(midpointSlotWidth))).toBe(
       roundMarkSize(2 * expectedScale)
     )
   })
@@ -44,10 +44,10 @@ describe('density-based mark sizing', () => {
       lineWidth: { minScale: 1, maxScale: 3 }
     })
 
-    expect(scalePointRadiusForDensity(4, 1, xScale(10), config)).toBe(2)
-    expect(scalePointRadiusForDensity(4, 1, xScale(20), config)).toBe(8)
-    expect(scaleLineWidthForDensity(1, 1, xScale(15), config)).toBe(2)
-    expect(getSlotWidth(4, xScale(100))).toBe(25)
+    expect(scalePointRadiusForDensity(4, xScale(10), config)).toBe(2)
+    expect(scalePointRadiusForDensity(4, xScale(20), config)).toBe(8)
+    expect(scaleLineWidthForDensity(1, xScale(15), config)).toBe(2)
+    expect(getSlotWidth(xScale(25))).toBe(25)
   })
 })
 
@@ -129,5 +129,5 @@ function roundMarkSize(size) {
 }
 
 function xScale(width) {
-  return { range: () => [0, width] }
+  return (value) => value * width
 }

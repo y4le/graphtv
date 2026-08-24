@@ -370,6 +370,42 @@ describe('createKeyboardController', () => {
       )
     )
   })
+
+  it('coordinates comparison page shortcuts and show switching', () => {
+    document.body.innerHTML = `
+      <button type="button" data-ui-action="compare">Change shows</button>
+    `
+    const chart = {
+      moveEpisode: vi.fn(),
+      moveSeason: vi.fn(),
+      switchLane: vi.fn(),
+      clearSelection: vi.fn(() => false)
+    }
+    const page = {
+      kind: 'comparison',
+      chart,
+      openComparePicker: vi.fn(() => true),
+      goBack: vi.fn()
+    }
+    keyboardController = createKeyboardController({
+      page,
+      overlayController: createClosedOverlayController()
+    })
+
+    pressKey('c')
+    document.querySelector('[data-ui-action="compare"]').click()
+    pressKey('ArrowLeft')
+    pressKey('ArrowUp')
+    pressKey('ArrowUp', { shiftKey: true })
+    pressKey('J', { shiftKey: true })
+    pressKey('q')
+
+    expect(page.openComparePicker).toHaveBeenCalledTimes(2)
+    expect(chart.moveEpisode).toHaveBeenCalledWith(-1)
+    expect(chart.moveSeason).toHaveBeenCalledWith(-1)
+    expect(chart.switchLane.mock.calls).toEqual([[-1], [1]])
+    expect(page.goBack).toHaveBeenCalledOnce()
+  })
 })
 
 function createClosedOverlayController() {

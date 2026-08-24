@@ -1,6 +1,6 @@
 import '../css/styles.css'
 
-import { getUrlParams, normalizeLegacyParams } from './lib/url.js'
+import { buildUrl, getUrlParams, normalizeLegacyParams } from './lib/url.js'
 import { createKeyboardController } from './ui/keyboard.js'
 import { createOverlayController } from './ui/overlayController.js'
 import { createDockController } from './ui/dock.js'
@@ -23,11 +23,21 @@ async function bootstrap() {
 
   const params = getUrlParams()
   const showRef = params.get('show')
+  let comparisonRef = params.get('vs')
+  if (showRef && comparisonRef === showRef) {
+    params.delete('vs')
+    params.delete('select')
+    window.history.replaceState({}, '', buildUrl(params))
+    comparisonRef = null
+  }
   const overlayController = createOverlayController()
   const dockController = createDockController()
   let pageController
 
-  if (showRef) {
+  if (showRef && comparisonRef) {
+    const { renderComparisonPage } = await import('./pages/compare.js')
+    pageController = await renderComparisonPage(app, showRef, comparisonRef)
+  } else if (showRef) {
     const { renderResultsPage } = await import('./pages/results.js')
     pageController = await renderResultsPage(app, showRef)
   } else {

@@ -95,32 +95,18 @@ export function isDefaultMarkDensity(config) {
 
 export function scalePointRadiusForDensity(
   baseRadius,
-  pointCount,
   xScale,
   config = MARK_DENSITY_CONFIG
 ) {
-  return scaleForDensity(
-    baseRadius,
-    pointCount,
-    xScale,
-    config.ramp,
-    config.pointRadius
-  )
+  return scaleForDensity(baseRadius, xScale, config.ramp, config.pointRadius)
 }
 
 export function scaleLineWidthForDensity(
   baseWidth,
-  pointCount,
   xScale,
   config = MARK_DENSITY_CONFIG
 ) {
-  return scaleForDensity(
-    baseWidth,
-    pointCount,
-    xScale,
-    config.ramp,
-    config.lineWidth
-  )
+  return scaleForDensity(baseWidth, xScale, config.ramp, config.lineWidth)
 }
 
 export function scaleSelectedPointRadius(
@@ -137,14 +123,15 @@ export function scaleSelectedLineWidth(
   return roundMarkSize(restingWidth * config.selection.lineScale)
 }
 
-export function getSlotWidth(pointCount, xScale) {
-  const [rangeStart, rangeEnd] = xScale.range()
-  const availableWidth = Math.abs(rangeEnd - rangeStart)
-  return availableWidth / Math.max(pointCount, 1)
+export function getSlotWidth(xScale) {
+  // Episode x values advance by one, so measuring two adjacent positions uses
+  // the spacing that is actually rendered. Point counts cannot provide this:
+  // a short comparison lane may occupy only part of a shared x domain.
+  return Math.abs(xScale(2) - xScale(1))
 }
 
-function scaleForDensity(baseSize, pointCount, xScale, ramp, sizeConfig) {
-  const slotWidth = getSlotWidth(pointCount, xScale)
+function scaleForDensity(baseSize, xScale, ramp, sizeConfig) {
+  const slotWidth = getSlotWidth(xScale)
   const { denseSlotWidth, sparseSlotWidth } = ramp
   const rampRatio = clamp(
     (slotWidth - denseSlotWidth) / (sparseSlotWidth - denseSlotWidth),

@@ -1,6 +1,6 @@
 # graphtv
 
-graphtv is a bundled client-side app for exploring TV episode ratings across multiple providers.
+graphtv is a bundled client-side app for exploring TV episode ratings across multiple providers, including synchronized show-to-show comparisons.
 
 ## Local development
 
@@ -43,12 +43,12 @@ npm run test:e2e
 It is separate from `verify` so local validation and production deployment do
 not become unavailable when the advisory service is unreachable.
 
-`test:e2e` builds the app and runs the mocked TVmaze search-to-results journey,
-keyboard/modal checks, mobile touch interaction, and an automated accessibility
-scan in Chromium. Install the local browser once with
+`test:e2e` builds the app and runs mocked search, single-show, and show-comparison
+journeys, keyboard/modal checks, mobile touch interaction, and automated
+accessibility scans in Chromium. Install the local browser once with
 `npx playwright install chromium`; CI installs Chromium automatically.
 
-The production asset budget defaults to 109,000 gzip bytes across all CSS and
+The production asset budget defaults to 118,000 gzip bytes across all CSS and
 JavaScript, 15,000 gzip bytes for the entry JavaScript chunk, and 50,000 gzip
 bytes for the largest JavaScript chunk. Set `MAX_TOTAL_GZIP_BYTES`,
 `MAX_ENTRY_GZIP_BYTES`, or `MAX_LARGEST_JAVASCRIPT_GZIP_BYTES` when
