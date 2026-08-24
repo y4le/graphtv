@@ -29,8 +29,8 @@ export function renderSearchMasthead() {
       ${renderPublisherBrand()}
       <div class="masthead-meta">
         <div class="masthead-actions" aria-label="Page actions">
-          <button type="button" class="masthead-action" data-ui-action="view-options">Options (o)</button>
-          <button type="button" class="masthead-action" data-ui-action="help">Help (?)</button>
+          <button type="button" class="masthead-action" data-ui-action="view-options">Options <span class="action-key">(o)</span></button>
+          <button type="button" class="masthead-action" data-ui-action="help">Help <span class="action-key">(?)</span></button>
         </div>
       </div>
     </header>

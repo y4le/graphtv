@@ -30,12 +30,12 @@ export function renderResultsMasthead({ interactive = false } = {}) {
           ${
             interactive
               ? `
-                <button type="button" class="masthead-action" data-ui-action="compare">Compare (c)</button>
-                <button type="button" class="masthead-action" data-ui-action="view-options">Options (o)</button>
-                <button type="button" class="masthead-action" data-ui-action="help">Help (?)</button>`
+                <button type="button" class="masthead-action" data-ui-action="compare">Compare <span class="action-key">(c)</span></button>
+                <button type="button" class="masthead-action" data-ui-action="view-options">Options <span class="action-key">(o)</span></button>
+                <button type="button" class="masthead-action" data-ui-action="help">Help <span class="action-key">(?)</span></button>`
               : ''
           }
-          <a class="back-link masthead-action" href="${buildBackHref()}" aria-label="Back to search (q shortcut)">Back (q)</a>
+          <a class="back-link masthead-action" href="${buildBackHref()}" aria-label="Back to search (q shortcut)">Back <span class="action-key">(q)</span></a>
         </div>
       </div>
     </header>

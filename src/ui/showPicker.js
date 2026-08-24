@@ -7,6 +7,7 @@ export function createShowPicker(
   {
     provider = 'tvmaze',
     excludedRefs = [],
+    heading = 'Compare with…',
     onSelect,
     onClose,
     search = searchShows
@@ -21,7 +22,7 @@ export function createShowPicker(
     <div class="show-picker-heading">
       <div>
         <p class="eyebrow">Choose another show</p>
-        <h2>Compare with…</h2>
+        <h2>${escapeHtml(heading)}</h2>
       </div>
       <button type="button" class="show-picker-close" aria-label="Close show picker">Close</button>
     </div>
@@ -50,6 +51,12 @@ export function createShowPicker(
 
   function open({ focus = true } = {}) {
     root.hidden = false
+    root.scrollIntoView?.({
+      block: 'start',
+      behavior: prefersReducedMotion(root.ownerDocument.defaultView)
+        ? 'auto'
+        : 'smooth'
+    })
     if (focus) {
       input.focus({ preventScroll: true })
       input.select()
@@ -142,6 +149,13 @@ export function createShowPicker(
       root.replaceChildren()
     }
   }
+}
+
+function prefersReducedMotion(view) {
+  return Boolean(
+    typeof view?.matchMedia === 'function' &&
+    view.matchMedia('(prefers-reduced-motion: reduce)').matches
+  )
 }
 
 function renderPickerResult(show) {

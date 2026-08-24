@@ -596,6 +596,88 @@ test.describe('mobile chart', () => {
     await expect(page.locator('.ratings-chart')).toBeVisible()
   })
 
+  test('uses touch-sized navigation and compact options', async ({ page }) => {
+    await page.goto('/?show=tvmaze%3A179')
+    await expect(page.locator('.sparkline-point')).toHaveCount(72)
+
+    const mastheadActions = page.locator('.results-masthead .masthead-action')
+    await expect(mastheadActions).toHaveCount(4)
+    for (const key of await page
+      .locator('.results-masthead .action-key')
+      .all()) {
+      await expect(key).toBeHidden()
+    }
+    for (const action of await mastheadActions.all()) {
+      expect((await action.boundingBox())?.height).toBeGreaterThanOrEqual(44)
+    }
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth)
+    ).toBeLessThanOrEqual(390)
+
+    await page.locator('[data-ui-action="view-options"]').click()
+    await expect(
+      page.getByRole('dialog', { name: 'View options' })
+    ).toBeVisible()
+    for (const hint of await page.locator('.view-option-hint').all()) {
+      await expect(hint).toBeHidden()
+    }
+    expect(
+      (await page.locator('.view-value').first().boundingBox())?.height
+    ).toBeGreaterThanOrEqual(44)
+    const overlayClose = page.locator('.overlay-panel .overlay-close')
+    const closeBox = await overlayClose.boundingBox()
+    expect(
+      Math.min(closeBox?.width ?? 0, closeBox?.height ?? 0)
+    ).toBeGreaterThanOrEqual(44)
+    await expectNoAccessibilityViolations(page, '.overlay-root')
+    await overlayClose.click()
+
+    await page.setViewportSize({ width: 1024, height: 768 })
+    const collectionStepSize = await page.evaluate(() => {
+      const fixture = document.createElement('div')
+      fixture.className = 'document-shell-search'
+      fixture.innerHTML = '<button class="collection-step">Next</button>'
+      document.body.append(fixture)
+      const bounds = fixture.firstElementChild.getBoundingClientRect()
+      fixture.remove()
+      return {
+        coarse: window.matchMedia('(pointer: coarse)').matches,
+        width: bounds.width,
+        height: bounds.height
+      }
+    })
+    expect(collectionStepSize.coarse).toBe(true)
+    expect(collectionStepSize.width).toBeGreaterThanOrEqual(44)
+    expect(collectionStepSize.height).toBeGreaterThanOrEqual(44)
+  })
+
+  test('brings a replacement picker into view', async ({ page }) => {
+    await page.goto('/?show=tvmaze%3A179&vs=tvmaze%3A527')
+    await expect(page.locator('.comparison-context')).toContainText(
+      'The Sopranos'
+    )
+
+    const replace = page.locator(
+      '.comparison-identity-b [data-comparison-action="replace"]'
+    )
+    await replace.scrollIntoViewIfNeeded()
+    await replace.click()
+
+    const picker = page.locator('.show-picker-root')
+    await expect(picker.getByRole('heading')).toHaveText('Replace The Sopranos')
+    await expect(
+      picker.getByRole('searchbox', { name: 'Show title' })
+    ).toBeFocused()
+    await expect
+      .poll(() =>
+        picker.evaluate((element) => {
+          const bounds = element.getBoundingClientRect()
+          return bounds.top >= 0 && bounds.top < window.innerHeight
+        })
+      )
+      .toBe(true)
+  })
+
   test('keeps show comparison in one mobile reading column', async ({
     page
   }) => {

@@ -155,6 +155,9 @@ export async function renderComparisonPage(
       excludedRefs: COMPARISON_SLOT_IDS.map(
         (candidate) => slots[candidate].ref
       ),
+      heading: slots[slot].show
+        ? `Replace ${slots[slot].show.title}`
+        : 'Replace show',
       onSelect(nextShowRef) {
         const params = getUrlParams()
         if (pickerSlot === 'a') {
@@ -773,10 +776,10 @@ function renderComparisonShell(showRef) {
         <div class="masthead-navigation">${renderPublisherBrand()}</div>
         <div class="masthead-meta">
           <div class="masthead-actions" aria-label="Page actions">
-            <button type="button" class="masthead-action" data-ui-action="compare">Change shows (c)</button>
-            <button type="button" class="masthead-action" data-ui-action="view-options">Options (o)</button>
-            <button type="button" class="masthead-action" data-ui-action="help">Help (?)</button>
-            <a class="back-link masthead-action" href="${escapeHtml(buildSingleShowHref(showRef))}" aria-label="Back to ${escapeHtml(showRef)}">Back (q)</a>
+            <button type="button" class="masthead-action" data-ui-action="compare">Change shows <span class="action-key">(c)</span></button>
+            <button type="button" class="masthead-action" data-ui-action="view-options">Options <span class="action-key">(o)</span></button>
+            <button type="button" class="masthead-action" data-ui-action="help">Help <span class="action-key">(?)</span></button>
+            <a class="back-link masthead-action" href="${escapeHtml(buildSingleShowHref(showRef))}" aria-label="Back to ${escapeHtml(showRef)}">Back <span class="action-key">(q)</span></a>
           </div>
         </div>
       </header>

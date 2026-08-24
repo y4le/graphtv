@@ -33,6 +33,7 @@
   --tight: 0.75rem;
   --transition-fast: 140ms ease;
   --transition-medium: 220ms ease;
+  --touch-target: 2.75rem;
 }
 
 :root[data-theme='dark'] {
@@ -2658,6 +2659,15 @@ button {
 }
 
 @media (pointer: coarse) {
+  .masthead-action,
+  .show-picker-close,
+  .show-picker-form button {
+    display: inline-flex;
+    min-height: var(--touch-target);
+    padding-inline: 0.75rem;
+    align-items: center;
+  }
+
   .chart-shell,
   .results-episode {
     -webkit-user-select: none;
@@ -2669,23 +2679,23 @@ button {
   }
 
   .sidenote-nav {
-    --sidenote-nav-button-width: 2.75rem;
+    --sidenote-nav-button-width: var(--touch-target);
   }
 
   .sidenote-nav-button {
-    width: 2.75rem;
-    min-height: 2.75rem;
+    width: var(--touch-target);
+    min-height: var(--touch-target);
   }
 
   .sidenote-compare-button,
   .sidenote-comparison-episode-button,
   .sidenote-comparison-rating.is-interactive,
   .sidenote-comparison-extreme {
-    min-height: 2.75rem;
+    min-height: var(--touch-target);
   }
 
   .trend-summary-extreme {
-    min-height: 2.75rem;
+    min-height: var(--touch-target);
   }
 
   .trend-info-button {
@@ -2699,7 +2709,13 @@ button {
   }
 
   .trend-summary-breakpoint-button {
-    min-height: 2.75rem;
+    min-height: var(--touch-target);
+  }
+}
+
+@media (pointer: coarse) and (hover: none) {
+  .action-key {
+    display: none;
   }
 }
 
@@ -2815,6 +2831,13 @@ button {
 
   .document-shell-search .collection-card-meta {
     color: var(--textMuted);
+  }
+}
+
+@media (pointer: coarse) {
+  .document-shell-search .collection-step {
+    width: var(--touch-target);
+    min-height: var(--touch-target);
   }
 }
 
@@ -3062,6 +3085,10 @@ button {
 }
 
 @media (max-width: 600px) {
+  .masthead {
+    flex-wrap: wrap;
+  }
+
   .results-masthead {
     align-items: flex-start;
     flex-wrap: wrap;

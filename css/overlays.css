@@ -671,3 +671,46 @@
     gap: 1.25rem;
   }
 }
+
+@media (pointer: coarse) {
+  .overlay-panel {
+    max-height: min(92svh, 44rem);
+  }
+
+  .overlay-panel .overlay-close,
+  .view-value {
+    min-height: var(--touch-target);
+  }
+
+  .overlay-panel .overlay-close {
+    min-width: var(--touch-target);
+  }
+
+  .view-option-info-button {
+    position: relative;
+  }
+
+  .view-option-info-button::before {
+    position: absolute;
+    inset: -0.75rem;
+    content: '';
+  }
+}
+
+@media (pointer: coarse) and (hover: none) {
+  .view-option-row {
+    grid-template-areas:
+      'label'
+      'values';
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .view-option-values {
+    justify-content: flex-start;
+    justify-self: start;
+  }
+
+  .view-option-hint {
+    display: none;
+  }
+}

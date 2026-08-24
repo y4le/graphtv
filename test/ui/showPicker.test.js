@@ -7,12 +7,14 @@ let picker
 afterEach(() => {
   picker?.destroy()
   picker = null
+  vi.unstubAllGlobals()
   document.body.replaceChildren()
 })
 
 describe('createShowPicker', () => {
   it('searches, excludes the current pair, and returns a selected show', async () => {
     const root = document.createElement('section')
+    root.scrollIntoView = vi.fn()
     root.hidden = true
     document.body.append(root)
     const onSelect = vi.fn()
@@ -23,6 +25,7 @@ describe('createShowPicker', () => {
     picker = createShowPicker(root, {
       provider: 'tvmaze',
       excludedRefs: ['tvmaze:1'],
+      heading: 'Replace Current Show',
       onSelect,
       search
     })
@@ -30,6 +33,11 @@ describe('createShowPicker', () => {
     picker.open()
     const input = root.querySelector('input')
     expect(root.hidden).toBe(false)
+    expect(root.querySelector('h2').textContent).toBe('Replace Current Show')
+    expect(root.scrollIntoView).toHaveBeenCalledWith({
+      block: 'start',
+      behavior: 'smooth'
+    })
     expect(document.activeElement).toBe(input)
 
     input.value = 'next'
@@ -45,17 +53,30 @@ describe('createShowPicker', () => {
       'tvmaze',
       expect.objectContaining({ signal: expect.any(AbortSignal) })
     )
-    expect(root.textContent).not.toContain('Current Show')
+    expect(
+      root.querySelector('.show-picker-results').textContent
+    ).not.toContain('Current Show')
     root.querySelector('[data-show-ref]').click()
     expect(onSelect).toHaveBeenCalledWith('tvmaze:2')
   })
 
   it('closes on Escape and restores through its callback', () => {
     const root = document.createElement('section')
+    root.scrollIntoView = vi.fn()
     document.body.append(root)
     const onClose = vi.fn()
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => ({ matches: true }))
+    )
     picker = createShowPicker(root, { onClose })
     picker.open()
+
+    expect(root.querySelector('h2').textContent).toBe('Compare with…')
+    expect(root.scrollIntoView).toHaveBeenCalledWith({
+      block: 'start',
+      behavior: 'auto'
+    })
 
     root.querySelector('input').dispatchEvent(
       new KeyboardEvent('keydown', {

@@ -36,6 +36,8 @@ Some vim bindings use multi-key sequences (e.g., `gg`). The implementation shoul
 | Toggle debug panel      | `D` | —            | Shift+D to avoid accidental triggers            |
 | Go back                 | `q` | —            | Results to search; comparison to its first show |
 
+Shortcut suffixes remain visible on keyboard-capable layouts. Coarse, non-hover devices hide those printed suffixes while preserving the same keyboard bindings for attached keyboards.
+
 ### Search input (insert mode)
 
 | Action              | Keys     | Notes                                                                                            |
