@@ -391,13 +391,11 @@ function updateShowContext(
 ) {
   container.querySelector('.results-context').innerHTML = `
     <div class="show-header">
-      <div class="show-poster-shell">
-        ${
-          show.poster
-            ? `<img src="${escapeHtml(show.poster)}" alt="" class="show-poster" />`
-            : `<div class="poster-fallback large">No art</div>`
-        }
-      </div>
+      ${
+        show.poster
+          ? `<div class="show-poster-shell"><img src="${escapeHtml(show.poster)}" alt="" class="show-poster" /></div>`
+          : ''
+      }
       <div class="show-facts">
         <p class="show-meta">${escapeHtml(show.genres.join(' · '))}</p>
         <ul class="show-metrics">

@@ -137,6 +137,8 @@ describe('renderResultsPage', () => {
     const chartOptions = chartFactory.mock.calls[0][2]
 
     expect(chartOptions.initialSelection).toBe('s03e07')
+    expect(container.querySelector('.show-poster-shell')).toBeNull()
+    expect(container.textContent).not.toContain('No art')
 
     chartOptions.onSelectionChange('s02')
 

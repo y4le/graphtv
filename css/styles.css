@@ -5,6 +5,7 @@
   --textPrimary: #1a1a1a;
   --textSecondary: #6f6f6f;
   --textMuted: #9a948a;
+  --lineSubtle: rgba(26, 26, 26, 0.07);
   --lineSoft: rgba(26, 26, 26, 0.12);
   --lineStrong: rgba(26, 26, 26, 0.24);
   --trendMacro: #d1d1d1;
@@ -41,6 +42,7 @@
   --textPrimary: #e8e3d5;
   --textSecondary: #8a857a;
   --textMuted: #66625a;
+  --lineSubtle: #232220;
   --lineSoft: #2a2926;
   --lineStrong: #403e39;
   --trendMacro: #56534d;
@@ -59,6 +61,7 @@
     --textPrimary: #e8e3d5;
     --textSecondary: #8a857a;
     --textMuted: #66625a;
+    --lineSubtle: #232220;
     --lineSoft: #2a2926;
     --lineStrong: #403e39;
     --trendMacro: #56534d;
@@ -621,9 +624,21 @@ button {
 }
 
 .collection-card-artwork-fallback {
-  color: var(--textMuted);
-  font-family: var(--font-sans);
-  font-size: var(--type-size-utility);
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+}
+
+.collection-card-artwork-fallback[hidden] {
+  display: none;
+}
+
+.artwork-missing::after {
+  width: min(2.4rem, 55%);
+  height: 1px;
+  background: var(--lineStrong);
+  content: '';
 }
 
 .collection-card-title {
@@ -1308,9 +1323,10 @@ button {
   aspect-ratio: 2 / 3;
   place-items: center;
   object-fit: cover;
+}
+
+.comparison-poster {
   background: var(--canvasSubtle);
-  color: var(--textSecondary);
-  font-size: 0.65rem;
 }
 
 .comparison-identity h3,
@@ -1397,6 +1413,10 @@ button {
   grid-template-columns: minmax(5rem, 32%) minmax(0, 1fr);
   gap: 0.85rem 1rem;
   align-items: start;
+}
+
+.show-header:not(:has(.show-poster-shell)) {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .show-facts {
@@ -2742,18 +2762,6 @@ button {
 
 .viewport-brush.is-brushing .handle {
   fill-opacity: var(--brush-handle-active);
-}
-
-.poster-fallback {
-  display: grid;
-  min-height: 6rem;
-  place-items: center;
-  color: var(--textSecondary);
-  font-family: var(--font-sans);
-}
-
-.poster-fallback.large {
-  min-height: 16rem;
 }
 
 @media (min-width: 861px) {

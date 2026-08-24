@@ -223,7 +223,7 @@ function renderShowCard(show, buildHref) {
       <a class="collection-card-link" href="${escapeHtml(href)}">
         <span class="collection-card-artwork">
           ${image}
-          <span class="collection-card-artwork-fallback" ${image ? 'hidden' : ''}>No art</span>
+          <span class="collection-card-artwork-fallback artwork-missing" aria-hidden="true" ${image ? 'hidden' : ''}></span>
         </span>
         <span class="collection-card-title">${escapeHtml(show.title)}</span>
         ${show.year ? `<span class="collection-card-meta">${escapeHtml(show.year)}</span>` : ''}

@@ -954,7 +954,7 @@ function renderComparisonIdentity(state, source) {
       ${
         state.show.poster
           ? `<img src="${escapeHtml(state.show.poster)}" alt="" class="comparison-poster" />`
-          : '<span class="comparison-poster-fallback">No art</span>'
+          : '<span class="comparison-poster-fallback artwork-missing" aria-hidden="true"></span>'
       }
       <div>
         <h3>${escapeHtml(state.show.title)}</h3>

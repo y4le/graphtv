@@ -83,6 +83,8 @@ describe('renderComparisonPage', () => {
     expect(container.querySelector('.comparison-summary')).not.toBeNull()
     expect(container.querySelector('.comparison-summary caption')).toBeNull()
     expect(container.querySelector('.comparison-summary thead')).toBeNull()
+    expect(container.querySelectorAll('.artwork-missing')).toHaveLength(2)
+    expect(container.textContent).not.toContain('No art')
     expect(container.querySelector('.comparison-context').hidden).toBe(false)
     expect(container.querySelector('.comparison-detail').hidden).toBe(true)
     expect(
