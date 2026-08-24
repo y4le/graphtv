@@ -1,0 +1,32 @@
+{
+  "hard": {
+    "criticalPath": {
+      "maxGzipBytes": 27000
+    },
+    "routes": {
+      "search": {
+        "entry": "src/pages/search.js",
+        "maxGzipBytes": 45000
+      },
+      "results": {
+        "entry": "src/pages/results.js",
+        "maxGzipBytes": 100000
+      },
+      "compare": {
+        "entry": "src/pages/compare.js",
+        "maxGzipBytes": 100000
+      }
+    }
+  },
+  "advisory": {
+    "budgetWarningFraction": 0.9,
+    "maxSingleChunkGzipBytes": 60000,
+    "totalGzipBytes": 150000,
+    "features": {
+      "help": "src/ui/helpOverlay.js",
+      "view options": "src/ui/viewOptionsOverlay.js",
+      "debug": "src/ui/debugOverlay.js",
+      "density": "src/ui/densityPanel.js"
+    }
+  }
+}

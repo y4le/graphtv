@@ -11,6 +11,10 @@ describe('production build', () => {
   it('does not publish source maps with production assets', () => {
     expect(viteConfig.build.sourcemap).toBe(false)
   })
+
+  it('emits a manifest for route-level asset budgets', () => {
+    expect(viteConfig.build.manifest).toBe(true)
+  })
 })
 
 describe('restoreTailnetRequestUrl', () => {
