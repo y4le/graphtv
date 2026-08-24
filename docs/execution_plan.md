@@ -31,6 +31,7 @@ Updated August 21, 2026. The redesign plan is complete; this document records th
 - TVmaze remains the keyless baseline, so the application works without build credentials.
 - Source maps are not published in production builds.
 - Malformed or ambiguous provider data is omitted instead of guessed into a chart.
+- Performance is budgeted by user-visible initial route, not by aggregate output or arbitrary chunk boundaries. See [performance.md](performance.md) for the enforced limits and review rules.
 
 ## Validation
 
@@ -42,7 +43,7 @@ npm run test:e2e
 npm run audit
 ```
 
-`verify` covers linting, unit/integration and DOM tests, formatting, the production build, and bundle budgets. Browser tests cover search-to-results, desktop and mobile show comparison, synchronized chart behavior, keyboard/modal behavior, touch interaction, and automated accessibility scans. The audit remains separate because the advisory service is network-backed.
+`verify` covers linting, unit/integration and DOM tests, formatting, the production build, and manifest-derived per-route asset budgets. Browser tests cover search-to-results, desktop and mobile show comparison, synchronized chart behavior, keyboard/modal behavior, touch interaction, and automated accessibility scans. The audit remains separate because the advisory service is network-backed.
 
 For chart-model performance measurements:
 

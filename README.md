@@ -48,12 +48,13 @@ journeys, keyboard/modal checks, mobile touch interaction, and automated
 accessibility scans in Chromium. Install the local browser once with
 `npx playwright install chromium`; CI installs Chromium automatically.
 
-The production asset budget defaults to 118,000 gzip bytes across all CSS and
-JavaScript, 15,000 gzip bytes for the entry JavaScript chunk, and 50,000 gzip
-bytes for the largest JavaScript chunk. Set `MAX_TOTAL_GZIP_BYTES`,
-`MAX_ENTRY_GZIP_BYTES`, or `MAX_LARGEST_JAVASCRIPT_GZIP_BYTES` when
-intentionally revising those limits. The separate limits preserve a small
-startup path while also guarding deferred features and total deployed size.
+`npm run size` enforces gzip budgets for the critical path and each initial
+page payload: 27,000 bytes for entry JavaScript, CSS, and referenced assets,
+45,000 for search, and 100,000 for each chart route. Aggregate output, optional
+features, and the largest chunk remain visible as advisory trends rather than
+deployment gates. The limits and the rules for investigating, optimizing, or
+deliberately raising them are documented in
+[docs/performance.md](docs/performance.md).
 
 ## Project card
 
