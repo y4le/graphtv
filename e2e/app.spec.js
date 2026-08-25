@@ -83,6 +83,40 @@ test.beforeEach(async ({ page }) => {
   })
 })
 
+test('renders the landing page as a static episode-ratings index', async ({
+  page
+}) => {
+  await page.goto('/')
+
+  await expect(
+    page.getByRole('searchbox', { name: 'Show title' })
+  ).toBeVisible()
+  await expect(
+    page.locator('.show-index-columns span:first-child').first()
+  ).toHaveText("Yale's picks")
+  await expect(page.locator('.show-index-row')).toHaveCount(20)
+  await expect(page.locator('.show-index img')).toHaveCount(0)
+  await expect(
+    page.locator('.show-index-shape[data-shape-regime="points"]')
+  ).not.toHaveCount(0)
+  await expect(
+    page.locator('.show-index-shape[data-shape-regime="line"]')
+  ).not.toHaveCount(0)
+  await expect(
+    page.locator('.show-index-shape[data-shape-regime="envelope"]')
+  ).not.toHaveCount(0)
+
+  const shapeBox = await page
+    .locator('.show-index-shape-desktop')
+    .first()
+    .boundingBox()
+  expect(shapeBox?.width).toBeCloseTo(192, 0)
+  expect(shapeBox?.height).toBeCloseTo(28, 0)
+
+  await page.getByRole('link', { name: /^Breaking Bad,/u }).click()
+  await expect(page).toHaveURL(/show=tvmaze%3A169/u)
+})
+
 test('searches, navigates the chart, and isolates modal interaction', async ({
   page
 }) => {
@@ -567,6 +601,29 @@ test.describe('mobile chart', () => {
     isMobile: true
   })
 
+  test('stacks index metadata beside touch-sized rating shapes', async ({
+    page
+  }) => {
+    await page.goto('/')
+
+    const firstRow = page.locator('.show-index-row').first()
+    const mobileShape = firstRow.locator('.show-index-shape-mobile')
+    await expect(mobileShape).toBeVisible()
+    await expect(firstRow.locator('.show-index-shape-desktop')).toBeHidden()
+
+    const [rowBox, shapeBox] = await Promise.all([
+      firstRow.boundingBox(),
+      mobileShape.boundingBox()
+    ])
+    expect(rowBox?.height).toBeGreaterThanOrEqual(44)
+    expect(shapeBox?.width).toBeCloseTo(120, 0)
+    expect(shapeBox?.height).toBeCloseTo(24, 0)
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth)
+    ).toBeLessThanOrEqual(390)
+    await expectNoAccessibilityViolations(page)
+  })
+
   test('pans the shared viewport with a touch gesture', async ({ page }) => {
     await page.goto('/?show=tvmaze%3A179')
     await expect(page.locator('.sparkline-point')).toHaveCount(72)
@@ -640,22 +697,20 @@ test.describe('mobile chart', () => {
     await overlayClose.click()
 
     await page.setViewportSize({ width: 1024, height: 768 })
-    const collectionStepSize = await page.evaluate(() => {
+    const indexRowSize = await page.evaluate(() => {
       const fixture = document.createElement('div')
       fixture.className = 'document-shell-search'
-      fixture.innerHTML = '<button class="collection-step">Next</button>'
+      fixture.innerHTML = '<a class="show-index-row">Series</a>'
       document.body.append(fixture)
       const bounds = fixture.firstElementChild.getBoundingClientRect()
       fixture.remove()
       return {
         coarse: window.matchMedia('(pointer: coarse)').matches,
-        width: bounds.width,
         height: bounds.height
       }
     })
-    expect(collectionStepSize.coarse).toBe(true)
-    expect(collectionStepSize.width).toBeGreaterThanOrEqual(44)
-    expect(collectionStepSize.height).toBeGreaterThanOrEqual(44)
+    expect(indexRowSize.coarse).toBe(true)
+    expect(indexRowSize.height).toBeGreaterThanOrEqual(44)
   })
 
   test('brings a replacement picker into view', async ({ page }) => {

@@ -32,8 +32,8 @@ describe('theme stylesheet', () => {
   it('owns responsive layout tokens without runtime overrides', () => {
     const rootStyle = getComputedStyle(document.documentElement)
 
-    expect(rootStyle.getPropertyValue('--searchMaxWidth').trim()).toBe(
-      'clamp(39rem, calc(24rem + 12vw), 52rem)'
+    expect(rootStyle.getPropertyValue('--indexMaxWidth').trim()).toBe(
+      'clamp(39rem, calc(26rem + 34vw), 84rem)'
     )
     expect(rootStyle.getPropertyValue('--pageMaxWidth').trim()).toBe('75rem')
   })
@@ -78,15 +78,18 @@ describe('theme stylesheet', () => {
     expect(Array.from(new Set(unresolved))).toEqual([])
   })
 
-  it('keeps hidden artwork fallbacks out of the rendered layout', () => {
-    const fallback = document.createElement('span')
-    fallback.className = 'collection-card-artwork-fallback artwork-missing'
-    fallback.hidden = true
-    document.body.append(fallback)
+  it('defines a shared reference rule for the landing-page shapes', () => {
+    document.documentElement.dataset.theme = 'light'
+    expect(getThemeToken('--indexShapeRule')).toBe('rgba(26, 26, 26, 0.16)')
 
-    expect(getComputedStyle(fallback).display).toBe('none')
+    document.documentElement.dataset.theme = 'dark'
+    expect(getThemeToken('--indexShapeRule')).toBe('rgba(232, 227, 213, 0.14)')
+  })
 
-    fallback.remove()
+  it('renders a visible mark for missing comparison artwork', () => {
+    expect(stylesheet).toMatch(
+      /\.artwork-missing::after\s*\{[^}]*background:\s*var\(--lineStrong\);[^}]*content:\s*'';/su
+    )
   })
 })
 

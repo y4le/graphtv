@@ -214,7 +214,7 @@ describe('theme token ownership', () => {
 
     expect(rootStyle.getPropertyValue('--canvas')).toBe('')
     expect(rootStyle.getPropertyValue('--font-app')).toBe('')
-    expect(rootStyle.getPropertyValue('--searchMaxWidth')).toBe('')
+    expect(rootStyle.getPropertyValue('--indexMaxWidth')).toBe('')
   })
 
   it('updates the browser theme color from the active CSS palette', () => {

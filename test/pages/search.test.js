@@ -8,20 +8,7 @@ vi.mock('../../src/data/provider.js', async (importOriginal) => {
   }
 })
 
-vi.mock('../../src/data/collections.js', async (importOriginal) => {
-  const actual = await importOriginal()
-  return {
-    ...actual,
-    canLoadSearchCollections: vi.fn(),
-    loadSearchCollections: vi.fn()
-  }
-})
-
 import { POPULAR_SHOW_TITLES } from '../../src/data/popularShows.js'
-import {
-  canLoadSearchCollections,
-  loadSearchCollections
-} from '../../src/data/collections.js'
 import { searchShows } from '../../src/data/provider.js'
 import {
   renderSearchMasthead,
@@ -38,23 +25,6 @@ beforeEach(() => {
   originalPath = `${window.location.pathname}${window.location.search}${window.location.hash}`
   vi.mocked(searchShows).mockReset()
   vi.mocked(searchShows).mockResolvedValue([])
-  vi.mocked(canLoadSearchCollections).mockReset()
-  vi.mocked(canLoadSearchCollections).mockReturnValue(true)
-  vi.mocked(loadSearchCollections).mockReset()
-  vi.mocked(loadSearchCollections).mockResolvedValue([
-    {
-      id: 'trending',
-      title: 'Trending this week',
-      status: 'unavailable',
-      shows: []
-    },
-    {
-      id: 'popular',
-      title: 'Popular',
-      status: 'unavailable',
-      shows: []
-    }
-  ])
 })
 
 afterEach(() => {
@@ -115,24 +85,27 @@ describe('renderSearchPage', () => {
     }
   }
 
-  it('keeps the masthead outside the centered landing content', () => {
+  it('keeps the masthead outside the top-aligned landing content', () => {
     const { container, page } = renderPage()
     const shell = container.querySelector('.document-shell-search')
     const masthead = container.querySelector('.masthead')
     const landingContent = container.querySelector('.search-landing-content')
 
     expect(masthead.parentElement).toBe(shell)
-    expect(shell.querySelector('h1').textContent).toBe(
-      'Every episode, plotted in order'
-    )
     expect(landingContent.parentElement).toBe(shell)
     expect(landingContent.contains(masthead)).toBe(false)
     const searchDocument = landingContent.querySelector('.search-document')
-    expect(searchDocument.querySelector('h1')).toBe(shell.querySelector('h1'))
-    expect(searchDocument.querySelector('.document-lede').textContent).toBe(
-      'Search a series to see its ratings season by season, with trends and possible turning points. Ratings from IMDb, TMDB, and TVmaze stay labeled and separate; compare two shows on one scale.'
+    expect(searchDocument.querySelector('h1').textContent).toBe('GraphTV')
+    expect(searchDocument.querySelector('h1').classList).toContain(
+      'visually-hidden'
     )
-    expect(landingContent.querySelector('.collection-rails')).not.toBeNull()
+    expect(searchDocument.querySelector('.document-lede')).toBeNull()
+    expect(searchDocument.querySelector('.search-label')).toBeNull()
+    expect(searchDocument.querySelector('.search-submit').textContent).toBe(
+      'Plot'
+    )
+    expect(landingContent.querySelector('.show-index')).not.toBeNull()
+    expect(landingContent.querySelectorAll('.show-index-row')).toHaveLength(20)
 
     page.destroy()
   })
@@ -151,89 +124,6 @@ describe('renderSearchPage', () => {
 
     page.destroy()
     expect(vi.getTimerCount()).toBe(0)
-  })
-
-  it('renders collection shells synchronously and fills independent rails', async () => {
-    const pending = createDeferred()
-    vi.mocked(loadSearchCollections).mockReturnValue(pending.promise)
-    const { container, page } = renderPage()
-
-    expect(container.querySelectorAll('.collection-rail')).toHaveLength(2)
-    expect(
-      container.querySelectorAll('.collection-card-skeleton')
-    ).toHaveLength(16)
-
-    pending.resolve([
-      {
-        id: 'trending',
-        title: 'Trending this week',
-        status: 'ready',
-        shows: [createCollectionShow()]
-      },
-      {
-        id: 'popular',
-        title: 'Popular',
-        status: 'error',
-        shows: [],
-        reason: 'Unavailable'
-      }
-    ])
-
-    await vi.waitFor(() =>
-      expect(container.querySelectorAll('.collection-card-link')).toHaveLength(
-        1
-      )
-    )
-    expect(container.querySelector('.collection-card-title').textContent).toBe(
-      'Reacher'
-    )
-    expect(
-      new URL(
-        container.querySelector('.collection-card-link').href
-      ).searchParams.get('show')
-    ).toBe('tmdb:108978')
-    expect(container.querySelector('.collection-card-link').href).not.toContain(
-      'q='
-    )
-    expect(container.querySelector('.error-state').textContent).toBe(
-      'Popular is unavailable right now.'
-    )
-    expect(page.getCreditsContext()).toEqual({
-      providers: ['tvmaze', 'tmdb'],
-      show: null
-    })
-
-    page.destroy()
-  })
-
-  it('omits collection UI when TMDB is not configured', () => {
-    vi.mocked(canLoadSearchCollections).mockReturnValue(false)
-    const { container, page } = renderPage()
-
-    expect(container.querySelector('.collection-rails')).toBeNull()
-    expect(loadSearchCollections).not.toHaveBeenCalled()
-
-    page.destroy()
-  })
-
-  it('removes collection UI when every configured rail is unavailable', async () => {
-    const { container, page } = renderPage()
-
-    await vi.waitFor(() =>
-      expect(container.querySelector('.collection-rails')).toBeNull()
-    )
-
-    page.destroy()
-  })
-
-  it('aborts collection loading when the search page is destroyed', () => {
-    vi.mocked(loadSearchCollections).mockReturnValue(new Promise(() => {}))
-    const { page } = renderPage()
-    const signal = vi.mocked(loadSearchCollections).mock.calls[0][0].signal
-
-    expect(signal.aborted).toBe(false)
-    page.destroy()
-    expect(signal.aborted).toBe(true)
   })
 
   it('focuses the empty landing search without stopping its placeholder rotation', () => {
@@ -330,7 +220,6 @@ describe('renderSearchPage', () => {
   })
 
   it('credits the search provider before and after results are displayed', async () => {
-    vi.mocked(canLoadSearchCollections).mockReturnValue(false)
     vi.mocked(searchShows).mockResolvedValue([createSearchResult()])
     const { clearButton, form, input, page, results } = renderPage()
 
@@ -521,16 +410,6 @@ function createSearchResult(overrides = {}) {
     year: '2002',
     genres: ['Crime', 'Drama', 'Thriller'],
     poster: 'https://example.com/wire.jpg',
-    ...overrides
-  }
-}
-
-function createCollectionShow(overrides = {}) {
-  return {
-    id: 'tmdb:108978',
-    title: 'Reacher',
-    year: '2022',
-    poster: 'https://image.tmdb.org/t/p/w342/reacher.jpg',
     ...overrides
   }
 }

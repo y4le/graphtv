@@ -3,19 +3,11 @@ import {
   getProviderCatalog,
   searchShows
 } from '../data/provider.js'
-import {
-  SEARCH_PAGE_COLLECTIONS,
-  canLoadSearchCollections,
-  loadSearchCollections
-} from '../data/collections.js'
+import { SHOW_INDEX } from '../data/showIndexData.js'
 import { buildUrl, getUrlParams, preserveDebugParams } from '../lib/url.js'
 import { escapeHtml } from '../lib/html.js'
 import { createPlaceholderRotation } from '../ui/placeholderRotation.js'
-import {
-  createShowCarousel,
-  renderCollectionError,
-  renderCollectionRailsShell
-} from '../ui/showCarousel.js'
+import { renderShowIndex } from '../ui/showIndex.js'
 import {
   renderEmpty,
   renderError,
@@ -42,24 +34,12 @@ export function renderSearchPage(container) {
   const provider = getActiveProvider(params)
   const query = params.get('q') ?? ''
   const debugEnabled = true
-  const collectionsEnabled = canLoadSearchCollections()
-  const collectionsAbortController = collectionsEnabled
-    ? new AbortController()
-    : null
-  const carouselControllers = []
-  let destroyed = false
   const state = {
     committedQuery: query,
     requestId: 0,
     abortController: null,
     results: [],
-    selectedIndex: -1,
-    collectionsProvider: null,
-    collections: SEARCH_PAGE_COLLECTIONS.map(({ id }) => ({
-      id,
-      status: collectionsEnabled ? 'loading' : 'unavailable',
-      count: 0
-    }))
+    selectedIndex: -1
   }
 
   container.innerHTML = `
@@ -67,8 +47,7 @@ export function renderSearchPage(container) {
       ${renderSearchMasthead()}
       <div class="search-landing-content">
         <section class="search-document ${query ? '' : 'search-document-empty'}">
-          <h1 class="document-title">Every episode, plotted in order</h1>
-          <p class="document-lede">Search a series to see its ratings season by season, with trends and possible turning points. Ratings from IMDb, TMDB, and TVmaze stay labeled and separate; compare two shows on one scale.</p>
+          <h1 class="visually-hidden">GraphTV</h1>
           <form class="search-form" role="search" aria-label="Search shows">
             <div class="search-row">
               <div class="search-field">
@@ -93,7 +72,7 @@ export function renderSearchPage(container) {
                   ${query ? '' : 'hidden'}
                 ><span aria-hidden="true">×</span></button>
               </div>
-              <button type="submit" class="search-submit">Search</button>
+              <button type="submit" class="search-submit">Plot</button>
             </div>
           </form>
           <section class="search-results-section" aria-busy="${query ? 'true' : 'false'}">
@@ -106,7 +85,9 @@ export function renderSearchPage(container) {
             ></ol>
           </section>
         </section>
-        ${collectionsEnabled ? renderCollectionRailsShell(SEARCH_PAGE_COLLECTIONS) : ''}
+        ${renderShowIndex({
+          buildHref: (showId) => buildShowLink(showId, { includeQuery: false })
+        })}
       </div>
     </main>
   `
@@ -118,71 +99,7 @@ export function renderSearchPage(container) {
   const resultsSection = container.querySelector('.search-results-section')
   const resultsRoot = container.querySelector('.search-results-list')
   const searchDocument = container.querySelector('.search-document')
-  const collectionRailsRoot = container.querySelector('.collection-rails')
   const placeholderRotation = createPlaceholderRotation(input)
-
-  async function initializeCollectionRails() {
-    let collections
-    try {
-      collections = await loadSearchCollections({
-        signal: collectionsAbortController.signal
-      })
-    } catch (error) {
-      if (error?.name === 'AbortError' || destroyed) {
-        return
-      }
-      collections = SEARCH_PAGE_COLLECTIONS.map((collection) => ({
-        ...collection,
-        status: 'error',
-        shows: [],
-        reason: error?.message ?? String(error)
-      }))
-    }
-
-    if (destroyed) {
-      return
-    }
-
-    state.collections = collections.map(({ id, status, shows }) => ({
-      id,
-      status,
-      count: shows.length
-    }))
-    state.collectionsProvider = collections.some(
-      (collection) =>
-        collection.status === 'ready' && collection.shows.length > 0
-    )
-      ? 'tmdb'
-      : null
-
-    for (const collection of collections) {
-      const rail = Array.from(
-        collectionRailsRoot.querySelectorAll('.collection-rail')
-      ).find((candidate) => candidate.dataset.collectionId === collection.id)
-
-      if (!rail) {
-        continue
-      }
-
-      if (collection.status === 'ready' && collection.shows.length > 0) {
-        carouselControllers.push(
-          createShowCarousel(rail, {
-            collection,
-            buildHref: (showId) =>
-              buildShowLink(showId, { includeQuery: false })
-          })
-        )
-      } else if (collection.status === 'error') {
-        renderCollectionError(rail, collection)
-      } else {
-        rail.remove()
-      }
-    }
-
-    if (!collectionRailsRoot.querySelector('.collection-rail')) {
-      collectionRailsRoot.remove()
-    }
-  }
 
   function syncEmptyLayout(isEmpty) {
     searchDocument.classList.toggle('search-document-empty', isEmpty)
@@ -327,9 +244,6 @@ export function renderSearchPage(container) {
   if (query) {
     form.requestSubmit()
   }
-  if (collectionsEnabled) {
-    void initializeCollectionRails()
-  }
 
   return {
     kind: 'search',
@@ -357,7 +271,7 @@ export function renderSearchPage(container) {
     },
     getCreditsContext() {
       return {
-        providers: [provider, state.collectionsProvider].filter(Boolean),
+        providers: Array.from(new Set([provider, SHOW_INDEX.source])),
         show: null
       }
     },
@@ -379,16 +293,20 @@ export function renderSearchPage(container) {
           }
         },
         {
-          title: 'Collections',
-          data: state.collections
+          title: 'Landing index',
+          data: {
+            builtAt: SHOW_INDEX.builtAt,
+            source: SHOW_INDEX.source,
+            sections: SHOW_INDEX.sections.map(({ id, rows }) => ({
+              id,
+              count: rows.length
+            }))
+          }
         }
       ]
     },
     destroy() {
-      destroyed = true
       invalidateActiveRequest()
-      collectionsAbortController?.abort()
-      carouselControllers.forEach((controller) => controller.destroy())
       placeholderRotation.destroy()
     }
   }

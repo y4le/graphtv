@@ -60,17 +60,6 @@ and query URL, then returns focus to the input. Escape remains a mode-exit key a
 | First result    | `gg`           | `Home`       | Chord: `g` then `g`        |
 | Last result     | `G`            | `End`        |                            |
 
-### Browse collections (focused rail)
-
-Collection rails use native Tab navigation for show links. When a rail itself is focused, it handles these keys locally without changing the selected search result.
-
-| Action                | Keys         |
-| --------------------- | ------------ |
-| Scroll backward       | `ArrowLeft`  |
-| Scroll forward        | `ArrowRight` |
-| Jump to start of rail | `Home`       |
-| Jump to end of rail   | `End`        |
-
 ### Chart (normal mode, results page)
 
 On the results page, chart navigation is the default keyboard target in normal mode. The user does not need to tab into the chart before using chart navigation keys. Search, help, debug, and view options remain explicit modes that take over keyboard handling.
