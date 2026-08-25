@@ -51,6 +51,55 @@ afterEach(() => {
 })
 
 describe('createChart', () => {
+  it('renders and updates a summarized companion series without foreign points', () => {
+    updateUiSettings({ fullShowTrendline: true })
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 600
+    })
+    document.body.appendChild(container)
+
+    const companionSeasons = createTwoSeasons()
+    chart = createChart(container, createSeasons(), {
+      comparisonXMax: 72,
+      sharedRatings: [7, 8, 9],
+      companionSeries: {
+        show: { title: 'Companion Show' },
+        seasons: companionSeasons,
+        primaryRatingSource: 'test'
+      }
+    })
+
+    expect(container.querySelector('.companion-series-trace')).not.toBeNull()
+    expect(container.querySelectorAll('.companion-season-tick')).toHaveLength(3)
+    expect(
+      Array.from(container.querySelectorAll('.episode-point'), (point) =>
+        point.__data__.id.startsWith('episode-')
+      )
+    ).not.toContain(false)
+    expect(chart.getDebugState().companionSeries).toEqual({
+      title: 'Companion Show',
+      primarySource: 'test',
+      ratedEpisodes: 6
+    })
+
+    updateUiSettings({ fullShowTrendline: false })
+
+    expect(container.querySelector('.companion-series-trace')).toBeNull()
+    expect(container.querySelectorAll('.companion-season-tick')).toHaveLength(3)
+
+    updateUiSettings({ fullShowTrendline: true })
+
+    expect(container.querySelector('.companion-series-trace')).not.toBeNull()
+
+    chart.updateSeasons(createSeasons(), { companionSeries: null })
+
+    expect(container.querySelector('.companion-series-trace')).toBeNull()
+    expect(container.querySelectorAll('.companion-season-tick')).toHaveLength(0)
+    expect(chart.getDebugState().companionSeries).toBeNull()
+  })
+
   it('emits concrete SVG colors from the active CSS theme', () => {
     const style = document.createElement('style')
     style.dataset.chartThemeTest = ''
@@ -4404,7 +4453,7 @@ describe('comparison chart coordination', () => {
     expect(container.querySelector('.crosshair')).toBeNull()
   })
 
-  it('uses shared ratings to keep comparison lanes on the same y domain', () => {
+  it('uses shared ratings to keep comparison charts and overviews on the same y domain', () => {
     const container = document.createElement('div')
     Object.defineProperty(container, 'clientWidth', {
       configurable: true,
@@ -4426,5 +4475,19 @@ describe('comparison chart coordination', () => {
     )
     expect(rangeLabels).toContain('10.0')
     expect(rangeLabels).toContain('0.0')
+    const mainChart = container.querySelector('.ratings-chart')
+    const sparkline = container.querySelector('.sparkline-chart')
+    const mainPoint = container.querySelector('.episode-point')
+    const overviewPoint = container.querySelector('.sparkline-point')
+    const sparklineHeight = Number(
+      sparkline.getAttribute('viewBox').split(/\s+/u)[3]
+    )
+    expect(
+      Number(overviewPoint.getAttribute('cy')) / sparklineHeight
+    ).toBeCloseTo(
+      Number(mainPoint.getAttribute('cy')) /
+        Number(mainChart.getAttribute('height')),
+      3
+    )
   })
 })

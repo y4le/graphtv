@@ -14,6 +14,7 @@ import {
   resolveViewportFromDisplay
 } from './scales.js'
 import {
+  renderCompanionSeriesContext,
   renderCrosshair,
   renderPoints,
   renderProviderRatingPreview,
@@ -108,9 +109,11 @@ export function createChart(container, seasons, options = {}) {
   let preferredPrimaryRatingSource = options.primaryRatingSource ?? null
   let comparisonXMax = options.comparisonXMax ?? null
   let sharedRatings = options.sharedRatings ?? []
+  let companionSeries = options.companionSeries ?? null
   let strictPrimaryRatingSource = Boolean(options.strictPrimaryRatingSource)
   let notifiedPrimaryRatingSource = Symbol('unreported-primary-rating-source')
   let model = createModel(currentSeasons)
+  let companionModel = createCompanionModel()
   let show = options.show ?? null
   let viewport = null
   let episodeDensity = getUiSettings().episodeDensity
@@ -157,6 +160,18 @@ export function createChart(container, seasons, options = {}) {
     return Number.isFinite(comparisonXMax)
       ? { ...nextModel, xMax: Math.max(nextModel.xMax, comparisonXMax) }
       : nextModel
+  }
+
+  function createCompanionModel() {
+    if (!companionSeries?.seasons?.length) {
+      return null
+    }
+
+    return buildChartModel(companionSeries.seasons, {
+      breakpointDetector: () => null,
+      primaryRatingSource: companionSeries.primaryRatingSource,
+      strictPrimaryRatingSource: true
+    })
   }
 
   const sidenote = createSidenote({
@@ -1991,6 +2006,10 @@ export function createChart(container, seasons, options = {}) {
     if (Object.hasOwn(context, 'sharedRatings')) {
       sharedRatings = context.sharedRatings ?? []
     }
+    if (Object.hasOwn(context, 'companionSeries')) {
+      companionSeries = context.companionSeries ?? null
+      companionModel = createCompanionModel()
+    }
     if (Object.hasOwn(context, 'strictPrimaryRatingSource')) {
       strictPrimaryRatingSource = Boolean(context.strictPrimaryRatingSource)
     }
@@ -2328,7 +2347,7 @@ export function createChart(container, seasons, options = {}) {
         width: chartWidth,
         height: sparklineHeight
       },
-      scaleOptions
+      { ...scaleOptions, additionalRatings: sharedRatings }
     )
     const visiblePoints = getVisiblePoints(model, viewport)
     const [displayStart, displayEnd] = mainScales.xScale.domain()
@@ -2353,6 +2372,21 @@ export function createChart(container, seasons, options = {}) {
       axisSvg,
       mainScales,
       { width: axisWidth, height: chartHeight },
+      chartTheme
+    )
+    renderCompanionSeriesContext(
+      mainSvg,
+      {
+        trendline:
+          companionModel && uiSettings.fullShowTrendline
+            ? getMacroTrendline(companionModel, viewport)
+            : null,
+        seasonSpans: companionModel?.seasonSpans ?? [],
+        viewport,
+        label: companionSeries?.show?.title ?? null
+      },
+      mainScales,
+      { width: chartWidth, height: chartHeight },
       chartTheme
     )
     renderTrendlines(
@@ -2909,6 +2943,13 @@ export function createChart(container, seasons, options = {}) {
     },
     getDebugState() {
       return {
+        companionSeries: companionModel
+          ? {
+              title: companionSeries?.show?.title ?? null,
+              primarySource: companionModel.primaryRatingSource,
+              ratedEpisodes: companionModel.primaryRatedPoints.length
+            }
+          : null,
         selectedPointId,
         comparison: {
           armed: comparisonArmed,

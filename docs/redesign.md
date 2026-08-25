@@ -10,7 +10,7 @@ Updated August 21, 2026. This is a record of the redesign decisions now represen
 - one viewport-driven ratings chart with integrated season axis, range-frame Y-axis, full-show and season trendlines, source-spread marks, and breakpoint analysis
 - a sparkline minimap that stays synchronized with chart navigation
 - desktop sidenotes and mobile inline episode detail
-- a show-comparison route with two stacked charts, one shared overview and viewport, a common rating source when coverage permits, and direct side-by-side context
+- a show-comparison route with one duplex canvas containing two coordinated lanes, one shared overview and viewport, a common rating source when coverage permits, and summarized companion trend and season-boundary context in each lane
 - centralized keyboard navigation documented in [keyboard.md](keyboard.md)
 - help, credits, debug, and view-options dialogs with focus trapping, restoration, outside-click closing, and reduced-motion behavior
 - explicit focus styles in both themes

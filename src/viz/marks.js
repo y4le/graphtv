@@ -302,6 +302,59 @@ export function renderSeasonAxis(
   })
 }
 
+export function renderCompanionSeriesContext(
+  svg,
+  { trendline = null, seasonSpans = [], viewport, label = null } = {},
+  scales,
+  dimensions,
+  theme
+) {
+  const layer = svg
+    .selectAll('.companion-series-layer')
+    .data([null])
+    .join('g')
+    .attr('class', 'companion-series-layer')
+    .attr('aria-hidden', 'true')
+    .attr('data-companion-label', label)
+    .attr('pointer-events', 'none')
+  const generator = line()
+    .x((point) => scales.xScale(point.x))
+    .y((point) => scales.yScale(point.y))
+
+  layer
+    .selectAll('.companion-series-trace')
+    .data(trendline ? [trendline] : [])
+    .join('path')
+    .attr('class', 'companion-series-trace')
+    .attr('fill', 'none')
+    .attr('stroke', theme.textSecondary)
+    .attr('stroke-width', 1.4)
+    .attr('stroke-dasharray', '2 5')
+    .attr('stroke-linecap', 'round')
+    .attr('stroke-opacity', 0.68)
+    .attr('vector-effect', 'non-scaling-stroke')
+    .attr('d', (value) => generator(value.points))
+
+  const boundaries = viewport
+    ? createVisibleSeasonBoundaries(seasonSpans, viewport)
+    : []
+  const axisY = dimensions.height - 0.5
+
+  layer
+    .selectAll('.companion-season-tick')
+    .data(boundaries, (boundary) => String(boundary))
+    .join('line')
+    .attr('class', 'companion-season-tick')
+    .attr('x1', (boundary) => scales.xScale(boundary))
+    .attr('x2', (boundary) => scales.xScale(boundary))
+    .attr('y1', axisY)
+    .attr('y2', axisY + 5)
+    .attr('stroke', theme.textSecondary)
+    .attr('stroke-width', 1)
+    .attr('stroke-opacity', 0.68)
+    .attr('vector-effect', 'non-scaling-stroke')
+}
+
 function isSelectableSeasonAxisLabel(span, interactions) {
   return interactions.isSelectable?.(span.seasonNumber) ?? false
 }

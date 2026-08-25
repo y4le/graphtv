@@ -91,6 +91,16 @@ describe('theme stylesheet', () => {
       /\.artwork-missing::after\s*\{[^}]*background:\s*var\(--lineStrong\);[^}]*content:\s*'';/su
     )
   })
+
+  it('uses a textual active-lane cue for the duplex comparison', () => {
+    expect(stylesheet).toContain('.comparison-duplex')
+    expect(stylesheet).toContain(
+      '.comparison-lane.is-active .comparison-lane-active-label'
+    )
+    expect(stylesheet).not.toContain(
+      '.comparison-lane.is-active .comparison-lane-heading h2::before'
+    )
+  })
 })
 
 function getThemeToken(token) {

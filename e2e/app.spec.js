@@ -233,6 +233,60 @@ test('adds a second show and keeps comparison navigation synchronized', async ({
   ).toBeFocused()
   await expect(page.locator('.comparison-lane')).toHaveCount(2)
   await expect(page.locator('.comparison-overview-row')).toHaveCount(2)
+  await expect(page.locator('.comparison-duplex')).toBeVisible()
+  await expect(page.locator('.companion-series-trace')).toHaveCount(2)
+  await expect(page.locator('.companion-season-tick')).not.toHaveCount(0)
+  await expect(page.locator('.companion-series-layer')).toHaveCount(2)
+  expect(
+    await page
+      .locator('.companion-series-layer')
+      .evaluateAll((layers) =>
+        layers.every(
+          (layer) =>
+            layer.getAttribute('aria-hidden') === 'true' &&
+            layer.getAttribute('pointer-events') === 'none'
+        )
+      )
+  ).toBe(true)
+  await expect(
+    page.locator('.comparison-lane.is-active .comparison-lane-active-label')
+  ).toHaveText('Active')
+  await expect(
+    page.locator('.comparison-lane-context-key').first()
+  ).toContainText(
+    'Companion context: The Sopranos · full-show trend + season boundaries'
+  )
+  await expect(
+    page.locator('.comparison-lane-context-key').last()
+  ).toContainText(
+    'Companion context: The Wire · full-show trend + season boundaries'
+  )
+  const companionTickGeometry = await page
+    .locator('.comparison-lane')
+    .first()
+    .evaluate((lane) => {
+      const shell = lane.querySelector('.chart-body-shell')
+      const tick = lane.querySelector('.companion-season-tick')
+      const shellBounds = shell.getBoundingClientRect()
+      const tickBounds = tick.getBoundingClientRect()
+      const shellStyle = getComputedStyle(shell)
+      return {
+        clipBottom:
+          shellBounds.bottom + parseFloat(shellStyle.overflowClipMargin),
+        overflowX: shellStyle.overflowX,
+        overflowY: shellStyle.overflowY,
+        tickBottom: tickBounds.bottom,
+        tickHeight: tickBounds.height
+      }
+    })
+  expect(companionTickGeometry).toMatchObject({
+    overflowX: 'clip',
+    overflowY: 'clip'
+  })
+  expect(companionTickGeometry.tickHeight).toBeGreaterThan(4)
+  expect(companionTickGeometry.tickBottom).toBeLessThanOrEqual(
+    companionTickGeometry.clipBottom
+  )
   const overviewLabels = await page
     .locator('.comparison-overview-label')
     .evaluateAll((labels) =>
