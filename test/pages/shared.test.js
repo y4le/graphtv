@@ -15,6 +15,9 @@ describe('renderPublisherBrand', () => {
     expect(markup).toContain('href="https://yalethom.as/"')
     expect(markup).toContain('aria-label="yalethom.as/graphtv, publisher home"')
     expect(markup).toContain('<span class="publisher-brand-period">.</span>')
+    expect(markup).toContain(
+      '<span class="publisher-brand-path">/graphtv</span>'
+    )
     expect(markup).not.toContain('target=')
   })
 })

@@ -601,6 +601,34 @@ test.describe('mobile chart', () => {
     isMobile: true
   })
 
+  test('keeps the landing masthead on one line at 320px', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 720 })
+    await page.goto('/')
+
+    const layout = await page
+      .locator('.document-shell-search .masthead')
+      .evaluate((masthead) => {
+        const brand = masthead.querySelector('.publisher-brand')
+        const actions = masthead.querySelector('.masthead-actions')
+        const brandBounds = brand.getBoundingClientRect()
+        const actionBounds = actions.getBoundingClientRect()
+
+        return {
+          actionCenter: actionBounds.top + actionBounds.height / 2,
+          actionsFollowBrand: actionBounds.left > brandBounds.right,
+          brandCenter: brandBounds.top + brandBounds.height / 2,
+          fits: masthead.scrollWidth <= masthead.clientWidth
+        }
+      })
+
+    expect(Math.abs(layout.brandCenter - layout.actionCenter)).toBeLessThan(1)
+    expect(layout.actionsFollowBrand).toBe(true)
+    expect(layout.fits).toBe(true)
+    for (const shortcut of await page.locator('.masthead .action-key').all()) {
+      await expect(shortcut).toBeHidden()
+    }
+  })
+
   test('stacks index metadata beside touch-sized rating shapes', async ({
     page
   }) => {
@@ -661,6 +689,7 @@ test.describe('mobile chart', () => {
   })
 
   test('uses touch-sized navigation and compact options', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 720 })
     await page.goto('/?show=tvmaze%3A179')
     await expect(page.locator('.sparkline-point')).toHaveCount(72)
 
@@ -674,9 +703,33 @@ test.describe('mobile chart', () => {
     for (const action of await mastheadActions.all()) {
       expect((await action.boundingBox())?.height).toBeGreaterThanOrEqual(44)
     }
+
+    const mastheadLayout = await page
+      .locator('.results-masthead')
+      .evaluate((masthead) => {
+        const brandBounds = masthead
+          .querySelector('.publisher-brand')
+          .getBoundingClientRect()
+        const actionBounds = Array.from(
+          masthead.querySelectorAll('.masthead-action'),
+          (action) => action.getBoundingClientRect()
+        )
+        const centers = [
+          brandBounds.top + brandBounds.height / 2,
+          ...actionBounds.map((bounds) => bounds.top + bounds.height / 2)
+        ]
+
+        return {
+          centerSpread: Math.max(...centers) - Math.min(...centers),
+          fits: masthead.scrollWidth <= masthead.clientWidth
+        }
+      })
+
+    expect(mastheadLayout.centerSpread).toBeLessThan(1)
+    expect(mastheadLayout.fits).toBe(true)
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth)
-    ).toBeLessThanOrEqual(390)
+    ).toBeLessThanOrEqual(320)
 
     await page.locator('[data-ui-action="view-options"]').click()
     await expect(
@@ -727,6 +780,7 @@ test.describe('mobile chart', () => {
 
     const picker = page.locator('.show-picker-root')
     await expect(picker.getByRole('heading')).toHaveText('Replace The Sopranos')
+    await expect(picker.getByRole('heading')).toBeVisible()
     await expect(
       picker.getByRole('searchbox', { name: 'Show title' })
     ).toBeFocused()
@@ -734,7 +788,7 @@ test.describe('mobile chart', () => {
       .poll(() =>
         picker.evaluate((element) => {
           const bounds = element.getBoundingClientRect()
-          return bounds.top >= 0 && bounds.top < window.innerHeight
+          return bounds.bottom > 0 && bounds.top < window.innerHeight
         })
       )
       .toBe(true)

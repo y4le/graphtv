@@ -16,7 +16,7 @@ export function renderLoading(
 export function renderPublisherBrand() {
   return `
     <a class="publisher-brand" href="https://yalethom.as/" aria-label="yalethom.as/graphtv, publisher home">
-      <span>yalethom</span><span class="publisher-brand-period">.</span><span>as/graphtv</span>
+      <span>yalethom</span><span class="publisher-brand-period">.</span><span>as</span><span class="publisher-brand-path">/graphtv</span>
     </a>
   `
 }
