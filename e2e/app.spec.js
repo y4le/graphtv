@@ -648,6 +648,27 @@ test('scrubs episodes across empty chart space and commits on release', async ({
   await expect(page).toHaveURL(/[?&]select=s\d+e\d+(?:&|$)/u)
 })
 
+test('keeps a narrow results masthead within a fine-pointer viewport', async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 320, height: 720 })
+  await page.goto('/?show=tvmaze%3A179')
+  await expect(page.locator('.sparkline-point')).toHaveCount(72)
+
+  expect(
+    await page.evaluate(
+      () => matchMedia('(pointer: coarse) and (hover: none)').matches
+    )
+  ).toBe(false)
+  await expect(page.locator('.results-masthead .action-key')).toHaveCount(4)
+  for (const key of await page.locator('.results-masthead .action-key').all()) {
+    await expect(key).toBeHidden()
+  }
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth)
+  ).toBeLessThanOrEqual(320)
+})
+
 test.describe('mobile chart', () => {
   test.use({
     viewport: { width: 390, height: 844 },

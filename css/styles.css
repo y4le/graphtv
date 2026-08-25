@@ -3154,6 +3154,10 @@ button {
     border-color: transparent;
   }
 
+  .results-masthead .action-key {
+    display: none;
+  }
+
   .results-masthead .publisher-brand {
     font-size: 12px;
   }
