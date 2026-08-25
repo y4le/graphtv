@@ -128,6 +128,29 @@ Canonical stack and compatibility aliases:
 --font-mono: var(--font-app);
 ```
 
+### Identity
+
+GraphTV's compact mark is “The Break”: two offset regime rules crossed by a
+single breakpoint marker. It reduces the product's own change-point analysis
+to three pieces of data-ink instead of using a generic television or dashboard
+symbol.
+
+Rules:
+
+- Preserve the 32-unit master geometry: an upper ink rule from `(4, 10)` to
+  `(15, 10)`, a spot-colored marker from `(16, 6)` to `(16, 26)`, and a lower
+  ink rule from `(17, 22)` to `(28, 22)`.
+- Use butt caps. The rules are 4 units thick and the marker is 2 units thick,
+  so their painted edges abut without gaps or overlaps.
+- Keep vector icons transparent and theme-adaptive. Raster fallbacks carry an
+  opaque `--canvas` ground because they cannot respond to the browser theme.
+- Preserve position as the primary encoding. The step must remain legible in
+  one color; the spot hue is emphasis, not the only source of meaning.
+- Hand-hint the 16px raster rather than downscaling the master. The breakpoint
+  marker must occupy one full-intensity pixel column.
+- After changing the geometry or palette, regenerate and commit the raster
+  fallbacks with `npm run build:favicons`.
+
 ### Color
 
 Color should support reading and comparison, not define the product.
