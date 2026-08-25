@@ -4342,6 +4342,26 @@ function dispatchPointer(target, type, properties) {
 }
 
 describe('comparison chart coordination', () => {
+  it('left-aligns a short series overview to the shared comparison origin', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      value: 1200
+    })
+    document.body.appendChild(container)
+
+    chart = createChart(container, createSeasonLengths([8]), {
+      comparisonXMax: 120
+    })
+
+    const mainPoint = container.querySelector('.episode-point')
+    const overviewPoint = container.querySelector('.sparkline-point')
+
+    expect(Number(overviewPoint.getAttribute('cx'))).toBeCloseTo(
+      Number(mainPoint.getAttribute('cx'))
+    )
+  })
+
   it('uses shared displayed episode spacing to size long and short series equally', () => {
     const shortContainer = document.createElement('div')
     const longContainer = document.createElement('div')

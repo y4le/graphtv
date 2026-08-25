@@ -1824,7 +1824,7 @@ export function createChart(container, seasons, options = {}) {
 
   function getHorizontalScaleOptions() {
     return {
-      centerSparse: true,
+      centerSparse: !Number.isFinite(comparisonXMax),
       episodeDensity,
       isMobile: isMobile()
     }
