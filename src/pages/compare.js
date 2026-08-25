@@ -23,8 +23,8 @@ import { escapeHtml } from '../lib/html.js'
 import { formatCompactNumber } from '../lib/number.js'
 import { forwardAbort, isAbortError } from '../lib/abort.js'
 import { createChart } from '../viz/ratingsChart.js'
-import { getUiSettings } from '../viz/theme.js'
 import { createShowPicker } from '../ui/showPicker.js'
+import { createTitleFitter } from '../ui/titleFitter.js'
 import { renderError, renderLoading, renderPublisherBrand } from './shared.js'
 
 export async function renderComparisonPage(
@@ -67,6 +67,9 @@ export async function renderComparisonPage(
   }
 
   container.innerHTML = renderComparisonShell(showRef)
+  const titleFitter = createTitleFitter(
+    container.querySelector('.comparison-title')
+  )
   const comparisonRoot = container.querySelector('.comparison-data')
 
   function activateSlot(slot) {
@@ -372,22 +375,12 @@ export async function renderComparisonPage(
         continue
       }
       const source = comparison.sourceBySlot[slot]
-      const companionSlot = slot === 'a' ? 'b' : 'a'
-      const companionState = slots[companionSlot]
       const chartContext = {
         show: state.bundle.show,
         primaryRatingSource: source,
         comparisonXMax: comparison.xMax,
         sharedRatings: comparison.sharedRatings,
-        strictPrimaryRatingSource: true,
-        companionSeries:
-          comparison.comparable && companionState.bundle
-            ? {
-                show: companionState.bundle.show,
-                seasons: companionState.bundle.seasons,
-                primaryRatingSource: comparison.sourceBySlot[companionSlot]
-              }
-            : null
+        strictPrimaryRatingSource: true
       }
 
       if (state.chart) {
@@ -613,10 +606,6 @@ export async function renderComparisonPage(
 
   comparisonRoot.addEventListener('pointerdown', handleComparisonClick)
   container.addEventListener('click', handleComparisonClick)
-  const settingsListener = () => {
-    updateComparisonContextKeys(container, slots, getResolvedComparisonState())
-  }
-  document.addEventListener('graphtv:settings-change', settingsListener)
   renderSlotState(container, slots.a)
   renderSlotState(container, slots.b)
 
@@ -749,7 +738,7 @@ export async function renderComparisonPage(
       abortController.abort()
       comparisonRoot.removeEventListener('pointerdown', handleComparisonClick)
       container.removeEventListener('click', handleComparisonClick)
-      document.removeEventListener('graphtv:settings-change', settingsListener)
+      titleFitter.destroy()
       for (const slot of COMPARISON_SLOT_IDS) {
         void slots[slot].iterator?.return?.().catch(() => {})
         slots[slot].chart?.destroy()
@@ -800,9 +789,7 @@ function renderComparisonShell(showRef) {
         </div>
       </header>
       <header class="comparison-heading">
-        <p class="eyebrow">Show comparison</p>
         <h1 class="comparison-title" tabindex="-1">Loading comparison…</h1>
-        <p class="comparison-subtitle">Episode ratings in run order</p>
       </header>
       <section class="show-picker-root" aria-label="Choose a comparison show" hidden></section>
       <section class="comparison-layout">
@@ -859,7 +846,6 @@ function renderComparisonLaneHeading(slot, show = null) {
         <span class="comparison-lane-active-label">Active</span>
       </div>
       ${meta ? `<p>${escapeHtml(meta)}</p>` : ''}
-      <p class="comparison-lane-context-key" data-comparison-context-key="${slot}" hidden></p>
     </div>
   `
 }
@@ -933,10 +919,10 @@ function updateComparisonPresentation(container, slots, comparison) {
   const shows = COMPARISON_SLOT_IDS.map((slot) => slots[slot].show)
   const title = container.querySelector('.comparison-title')
   if (shows.every(Boolean)) {
-    title.textContent = `${shows[0].title} · ${shows[1].title}`
-    document.title = `${shows[0].title} · ${shows[1].title} · graphtv`
+    title.innerHTML = `${escapeHtml(shows[0].title)} <span class="comparison-title-divider">vs</span> ${escapeHtml(shows[1].title)}`
+    document.title = `${shows[0].title} vs ${shows[1].title} · graphtv`
   } else if (shows.find(Boolean)) {
-    title.textContent = `${shows.find(Boolean).title} · loading comparison…`
+    title.innerHTML = `${escapeHtml(shows.find(Boolean).title)} <span class="comparison-title-divider">vs</span> loading comparison…`
   }
   if (shows[0]) {
     container
@@ -944,20 +930,7 @@ function updateComparisonPresentation(container, slots, comparison) {
       ?.setAttribute('aria-label', `Back to ${shows[0].title}`)
   }
 
-  const subtitle = container.querySelector('.comparison-subtitle')
-  if (comparison.allReady) {
-    if (comparison.comparable) {
-      subtitle.textContent = `Shared ${getRatingSourceLabel(comparison.sourceBySlot.a)} ratings · episode order · shared scale`
-    } else {
-      subtitle.textContent =
-        'Episode order · shared scale · rating sources differ'
-    }
-  } else if (COMPARISON_SLOT_IDS.some((slot) => slots[slot].bundle)) {
-    subtitle.textContent = 'Loading the second show · scale provisional'
-  }
-
   const context = container.querySelector('.comparison-context')
-  updateComparisonContextKeys(container, slots, comparison)
   context.innerHTML = `
     ${
       comparison.allReady && !comparison.comparable
@@ -976,40 +949,14 @@ function updateComparisonPresentation(container, slots, comparison) {
     ${renderComparisonTable(slots)}
     ${
       comparison.allReady
-        ? '<p class="comparison-method-note">Ratings reflect each show’s voting audience. Adjacent values provide context, not a winner.</p>'
+        ? `<p class="comparison-method-note">${
+            comparison.comparable
+              ? `${escapeHtml(getRatingSourceLabel(comparison.sourceBySlot.a))} ratings reflect`
+              : 'Ratings reflect'
+          } each show’s voting audience. Adjacent values provide context, not a winner.</p>`
         : ''
     }
   `
-}
-
-function updateComparisonContextKeys(
-  container,
-  slots,
-  comparison,
-  settings = getUiSettings()
-) {
-  for (const slot of COMPARISON_SLOT_IDS) {
-    const otherSlot = slot === 'a' ? 'b' : 'a'
-    const key = container.querySelector(
-      `[data-comparison-context-key="${slot}"]`
-    )
-    if (!key) {
-      continue
-    }
-    const companionTitle = slots[otherSlot].show?.title
-    key.hidden = !comparison.comparable || !companionTitle
-    key.classList.toggle(
-      'has-companion-trend',
-      comparison.comparable && settings.fullShowTrendline
-    )
-    const encodings = [
-      settings.fullShowTrendline ? 'full-show trend' : null,
-      'season boundaries'
-    ].filter(Boolean)
-    key.textContent = companionTitle
-      ? `Companion context: ${companionTitle} · ${encodings.join(' + ')}`
-      : ''
-  }
 }
 
 function renderComparisonIdentity(state, source, { showSource = true } = {}) {

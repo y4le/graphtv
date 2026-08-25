@@ -229,64 +229,28 @@ test('adds a second show and keeps comparison navigation synchronized', async ({
 
   await expect(page).toHaveURL(/show=tvmaze%3A179.*vs=tvmaze%3A527/u)
   await expect(
-    page.getByRole('heading', { name: 'The Wire · The Sopranos' })
+    page.getByRole('heading', { name: 'The Wire vs The Sopranos' })
   ).toBeFocused()
+  const comparisonTitleSizes = await page
+    .locator('.comparison-title')
+    .evaluate((title) => ({
+      divider: Number.parseFloat(
+        getComputedStyle(title.querySelector('.comparison-title-divider'))
+          .fontSize
+      ),
+      title: Number.parseFloat(getComputedStyle(title).fontSize)
+    }))
+  expect(comparisonTitleSizes.divider).toBeLessThan(comparisonTitleSizes.title)
   await expect(page.locator('.comparison-lane')).toHaveCount(2)
   await expect(page.locator('.comparison-overview-row')).toHaveCount(2)
   await expect(page.locator('.comparison-duplex')).toBeVisible()
-  await expect(page.locator('.companion-series-trace')).toHaveCount(2)
-  await expect(page.locator('.companion-season-tick')).not.toHaveCount(0)
-  await expect(page.locator('.companion-series-layer')).toHaveCount(2)
-  expect(
-    await page
-      .locator('.companion-series-layer')
-      .evaluateAll((layers) =>
-        layers.every(
-          (layer) =>
-            layer.getAttribute('aria-hidden') === 'true' &&
-            layer.getAttribute('pointer-events') === 'none'
-        )
-      )
-  ).toBe(true)
+  await expect(page.locator('.companion-series-trace')).toHaveCount(0)
+  await expect(page.locator('.companion-season-tick')).toHaveCount(0)
+  await expect(page.locator('.companion-series-layer')).toHaveCount(0)
   await expect(
     page.locator('.comparison-lane.is-active .comparison-lane-active-label')
   ).toHaveText('Active')
-  await expect(
-    page.locator('.comparison-lane-context-key').first()
-  ).toContainText(
-    'Companion context: The Sopranos · full-show trend + season boundaries'
-  )
-  await expect(
-    page.locator('.comparison-lane-context-key').last()
-  ).toContainText(
-    'Companion context: The Wire · full-show trend + season boundaries'
-  )
-  const companionTickGeometry = await page
-    .locator('.comparison-lane')
-    .first()
-    .evaluate((lane) => {
-      const shell = lane.querySelector('.chart-body-shell')
-      const tick = lane.querySelector('.companion-season-tick')
-      const shellBounds = shell.getBoundingClientRect()
-      const tickBounds = tick.getBoundingClientRect()
-      const shellStyle = getComputedStyle(shell)
-      return {
-        clipBottom:
-          shellBounds.bottom + parseFloat(shellStyle.overflowClipMargin),
-        overflowX: shellStyle.overflowX,
-        overflowY: shellStyle.overflowY,
-        tickBottom: tickBounds.bottom,
-        tickHeight: tickBounds.height
-      }
-    })
-  expect(companionTickGeometry).toMatchObject({
-    overflowX: 'clip',
-    overflowY: 'clip'
-  })
-  expect(companionTickGeometry.tickHeight).toBeGreaterThan(4)
-  expect(companionTickGeometry.tickBottom).toBeLessThanOrEqual(
-    companionTickGeometry.clipBottom
-  )
+  await expect(page.locator('.comparison-lane-context-key')).toHaveCount(0)
   const overviewLabels = await page
     .locator('.comparison-overview-label')
     .evaluateAll((labels) =>
@@ -869,12 +833,94 @@ test.describe('mobile chart', () => {
       .toBe(true)
   })
 
+  test('shrinks long page titles instead of wrapping them', async ({
+    page
+  }) => {
+    await page.goto('/?show=tvmaze%3A179')
+    const resultsTitle = page.locator('.results-title')
+    await expect(resultsTitle).toBeVisible()
+    await expect(resultsTitle).toHaveText('The Wire')
+    const resultsMaximum = await resultsTitle.evaluate((title) =>
+      Number.parseFloat(getComputedStyle(title).fontSize)
+    )
+    await resultsTitle.evaluate((title) => {
+      title.textContent =
+        'The Unnecessarily Long Chronicle of Detectives, Institutions, and the Entire City of Baltimore'
+    })
+
+    await expect
+      .poll(() =>
+        resultsTitle.evaluate((title) =>
+          Number.parseFloat(title.style.fontSize)
+        )
+      )
+      .toBeLessThan(resultsMaximum)
+    const resultsFit = await resultsTitle.evaluate((title) => ({
+      clientWidth: title.clientWidth,
+      fontSize: Number.parseFloat(getComputedStyle(title).fontSize),
+      fits: title.scrollWidth <= title.clientWidth,
+      overflow: getComputedStyle(title).overflow,
+      parentRight: title.parentElement.getBoundingClientRect().right,
+      right: title.getBoundingClientRect().right,
+      scrollWidth: title.scrollWidth,
+      textOverflow: getComputedStyle(title).textOverflow,
+      whiteSpace: getComputedStyle(title).whiteSpace
+    }))
+    expect(resultsFit.fontSize).toBeGreaterThanOrEqual(14)
+    expect(resultsFit.fits).toBe(false)
+    expect(resultsFit.scrollWidth).toBeGreaterThan(resultsFit.clientWidth)
+    expect(resultsFit.overflow).toBe('clip')
+    expect(resultsFit.right).toBeLessThanOrEqual(resultsFit.parentRight + 1)
+    expect(resultsFit.textOverflow).toBe('ellipsis')
+    expect(resultsFit.whiteSpace).toBe('nowrap')
+
+    await page.goto('/?show=tvmaze%3A179&vs=tvmaze%3A527')
+    const comparisonTitle = page.locator('.comparison-title')
+    await expect(comparisonTitle).toBeVisible()
+    await expect(comparisonTitle).toHaveText('The Wire vs The Sopranos')
+    const comparisonMaximum = await comparisonTitle.evaluate((title) =>
+      Number.parseFloat(getComputedStyle(title).fontSize)
+    )
+    await comparisonTitle.evaluate((title) => {
+      title.innerHTML =
+        'The Complete History of Baltimore Institutions <span class="comparison-title-divider">vs</span> The Complete History of New Jersey Organized Crime Families'
+    })
+
+    await expect
+      .poll(() =>
+        comparisonTitle.evaluate((title) =>
+          Number.parseFloat(title.style.fontSize)
+        )
+      )
+      .toBeLessThan(comparisonMaximum)
+    const comparisonFit = await comparisonTitle.evaluate((title) => ({
+      clientWidth: title.clientWidth,
+      fontSize: Number.parseFloat(getComputedStyle(title).fontSize),
+      fits: title.scrollWidth <= title.clientWidth,
+      overflow: getComputedStyle(title).overflow,
+      parentRight: title.parentElement.getBoundingClientRect().right,
+      right: title.getBoundingClientRect().right,
+      scrollWidth: title.scrollWidth,
+      textOverflow: getComputedStyle(title).textOverflow,
+      whiteSpace: getComputedStyle(title).whiteSpace
+    }))
+    expect(comparisonFit.fontSize).toBeGreaterThanOrEqual(14)
+    expect(comparisonFit.fits).toBe(false)
+    expect(comparisonFit.scrollWidth).toBeGreaterThan(comparisonFit.clientWidth)
+    expect(comparisonFit.overflow).toBe('hidden')
+    expect(comparisonFit.right).toBeLessThanOrEqual(
+      comparisonFit.parentRight + 1
+    )
+    expect(comparisonFit.textOverflow).toBe('ellipsis')
+    expect(comparisonFit.whiteSpace).toBe('nowrap')
+  })
+
   test('keeps show comparison in one mobile reading column', async ({
     page
   }) => {
     await page.goto('/?show=tvmaze%3A179&vs=tvmaze%3A527')
     await expect(
-      page.getByRole('heading', { name: 'The Wire · The Sopranos' })
+      page.getByRole('heading', { name: 'The Wire vs The Sopranos' })
     ).toBeVisible()
     await expect(page.locator('.comparison-overview-label')).toHaveText([
       'The Wire',
@@ -900,6 +946,23 @@ test.describe('mobile chart', () => {
           Number.parseFloat(getComputedStyle(title).fontSize)
         )
     ).toBeLessThanOrEqual(22)
+    expect(
+      await page.locator('.comparison-lane').evaluateAll((lanes) =>
+        lanes.every((lane) => {
+          const laneLeft = lane.getBoundingClientRect().left
+          const headingLeft = lane
+            .querySelector('.comparison-lane-heading h2')
+            .getBoundingClientRect().left
+          const plotLeft = lane
+            .querySelector('.ratings-chart')
+            .getBoundingClientRect().left
+          const headingInset = headingLeft - laneLeft
+          return (
+            headingInset >= 15 && headingInset <= 17 && headingLeft < plotLeft
+          )
+        })
+      )
+    ).toBe(true)
     expect(
       await page
         .locator('.comparison-identities')

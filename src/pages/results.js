@@ -18,6 +18,7 @@ import { escapeHtml } from '../lib/html.js'
 import { forwardAbort, isAbortError } from '../lib/abort.js'
 import { bindVoteCountTooltips } from '../ui/voteCount.js'
 import { createShowPicker } from '../ui/showPicker.js'
+import { createTitleFitter } from '../ui/titleFitter.js'
 
 export function renderResultsMasthead({ interactive = false } = {}) {
   return `
@@ -63,6 +64,7 @@ export async function renderResultsPage(container, showRef, options = {}) {
   let latestShow = null
   let primaryProvider = null
   let chartPrimaryRatingSource = null
+  let titleFitter = null
   const initialSelection = getUrlParams().get('select')
   const abortController = new AbortController()
   const stopForwardingAbort = forwardAbort(options.signal, abortController)
@@ -151,6 +153,9 @@ export async function renderResultsPage(container, showRef, options = {}) {
 
     latestShow = showSnapshot.value.show
     renderResultsShell(container, showSnapshot.value.show)
+    titleFitter = createTitleFitter(container.querySelector('.results-title'), {
+      reserveSiblingSpace: true
+    })
     document.title = `${showSnapshot.value.show.title} · graphtv`
 
     const primarySnapshot = await iterator.next()
@@ -256,6 +261,7 @@ export async function renderResultsPage(container, showRef, options = {}) {
         void iterator?.return?.().catch(() => {})
         container.removeEventListener('click', handleSeriesRatingSelection)
         stopVoteCountTooltips()
+        titleFitter?.destroy()
         comparePicker?.destroy()
         chart.destroy()
       }
@@ -317,6 +323,7 @@ export async function renderResultsPage(container, showRef, options = {}) {
         void iterator?.return?.().catch(() => {})
         container.removeEventListener('click', handleSeriesRatingSelection)
         stopVoteCountTooltips()
+        titleFitter?.destroy()
         comparePicker?.destroy()
       }
     }

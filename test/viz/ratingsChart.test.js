@@ -51,55 +51,6 @@ afterEach(() => {
 })
 
 describe('createChart', () => {
-  it('renders and updates a summarized companion series without foreign points', () => {
-    updateUiSettings({ fullShowTrendline: true })
-    const container = document.createElement('div')
-    Object.defineProperty(container, 'clientWidth', {
-      configurable: true,
-      value: 600
-    })
-    document.body.appendChild(container)
-
-    const companionSeasons = createTwoSeasons()
-    chart = createChart(container, createSeasons(), {
-      comparisonXMax: 72,
-      sharedRatings: [7, 8, 9],
-      companionSeries: {
-        show: { title: 'Companion Show' },
-        seasons: companionSeasons,
-        primaryRatingSource: 'test'
-      }
-    })
-
-    expect(container.querySelector('.companion-series-trace')).not.toBeNull()
-    expect(container.querySelectorAll('.companion-season-tick')).toHaveLength(3)
-    expect(
-      Array.from(container.querySelectorAll('.episode-point'), (point) =>
-        point.__data__.id.startsWith('episode-')
-      )
-    ).not.toContain(false)
-    expect(chart.getDebugState().companionSeries).toEqual({
-      title: 'Companion Show',
-      primarySource: 'test',
-      ratedEpisodes: 6
-    })
-
-    updateUiSettings({ fullShowTrendline: false })
-
-    expect(container.querySelector('.companion-series-trace')).toBeNull()
-    expect(container.querySelectorAll('.companion-season-tick')).toHaveLength(3)
-
-    updateUiSettings({ fullShowTrendline: true })
-
-    expect(container.querySelector('.companion-series-trace')).not.toBeNull()
-
-    chart.updateSeasons(createSeasons(), { companionSeries: null })
-
-    expect(container.querySelector('.companion-series-trace')).toBeNull()
-    expect(container.querySelectorAll('.companion-season-tick')).toHaveLength(0)
-    expect(chart.getDebugState().companionSeries).toBeNull()
-  })
-
   it('emits concrete SVG colors from the active CSS theme', () => {
     const style = document.createElement('style')
     style.dataset.chartThemeTest = ''

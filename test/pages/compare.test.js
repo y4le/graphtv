@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { renderComparisonPage } from '../../src/pages/compare.js'
-import { updateUiSettings } from '../../src/viz/theme.js'
 
 let originalPath
 let originalTitle
@@ -9,7 +8,6 @@ let originalTitle
 beforeEach(() => {
   originalPath = `${window.location.pathname}${window.location.search}${window.location.hash}`
   originalTitle = document.title
-  updateUiSettings({ fullShowTrendline: true })
 })
 
 afterEach(() => {
@@ -48,8 +46,13 @@ describe('renderComparisonPage', () => {
     await page.whenSettled
 
     expect(container.querySelector('.comparison-title').textContent).toBe(
-      'First Show · Second Show'
+      'First Show vs Second Show'
     )
+    expect(
+      container.querySelector('.comparison-title-divider').textContent
+    ).toBe('vs')
+    expect(container.querySelector('.comparison-heading .eyebrow')).toBeNull()
+    expect(container.querySelector('.comparison-subtitle')).toBeNull()
     expect(chartFactory).toHaveBeenCalledTimes(2)
     const optionsByTitle = Object.fromEntries(
       chartFactory.mock.calls.map((call) => [call[2].show.title, call[2]])
@@ -83,6 +86,9 @@ describe('renderComparisonPage', () => {
     ).toHaveLength(8)
     expect(container.querySelector('.comparison-caution')).toBeNull()
     expect(container.querySelector('.comparison-summary')).not.toBeNull()
+    expect(container.querySelector('.comparison-method-note').textContent).toBe(
+      'IMDb ratings reflect each show’s voting audience. Adjacent values provide context, not a winner.'
+    )
     expect(container.querySelector('.comparison-summary caption')).toBeNull()
     expect(container.querySelector('.comparison-summary thead')).toBeNull()
     expect(container.querySelectorAll('.artwork-missing')).toHaveLength(2)
@@ -124,37 +130,7 @@ describe('renderComparisonPage', () => {
       container.querySelector('.comparison-lane[data-comparison-slot="a"]'),
       container.querySelector('.comparison-lane[data-comparison-slot="b"]')
     ])
-    expect(
-      Array.from(
-        container.querySelectorAll('.comparison-lane-context-key'),
-        (key) => key.textContent
-      )
-    ).toEqual([
-      'Companion context: Second Show · full-show trend + season boundaries',
-      'Companion context: First Show · full-show trend + season boundaries'
-    ])
-    expect(
-      container.querySelectorAll(
-        '.comparison-lane-context-key.has-companion-trend'
-      )
-    ).toHaveLength(2)
-
-    updateUiSettings({ fullShowTrendline: false })
-
-    expect(
-      Array.from(
-        container.querySelectorAll('.comparison-lane-context-key'),
-        (key) => key.textContent
-      )
-    ).toEqual([
-      'Companion context: Second Show · season boundaries',
-      'Companion context: First Show · season boundaries'
-    ])
-    expect(
-      container.querySelector(
-        '.comparison-lane-context-key.has-companion-trend'
-      )
-    ).toBeNull()
+    expect(container.querySelector('.comparison-lane-context-key')).toBeNull()
     expect(
       container.querySelectorAll('.comparison-lane-active-label')
     ).toHaveLength(2)
@@ -163,18 +139,12 @@ describe('renderComparisonPage', () => {
         '.comparison-lane.is-active .comparison-lane-active-label'
       ).textContent
     ).toBe('Active')
-    expect(
-      charts[0].updateSeasons.mock.calls.at(-1)[1].companionSeries
-    ).toMatchObject({
-      show: { title: 'Second Show' },
-      primaryRatingSource: 'omdb'
-    })
-    expect(
-      charts[1].updateSeasons.mock.calls.at(-1)[1].companionSeries
-    ).toMatchObject({
-      show: { title: 'First Show' },
-      primaryRatingSource: 'omdb'
-    })
+    expect(charts[0].updateSeasons.mock.calls.at(-1)[1]).not.toHaveProperty(
+      'companionSeries'
+    )
+    expect(charts[1].updateSeasons.mock.calls.at(-1)[1]).not.toHaveProperty(
+      'companionSeries'
+    )
 
     optionsByTitle['First Show'].onViewportChange({ start: 2, end: 4 })
     expect(charts[1].setViewport).toHaveBeenCalledWith({ start: 2, end: 4 })
@@ -409,8 +379,9 @@ describe('renderComparisonPage', () => {
       chartFactory.mock.results[0].value.updateSeasons.mock.calls.at(-1)[1]
         .primaryRatingSource
     ).toBe('omdb')
-    expect(container.querySelector('.comparison-subtitle').textContent).toBe(
-      'Episode order · shared scale · rating sources differ'
+    expect(container.querySelector('.comparison-subtitle')).toBeNull()
+    expect(container.querySelector('.comparison-method-note').textContent).toBe(
+      'Ratings reflect each show’s voting audience. Adjacent values provide context, not a winner.'
     )
     expect(
       Array.from(
@@ -418,16 +389,10 @@ describe('renderComparisonPage', () => {
         (paragraph) => paragraph.textContent
       ).filter((text) => text.startsWith('Plotted on'))
     ).toEqual(['Plotted on IMDb', 'Plotted on TVmaze'])
-    expect(
-      Array.from(
-        container.querySelectorAll('.comparison-lane-context-key'),
-        (key) => key.hidden
-      )
-    ).toEqual([true, true])
+    expect(container.querySelector('.comparison-lane-context-key')).toBeNull()
     expect(
       chartFactory.mock.results[0].value.updateSeasons.mock.calls.at(-1)[1]
-        .companionSeries
-    ).toBeNull()
+    ).not.toHaveProperty('companionSeries')
 
     page.destroy()
   })
