@@ -1,0 +1,140 @@
+{
+  "name": "part keys are lexical and raw unmatched titles use utf16 order",
+  "provider": "tmdb",
+  "alignVersion": 2,
+  "primary": [
+    {
+      "id": "p:part-2",
+      "season": 1,
+      "episode": 2,
+      "title": "Order - Part 2",
+      "date": null
+    },
+    {
+      "id": "p:part-10",
+      "season": 1,
+      "episode": 10,
+      "title": "Order - Part 10",
+      "date": null
+    },
+    {
+      "id": "p:bmp",
+      "season": 1,
+      "episode": null,
+      "title": "Ａ",
+      "date": null
+    },
+    {
+      "id": "p:astral",
+      "season": 1,
+      "episode": null,
+      "title": "😀",
+      "date": null
+    }
+  ],
+  "supplemental": [
+    {
+      "id": "s:part-2",
+      "season": 1,
+      "episode": 2,
+      "title": "Order Pt. 2",
+      "date": null
+    },
+    {
+      "id": "s:part-10",
+      "season": 1,
+      "episode": 10,
+      "title": "Order Pt. 10",
+      "date": null
+    }
+  ],
+  "expected": {
+    "provider": "tmdb",
+    "alignVersion": 2,
+    "seasons": [
+      {
+        "season": 1,
+        "primaryCount": 4,
+        "supplementalCount": 2,
+        "matched": 2,
+        "ambiguous": 0,
+        "unmatchedPrimary": 2,
+        "unmatchedSupplemental": 0
+      }
+    ],
+    "entries": [
+      {
+        "type": "matched",
+        "source": "tmdb",
+        "strategy": "part-title",
+        "confidence": "strong",
+        "evidence": {
+          "title": "base",
+          "part": "exact",
+          "date": "none"
+        },
+        "primary": {
+          "id": "p:part-10",
+          "season": 1,
+          "episode": 10,
+          "title": "Order - Part 10",
+          "date": null
+        },
+        "supplemental": {
+          "id": "s:part-10",
+          "season": 1,
+          "episode": 10,
+          "title": "Order Pt. 10",
+          "date": null
+        }
+      },
+      {
+        "type": "matched",
+        "source": "tmdb",
+        "strategy": "part-title",
+        "confidence": "strong",
+        "evidence": {
+          "title": "base",
+          "part": "exact",
+          "date": "none"
+        },
+        "primary": {
+          "id": "p:part-2",
+          "season": 1,
+          "episode": 2,
+          "title": "Order - Part 2",
+          "date": null
+        },
+        "supplemental": {
+          "id": "s:part-2",
+          "season": 1,
+          "episode": 2,
+          "title": "Order Pt. 2",
+          "date": null
+        }
+      },
+      {
+        "type": "unmatched_primary",
+        "source": "tmdb",
+        "primary": {
+          "id": "p:astral",
+          "season": 1,
+          "episode": null,
+          "title": "😀",
+          "date": null
+        }
+      },
+      {
+        "type": "unmatched_primary",
+        "source": "tmdb",
+        "primary": {
+          "id": "p:bmp",
+          "season": 1,
+          "episode": null,
+          "title": "Ａ",
+          "date": null
+        }
+      }
+    ]
+  }
+}

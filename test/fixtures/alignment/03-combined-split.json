@@ -1,0 +1,87 @@
+{
+  "name": "combined episodes never duplicate onto split parts",
+  "provider": "tmdb",
+  "alignVersion": 2,
+  "primary": [
+    {
+      "id": "p:one",
+      "season": 1,
+      "episode": 1,
+      "title": "Fun Run (1)",
+      "date": "2020-01-01"
+    },
+    {
+      "id": "p:two",
+      "season": 1,
+      "episode": 2,
+      "title": "Fun Run (2)",
+      "date": "2020-01-01"
+    }
+  ],
+  "supplemental": [
+    {
+      "id": "s:combined",
+      "season": 1,
+      "episode": 1,
+      "title": "Fun Run",
+      "date": "2020-01-01"
+    }
+  ],
+  "expected": {
+    "provider": "tmdb",
+    "alignVersion": 2,
+    "seasons": [
+      {
+        "season": 1,
+        "primaryCount": 2,
+        "supplementalCount": 1,
+        "matched": 0,
+        "ambiguous": 2,
+        "unmatchedPrimary": 0,
+        "unmatchedSupplemental": 0
+      }
+    ],
+    "entries": [
+      {
+        "type": "ambiguous",
+        "source": "tmdb",
+        "primary": {
+          "id": "p:one",
+          "season": 1,
+          "episode": 1,
+          "title": "Fun Run (1)",
+          "date": "2020-01-01"
+        },
+        "candidates": [
+          {
+            "id": "s:combined",
+            "season": 1,
+            "episode": 1,
+            "title": "Fun Run",
+            "date": "2020-01-01"
+          }
+        ]
+      },
+      {
+        "type": "ambiguous",
+        "source": "tmdb",
+        "primary": {
+          "id": "p:two",
+          "season": 1,
+          "episode": 2,
+          "title": "Fun Run (2)",
+          "date": "2020-01-01"
+        },
+        "candidates": [
+          {
+            "id": "s:combined",
+            "season": 1,
+            "episode": 1,
+            "title": "Fun Run",
+            "date": "2020-01-01"
+          }
+        ]
+      }
+    ]
+  }
+}

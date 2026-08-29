@@ -1,0 +1,221 @@
+{
+  "name": "unicode normalization and classification stay cross-language exact",
+  "provider": "tvmaze",
+  "alignVersion": 2,
+  "primary": [
+    {
+      "id": "p:accent",
+      "season": 1,
+      "episode": 1,
+      "title": "L’Épisode — Rock & Roll!",
+      "date": "2020-01-01"
+    },
+    {
+      "id": "p:sigma",
+      "season": 1,
+      "episode": 2,
+      "title": "ΟΔΟΣ",
+      "date": "2020-02-01"
+    },
+    {
+      "id": "p:compat",
+      "season": 1,
+      "episode": 3,
+      "title": "Ａ Ⓑ Ⅷ 二 ٢",
+      "date": null
+    },
+    {
+      "id": "p:enclosed",
+      "season": 1,
+      "episode": 4,
+      "title": "a🅐a",
+      "date": null
+    },
+    {
+      "id": "p:roman",
+      "season": 1,
+      "episode": 5,
+      "title": "Story Part ⅱ",
+      "date": "2020-05-01"
+    }
+  ],
+  "supplemental": [
+    {
+      "id": "s:accent",
+      "season": 1,
+      "episode": 1,
+      "title": "L'Episode Rock and Roll",
+      "date": "2020-01-01"
+    },
+    {
+      "id": "s:sigma",
+      "season": 1,
+      "episode": 2,
+      "title": "οδος",
+      "date": "2020-02-02"
+    },
+    {
+      "id": "s:compat",
+      "season": 1,
+      "episode": 3,
+      "title": "a b viii 二 ٢",
+      "date": null
+    },
+    {
+      "id": "s:enclosed",
+      "season": 1,
+      "episode": 4,
+      "title": "a a",
+      "date": null
+    },
+    {
+      "id": "s:roman",
+      "season": 1,
+      "episode": 5,
+      "title": "Story (2)",
+      "date": "2020-05-02"
+    }
+  ],
+  "expected": {
+    "provider": "tvmaze",
+    "alignVersion": 2,
+    "seasons": [
+      {
+        "season": 1,
+        "primaryCount": 5,
+        "supplementalCount": 5,
+        "matched": 5,
+        "ambiguous": 0,
+        "unmatchedPrimary": 0,
+        "unmatchedSupplemental": 0
+      }
+    ],
+    "entries": [
+      {
+        "type": "matched",
+        "source": "tvmaze",
+        "strategy": "title-date",
+        "confidence": "strong",
+        "evidence": {
+          "title": "exact",
+          "part": "absent",
+          "date": "exact"
+        },
+        "primary": {
+          "id": "p:accent",
+          "season": 1,
+          "episode": 1,
+          "title": "L’Épisode — Rock & Roll!",
+          "date": "2020-01-01"
+        },
+        "supplemental": {
+          "id": "s:accent",
+          "season": 1,
+          "episode": 1,
+          "title": "L'Episode Rock and Roll",
+          "date": "2020-01-01"
+        }
+      },
+      {
+        "type": "matched",
+        "source": "tvmaze",
+        "strategy": "title",
+        "confidence": "strong",
+        "evidence": {
+          "title": "exact",
+          "part": "absent",
+          "date": "none"
+        },
+        "primary": {
+          "id": "p:enclosed",
+          "season": 1,
+          "episode": 4,
+          "title": "a🅐a",
+          "date": null
+        },
+        "supplemental": {
+          "id": "s:enclosed",
+          "season": 1,
+          "episode": 4,
+          "title": "a a",
+          "date": null
+        }
+      },
+      {
+        "type": "matched",
+        "source": "tvmaze",
+        "strategy": "title",
+        "confidence": "strong",
+        "evidence": {
+          "title": "exact",
+          "part": "absent",
+          "date": "none"
+        },
+        "primary": {
+          "id": "p:compat",
+          "season": 1,
+          "episode": 3,
+          "title": "Ａ Ⓑ Ⅷ 二 ٢",
+          "date": null
+        },
+        "supplemental": {
+          "id": "s:compat",
+          "season": 1,
+          "episode": 3,
+          "title": "a b viii 二 ٢",
+          "date": null
+        }
+      },
+      {
+        "type": "matched",
+        "source": "tvmaze",
+        "strategy": "title",
+        "confidence": "strong",
+        "evidence": {
+          "title": "exact",
+          "part": "absent",
+          "date": "none"
+        },
+        "primary": {
+          "id": "p:sigma",
+          "season": 1,
+          "episode": 2,
+          "title": "ΟΔΟΣ",
+          "date": "2020-02-01"
+        },
+        "supplemental": {
+          "id": "s:sigma",
+          "season": 1,
+          "episode": 2,
+          "title": "οδος",
+          "date": "2020-02-02"
+        }
+      },
+      {
+        "type": "matched",
+        "source": "tvmaze",
+        "strategy": "part-title",
+        "confidence": "strong",
+        "evidence": {
+          "title": "base",
+          "part": "exact",
+          "date": "none"
+        },
+        "primary": {
+          "id": "p:roman",
+          "season": 1,
+          "episode": 5,
+          "title": "Story Part ⅱ",
+          "date": "2020-05-01"
+        },
+        "supplemental": {
+          "id": "s:roman",
+          "season": 1,
+          "episode": 5,
+          "title": "Story (2)",
+          "date": "2020-05-02"
+        }
+      }
+    ]
+  }
+}

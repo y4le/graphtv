@@ -1,0 +1,143 @@
+{
+  "name": "missing and malformed dates fall through while shaped dates match",
+  "provider": "tmdb",
+  "alignVersion": 2,
+  "primary": [
+    {
+      "id": "p:shifted",
+      "season": 1,
+      "episode": 7,
+      "title": "Shifted",
+      "date": null
+    },
+    {
+      "id": "p:invalid",
+      "season": 1,
+      "episode": 2,
+      "title": "Invalid Date Title",
+      "date": "2020-1-1"
+    },
+    {
+      "id": "p:shape",
+      "season": 1,
+      "episode": 3,
+      "title": "Calendar Shape",
+      "date": "2020-13-45"
+    }
+  ],
+  "supplemental": [
+    {
+      "id": "s:shifted",
+      "season": 1,
+      "episode": 2,
+      "title": "Shifted",
+      "date": null
+    },
+    {
+      "id": "s:invalid",
+      "season": 1,
+      "episode": 9,
+      "title": "Invalid Date Title",
+      "date": "2020-1-1"
+    },
+    {
+      "id": "s:shape",
+      "season": 1,
+      "episode": 8,
+      "title": "Calendar Shape",
+      "date": "2020-13-45"
+    }
+  ],
+  "expected": {
+    "provider": "tmdb",
+    "alignVersion": 2,
+    "seasons": [
+      {
+        "season": 1,
+        "primaryCount": 3,
+        "supplementalCount": 3,
+        "matched": 3,
+        "ambiguous": 0,
+        "unmatchedPrimary": 0,
+        "unmatchedSupplemental": 0
+      }
+    ],
+    "entries": [
+      {
+        "type": "matched",
+        "source": "tmdb",
+        "strategy": "title-date",
+        "confidence": "strong",
+        "evidence": {
+          "title": "exact",
+          "part": "absent",
+          "date": "exact"
+        },
+        "primary": {
+          "id": "p:shape",
+          "season": 1,
+          "episode": 3,
+          "title": "Calendar Shape",
+          "date": "2020-13-45"
+        },
+        "supplemental": {
+          "id": "s:shape",
+          "season": 1,
+          "episode": 8,
+          "title": "Calendar Shape",
+          "date": "2020-13-45"
+        }
+      },
+      {
+        "type": "matched",
+        "source": "tmdb",
+        "strategy": "title",
+        "confidence": "strong",
+        "evidence": {
+          "title": "exact",
+          "part": "absent",
+          "date": "none"
+        },
+        "primary": {
+          "id": "p:invalid",
+          "season": 1,
+          "episode": 2,
+          "title": "Invalid Date Title",
+          "date": "2020-1-1"
+        },
+        "supplemental": {
+          "id": "s:invalid",
+          "season": 1,
+          "episode": 9,
+          "title": "Invalid Date Title",
+          "date": "2020-1-1"
+        }
+      },
+      {
+        "type": "matched",
+        "source": "tmdb",
+        "strategy": "title",
+        "confidence": "strong",
+        "evidence": {
+          "title": "exact",
+          "part": "absent",
+          "date": "none"
+        },
+        "primary": {
+          "id": "p:shifted",
+          "season": 1,
+          "episode": 7,
+          "title": "Shifted",
+          "date": null
+        },
+        "supplemental": {
+          "id": "s:shifted",
+          "season": 1,
+          "episode": 2,
+          "title": "Shifted",
+          "date": null
+        }
+      }
+    ]
+  }
+}

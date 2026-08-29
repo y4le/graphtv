@@ -1,0 +1,143 @@
+{
+  "name": "digit word roman and parenthesized part markers",
+  "provider": "tvmaze",
+  "alignVersion": 2,
+  "primary": [
+    {
+      "id": "p:digit",
+      "season": 6,
+      "episode": 1,
+      "title": "Bargaining - Part 1",
+      "date": "2001-10-02"
+    },
+    {
+      "id": "p:word",
+      "season": 6,
+      "episode": 2,
+      "title": "Finale, Part Two",
+      "date": "2001-10-09"
+    },
+    {
+      "id": "p:roman",
+      "season": 6,
+      "episode": 3,
+      "title": "Coda Pt. III",
+      "date": null
+    }
+  ],
+  "supplemental": [
+    {
+      "id": "s:digit",
+      "season": 6,
+      "episode": 1,
+      "title": "Bargaining (1)",
+      "date": "2001-10-02"
+    },
+    {
+      "id": "s:word",
+      "season": 6,
+      "episode": 2,
+      "title": "Finale Pt. II",
+      "date": "2001-10-09"
+    },
+    {
+      "id": "s:roman",
+      "season": 6,
+      "episode": 3,
+      "title": "Coda - Part 3",
+      "date": null
+    }
+  ],
+  "expected": {
+    "provider": "tvmaze",
+    "alignVersion": 2,
+    "seasons": [
+      {
+        "season": 6,
+        "primaryCount": 3,
+        "supplementalCount": 3,
+        "matched": 3,
+        "ambiguous": 0,
+        "unmatchedPrimary": 0,
+        "unmatchedSupplemental": 0
+      }
+    ],
+    "entries": [
+      {
+        "type": "matched",
+        "source": "tvmaze",
+        "strategy": "part-title-date",
+        "confidence": "strong",
+        "evidence": {
+          "title": "base",
+          "part": "exact",
+          "date": "exact"
+        },
+        "primary": {
+          "id": "p:digit",
+          "season": 6,
+          "episode": 1,
+          "title": "Bargaining - Part 1",
+          "date": "2001-10-02"
+        },
+        "supplemental": {
+          "id": "s:digit",
+          "season": 6,
+          "episode": 1,
+          "title": "Bargaining (1)",
+          "date": "2001-10-02"
+        }
+      },
+      {
+        "type": "matched",
+        "source": "tvmaze",
+        "strategy": "part-title-date",
+        "confidence": "strong",
+        "evidence": {
+          "title": "base",
+          "part": "exact",
+          "date": "exact"
+        },
+        "primary": {
+          "id": "p:word",
+          "season": 6,
+          "episode": 2,
+          "title": "Finale, Part Two",
+          "date": "2001-10-09"
+        },
+        "supplemental": {
+          "id": "s:word",
+          "season": 6,
+          "episode": 2,
+          "title": "Finale Pt. II",
+          "date": "2001-10-09"
+        }
+      },
+      {
+        "type": "matched",
+        "source": "tvmaze",
+        "strategy": "part-title",
+        "confidence": "strong",
+        "evidence": {
+          "title": "base",
+          "part": "exact",
+          "date": "none"
+        },
+        "primary": {
+          "id": "p:roman",
+          "season": 6,
+          "episode": 3,
+          "title": "Coda Pt. III",
+          "date": null
+        },
+        "supplemental": {
+          "id": "s:roman",
+          "season": 6,
+          "episode": 3,
+          "title": "Coda - Part 3",
+          "date": null
+        }
+      }
+    ]
+  }
+}

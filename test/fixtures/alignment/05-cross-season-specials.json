@@ -1,0 +1,119 @@
+{
+  "name": "season zero aligns while identical cross-season episodes do not",
+  "provider": "tmdb",
+  "alignVersion": 2,
+  "primary": [
+    {
+      "id": "p:special",
+      "season": 0,
+      "episode": 1,
+      "title": "A Special",
+      "date": "2019-12-25"
+    },
+    {
+      "id": "p:shared",
+      "season": 1,
+      "episode": 1,
+      "title": "Shared Title",
+      "date": "2020-01-01"
+    }
+  ],
+  "supplemental": [
+    {
+      "id": "s:special",
+      "season": 0,
+      "episode": 9,
+      "title": "A Special",
+      "date": "2019-12-25"
+    },
+    {
+      "id": "s:shared",
+      "season": 2,
+      "episode": 1,
+      "title": "Shared Title",
+      "date": "2020-01-01"
+    }
+  ],
+  "expected": {
+    "provider": "tmdb",
+    "alignVersion": 2,
+    "seasons": [
+      {
+        "season": 0,
+        "primaryCount": 1,
+        "supplementalCount": 1,
+        "matched": 1,
+        "ambiguous": 0,
+        "unmatchedPrimary": 0,
+        "unmatchedSupplemental": 0
+      },
+      {
+        "season": 1,
+        "primaryCount": 1,
+        "supplementalCount": 0,
+        "matched": 0,
+        "ambiguous": 0,
+        "unmatchedPrimary": 1,
+        "unmatchedSupplemental": 0
+      },
+      {
+        "season": 2,
+        "primaryCount": 0,
+        "supplementalCount": 1,
+        "matched": 0,
+        "ambiguous": 0,
+        "unmatchedPrimary": 0,
+        "unmatchedSupplemental": 1
+      }
+    ],
+    "entries": [
+      {
+        "type": "matched",
+        "source": "tmdb",
+        "strategy": "title-date",
+        "confidence": "strong",
+        "evidence": {
+          "title": "exact",
+          "part": "absent",
+          "date": "exact"
+        },
+        "primary": {
+          "id": "p:special",
+          "season": 0,
+          "episode": 1,
+          "title": "A Special",
+          "date": "2019-12-25"
+        },
+        "supplemental": {
+          "id": "s:special",
+          "season": 0,
+          "episode": 9,
+          "title": "A Special",
+          "date": "2019-12-25"
+        }
+      },
+      {
+        "type": "unmatched_primary",
+        "source": "tmdb",
+        "primary": {
+          "id": "p:shared",
+          "season": 1,
+          "episode": 1,
+          "title": "Shared Title",
+          "date": "2020-01-01"
+        }
+      },
+      {
+        "type": "unmatched_supplemental",
+        "source": "tmdb",
+        "supplemental": {
+          "id": "s:shared",
+          "season": 2,
+          "episode": 1,
+          "title": "Shared Title",
+          "date": "2020-01-01"
+        }
+      }
+    ]
+  }
+}

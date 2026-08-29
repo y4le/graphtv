@@ -1,0 +1,260 @@
+{
+  "name": "all six matching passes retain their priority order",
+  "provider": "tmdb",
+  "alignVersion": 2,
+  "primary": [
+    {
+      "id": "p:title-date",
+      "season": 1,
+      "episode": 6,
+      "title": "Exact Both",
+      "date": "2020-01-01"
+    },
+    {
+      "id": "p:title",
+      "season": 1,
+      "episode": 5,
+      "title": "Exact Title",
+      "date": "2020-02-01"
+    },
+    {
+      "id": "p:part-date",
+      "season": 1,
+      "episode": 4,
+      "title": "Multipart - Part 1",
+      "date": "2020-03-01"
+    },
+    {
+      "id": "p:part",
+      "season": 1,
+      "episode": 3,
+      "title": "Undated - Part 2",
+      "date": "2020-04-01"
+    },
+    {
+      "id": "p:base-date",
+      "season": 1,
+      "episode": 2,
+      "title": "Decorated",
+      "date": "2020-05-01"
+    },
+    {
+      "id": "p:date",
+      "season": 1,
+      "episode": 1,
+      "title": "Localized",
+      "date": "2020-06-01"
+    }
+  ],
+  "supplemental": [
+    {
+      "id": "s:title-date",
+      "season": 1,
+      "episode": 1,
+      "title": "Exact Both",
+      "date": "2020-01-01"
+    },
+    {
+      "id": "s:title",
+      "season": 1,
+      "episode": 2,
+      "title": "Exact Title",
+      "date": "2020-02-02"
+    },
+    {
+      "id": "s:part-date",
+      "season": 1,
+      "episode": 3,
+      "title": "Multipart (1)",
+      "date": "2020-03-01"
+    },
+    {
+      "id": "s:part",
+      "season": 1,
+      "episode": 4,
+      "title": "Undated (2)",
+      "date": "2020-04-02"
+    },
+    {
+      "id": "s:base-date",
+      "season": 1,
+      "episode": 5,
+      "title": "Decorated (1)",
+      "date": "2020-05-01"
+    },
+    {
+      "id": "s:date",
+      "season": 1,
+      "episode": 6,
+      "title": "Original",
+      "date": "2020-06-01"
+    }
+  ],
+  "expected": {
+    "provider": "tmdb",
+    "alignVersion": 2,
+    "seasons": [
+      {
+        "season": 1,
+        "primaryCount": 6,
+        "supplementalCount": 6,
+        "matched": 6,
+        "ambiguous": 0,
+        "unmatchedPrimary": 0,
+        "unmatchedSupplemental": 0
+      }
+    ],
+    "entries": [
+      {
+        "type": "matched",
+        "source": "tmdb",
+        "strategy": "title-date",
+        "confidence": "strong",
+        "evidence": {
+          "title": "exact",
+          "part": "absent",
+          "date": "exact"
+        },
+        "primary": {
+          "id": "p:title-date",
+          "season": 1,
+          "episode": 6,
+          "title": "Exact Both",
+          "date": "2020-01-01"
+        },
+        "supplemental": {
+          "id": "s:title-date",
+          "season": 1,
+          "episode": 1,
+          "title": "Exact Both",
+          "date": "2020-01-01"
+        }
+      },
+      {
+        "type": "matched",
+        "source": "tmdb",
+        "strategy": "title",
+        "confidence": "strong",
+        "evidence": {
+          "title": "exact",
+          "part": "absent",
+          "date": "none"
+        },
+        "primary": {
+          "id": "p:title",
+          "season": 1,
+          "episode": 5,
+          "title": "Exact Title",
+          "date": "2020-02-01"
+        },
+        "supplemental": {
+          "id": "s:title",
+          "season": 1,
+          "episode": 2,
+          "title": "Exact Title",
+          "date": "2020-02-02"
+        }
+      },
+      {
+        "type": "matched",
+        "source": "tmdb",
+        "strategy": "part-title-date",
+        "confidence": "strong",
+        "evidence": {
+          "title": "base",
+          "part": "exact",
+          "date": "exact"
+        },
+        "primary": {
+          "id": "p:part-date",
+          "season": 1,
+          "episode": 4,
+          "title": "Multipart - Part 1",
+          "date": "2020-03-01"
+        },
+        "supplemental": {
+          "id": "s:part-date",
+          "season": 1,
+          "episode": 3,
+          "title": "Multipart (1)",
+          "date": "2020-03-01"
+        }
+      },
+      {
+        "type": "matched",
+        "source": "tmdb",
+        "strategy": "part-title",
+        "confidence": "strong",
+        "evidence": {
+          "title": "base",
+          "part": "exact",
+          "date": "none"
+        },
+        "primary": {
+          "id": "p:part",
+          "season": 1,
+          "episode": 3,
+          "title": "Undated - Part 2",
+          "date": "2020-04-01"
+        },
+        "supplemental": {
+          "id": "s:part",
+          "season": 1,
+          "episode": 4,
+          "title": "Undated (2)",
+          "date": "2020-04-02"
+        }
+      },
+      {
+        "type": "matched",
+        "source": "tmdb",
+        "strategy": "base-title-date",
+        "confidence": "strong",
+        "evidence": {
+          "title": "base",
+          "part": "ignored",
+          "date": "exact"
+        },
+        "primary": {
+          "id": "p:base-date",
+          "season": 1,
+          "episode": 2,
+          "title": "Decorated",
+          "date": "2020-05-01"
+        },
+        "supplemental": {
+          "id": "s:base-date",
+          "season": 1,
+          "episode": 5,
+          "title": "Decorated (1)",
+          "date": "2020-05-01"
+        }
+      },
+      {
+        "type": "matched",
+        "source": "tmdb",
+        "strategy": "date",
+        "confidence": "moderate",
+        "evidence": {
+          "title": "none",
+          "part": "absent",
+          "date": "exact"
+        },
+        "primary": {
+          "id": "p:date",
+          "season": 1,
+          "episode": 1,
+          "title": "Localized",
+          "date": "2020-06-01"
+        },
+        "supplemental": {
+          "id": "s:date",
+          "season": 1,
+          "episode": 6,
+          "title": "Original",
+          "date": "2020-06-01"
+        }
+      }
+    ]
+  }
+}

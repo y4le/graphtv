@@ -1,0 +1,119 @@
+{
+  "name": "ecmascript whitespace null ordinals and empty evidence are explicit",
+  "provider": "tvmaze",
+  "alignVersion": 2,
+  "primary": [
+    {
+      "id": "p:whitespace",
+      "season": 1,
+      "episode": 2,
+      "title": "Whitespace﻿Part﻿2",
+      "date": "2020-01-01"
+    },
+    {
+      "id": "p:marker-only",
+      "season": 1,
+      "episode": 1,
+      "title": "Part Two",
+      "date": null
+    },
+    {
+      "id": "p:empty",
+      "season": 1,
+      "episode": null,
+      "title": "!!!",
+      "date": "2020-1-1"
+    }
+  ],
+  "supplemental": [
+    {
+      "id": "s:whitespace",
+      "season": 1,
+      "episode": 2,
+      "title": "Whitespace (2)",
+      "date": "2020-01-01"
+    },
+    {
+      "id": "s:empty",
+      "season": 1,
+      "episode": null,
+      "title": "???",
+      "date": null
+    }
+  ],
+  "expected": {
+    "provider": "tvmaze",
+    "alignVersion": 2,
+    "seasons": [
+      {
+        "season": 1,
+        "primaryCount": 3,
+        "supplementalCount": 2,
+        "matched": 1,
+        "ambiguous": 0,
+        "unmatchedPrimary": 2,
+        "unmatchedSupplemental": 1
+      }
+    ],
+    "entries": [
+      {
+        "type": "matched",
+        "source": "tvmaze",
+        "strategy": "part-title-date",
+        "confidence": "strong",
+        "evidence": {
+          "title": "base",
+          "part": "exact",
+          "date": "exact"
+        },
+        "primary": {
+          "id": "p:whitespace",
+          "season": 1,
+          "episode": 2,
+          "title": "Whitespace﻿Part﻿2",
+          "date": "2020-01-01"
+        },
+        "supplemental": {
+          "id": "s:whitespace",
+          "season": 1,
+          "episode": 2,
+          "title": "Whitespace (2)",
+          "date": "2020-01-01"
+        }
+      },
+      {
+        "type": "unmatched_primary",
+        "source": "tvmaze",
+        "primary": {
+          "id": "p:empty",
+          "season": 1,
+          "episode": null,
+          "title": "!!!",
+          "date": "2020-1-1"
+        }
+      },
+      {
+        "type": "unmatched_primary",
+        "source": "tvmaze",
+        "primary": {
+          "id": "p:marker-only",
+          "season": 1,
+          "episode": 1,
+          "title": "Part Two",
+          "date": null
+        }
+      },
+      {
+        "type": "unmatched_supplemental",
+        "source": "tvmaze",
+        "supplemental": {
+          "id": "s:empty",
+          "season": 1,
+          "episode": null,
+          "title": "???",
+          "date": null
+        }
+      }
+    ]
+  }
+}

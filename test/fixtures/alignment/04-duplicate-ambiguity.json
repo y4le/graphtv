@@ -1,0 +1,74 @@
+{
+  "name": "duplicate evidence is ambiguous and candidate sorted",
+  "provider": "tvmaze",
+  "alignVersion": 2,
+  "primary": [
+    {
+      "id": "p:pilot",
+      "season": 1,
+      "episode": 1,
+      "title": "Pilot",
+      "date": "2020-01-01"
+    }
+  ],
+  "supplemental": [
+    {
+      "id": "s:b",
+      "season": 1,
+      "episode": 1,
+      "title": "Pilot",
+      "date": "2020-01-01"
+    },
+    {
+      "id": "s:a",
+      "season": 1,
+      "episode": 1,
+      "title": "Pilot",
+      "date": "2020-01-01"
+    }
+  ],
+  "expected": {
+    "provider": "tvmaze",
+    "alignVersion": 2,
+    "seasons": [
+      {
+        "season": 1,
+        "primaryCount": 1,
+        "supplementalCount": 2,
+        "matched": 0,
+        "ambiguous": 1,
+        "unmatchedPrimary": 0,
+        "unmatchedSupplemental": 0
+      }
+    ],
+    "entries": [
+      {
+        "type": "ambiguous",
+        "source": "tvmaze",
+        "primary": {
+          "id": "p:pilot",
+          "season": 1,
+          "episode": 1,
+          "title": "Pilot",
+          "date": "2020-01-01"
+        },
+        "candidates": [
+          {
+            "id": "s:a",
+            "season": 1,
+            "episode": 1,
+            "title": "Pilot",
+            "date": "2020-01-01"
+          },
+          {
+            "id": "s:b",
+            "season": 1,
+            "episode": 1,
+            "title": "Pilot",
+            "date": "2020-01-01"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "name": "duplicate primary ids retain the last matched season in lookup",
+  "provider": "tvmaze",
+  "alignVersion": 2,
+  "primary": [
+    {
+      "id": "duplicate",
+      "season": 1,
+      "episode": 1,
+      "title": "One",
+      "date": "2020-01-01"
+    },
+    {
+      "id": "duplicate",
+      "season": 2,
+      "episode": 1,
+      "title": "Two",
+      "date": "2020-02-01"
+    }
+  ],
+  "supplemental": [
+    {
+      "id": "s:one",
+      "season": 1,
+      "episode": 1,
+      "title": "One",
+      "date": "2020-01-01"
+    },
+    {
+      "id": "s:two",
+      "season": 2,
+      "episode": 1,
+      "title": "Two",
+      "date": "2020-02-01"
+    }
+  ],
+  "expected": {
+    "provider": "tvmaze",
+    "alignVersion": 2,
+    "seasons": [
+      {
+        "season": 1,
+        "primaryCount": 1,
+        "supplementalCount": 1,
+        "matched": 1,
+        "ambiguous": 0,
+        "unmatchedPrimary": 0,
+        "unmatchedSupplemental": 0
+      },
+      {
+        "season": 2,
+        "primaryCount": 1,
+        "supplementalCount": 1,
+        "matched": 1,
+        "ambiguous": 0,
+        "unmatchedPrimary": 0,
+        "unmatchedSupplemental": 0
+      }
+    ],
+    "entries": [
+      {
+        "type": "matched",
+        "source": "tvmaze",
+        "strategy": "title-date",
+        "confidence": "strong",
+        "evidence": {
+          "title": "exact",
+          "part": "absent",
+          "date": "exact"
+        },
+        "primary": {
+          "id": "duplicate",
+          "season": 1,
+          "episode": 1,
+          "title": "One",
+          "date": "2020-01-01"
+        },
+        "supplemental": {
+          "id": "s:one",
+          "season": 1,
+          "episode": 1,
+          "title": "One",
+          "date": "2020-01-01"
+        }
+      },
+      {
+        "type": "matched",
+        "source": "tvmaze",
+        "strategy": "title-date",
+        "confidence": "strong",
+        "evidence": {
+          "title": "exact",
+          "part": "absent",
+          "date": "exact"
+        },
+        "primary": {
+          "id": "duplicate",
+          "season": 2,
+          "episode": 1,
+          "title": "Two",
+          "date": "2020-02-01"
+        },
+        "supplemental": {
+          "id": "s:two",
+          "season": 2,
+          "episode": 1,
+          "title": "Two",
+          "date": "2020-02-01"
+        }
+      }
+    ]
+  }
+}
