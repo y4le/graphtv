@@ -176,8 +176,15 @@ export async function getShow(id, options = {}) {
 }
 
 export async function getSeasons(id, _totalSeasons, options = {}) {
-  const { seasons, diagnostics } = await loadRatingsdbBundle(id, options)
-  return { seasons, diagnostics }
+  const { seasons, diagnostics, meta } = await loadRatingsdbBundle(id, options)
+  return {
+    seasons,
+    meta: {
+      ...meta,
+      provider: 'ratingsdb',
+      sources: diagnostics
+    }
+  }
 }
 
 export async function resolveShowRef({ externalIds }) {

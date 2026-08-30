@@ -60,6 +60,7 @@ function createBundle() {
 
 function createDiagnosticsBundle() {
   const bundle = createBundle()
+  bundle.incomplete = true
   bundle.providers = [
     {
       source: 'imdb',
@@ -264,22 +265,24 @@ test('exposes RatingsDB provider statuses through debug diagnostics', async ({
   })
   await page.goto('/?api=ratingsdb&show=ratingsdb%3Att9000001')
   await expect(page.locator('.episode-point').first()).toBeVisible()
+  await expect(page.locator('.results-progress')).toHaveText('TMDB unavailable')
 
   await page.keyboard.press('Shift+D')
   const section = page.locator('.debug-section').filter({
-    has: page.getByRole('heading', { name: 'Provider diagnostics' })
+    has: page.getByRole('heading', { name: 'Merged bundle' })
   })
   const href = await section.locator('.debug-raw-link').getAttribute('href')
-  const diagnostics = JSON.parse(
+  const bundle = JSON.parse(
     decodeURIComponent(href.slice(href.indexOf(',') + 1))
   )
   const sources = Object.fromEntries(
-    diagnostics[0].seasonDiagnostics.map((item) => [
+    bundle.sourceStatus.sources.map((item) => [
       item.source,
       { reason: item.reason, status: item.status }
     ])
   )
 
+  expect(bundle.sourceStatus.incomplete).toBe(true)
   expect(sources).toStrictEqual({
     combined: { reason: null, status: 'loaded' },
     imdb: { reason: null, status: 'loaded' },

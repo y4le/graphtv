@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  formatSourceStatus,
   renderResultsMasthead,
   renderResultsPage
 } from '../../src/pages/results.js'
@@ -92,6 +93,36 @@ describe('renderResultsMasthead', () => {
     expect(target.searchParams.has('show')).toBe(false)
     expect(target.searchParams.has('q')).toBe(false)
     expect(target.hash).toBe('')
+  })
+})
+
+describe('formatSourceStatus', () => {
+  it('renders only failed and pending facts supplied by the server', () => {
+    expect(formatSourceStatus(null)).toBe('')
+    expect(formatSourceStatus({ sources: [] })).toBe('')
+    expect(
+      formatSourceStatus({
+        incomplete: true,
+        sources: [
+          { source: 'imdb', status: 'loaded' },
+          { source: 'rtCritics', status: 'skipped' },
+          { source: 'tmdb', status: 'failed' },
+          { source: 'trakt', status: 'pending' }
+        ]
+      })
+    ).toBe('TMDB unavailable · Trakt still loading')
+  })
+
+  it('uses the incomplete fallback only when no source explains it', () => {
+    expect(formatSourceStatus({ incomplete: true, sources: [] })).toBe(
+      'Some ratings are still being collected'
+    )
+    expect(
+      formatSourceStatus({
+        incomplete: true,
+        sources: [{ source: 'tmdb', status: 'pending' }]
+      })
+    ).toBe('TMDB still loading')
   })
 })
 
@@ -305,6 +336,7 @@ describe('renderResultsPage', () => {
       container.querySelector('.rating-badge.is-primary').dataset.ratingProvider
     ).toBe('omdb')
     expect(container.querySelector('.results-progress').hidden).toBe(true)
+    expect(container.querySelector('.results-progress').textContent).toBe('')
     expect(
       container.querySelector('.results-data').getAttribute('aria-busy')
     ).toBe('false')
@@ -316,6 +348,45 @@ describe('renderResultsPage', () => {
     page.destroy()
     container.remove()
     expect(chart.destroy).toHaveBeenCalledTimes(1)
+  })
+
+  it('announces source failures when a complete bundle reports them', async () => {
+    const bundle = createBundle()
+    bundle.sourceStatus = {
+      incomplete: true,
+      sources: [
+        { source: 'imdb', status: 'loaded' },
+        { source: 'tmdb', status: 'failed', reason: 'upstream_error' }
+      ]
+    }
+    const bundleStream = async function* () {
+      yield {
+        phase: 'show',
+        show: bundle.show,
+        pendingProviders: [],
+        complete: false
+      }
+      yield {
+        phase: 'primary',
+        bundle,
+        pendingProviders: [],
+        complete: true
+      }
+    }
+    const container = document.createElement('div')
+
+    const page = await renderResultsPage(container, 'tvmaze:1', {
+      bundleStream,
+      chartFactory: () => createChartStub(),
+      detailLoaderFactory: () => vi.fn(),
+      compareProviders: []
+    })
+
+    const progress = container.querySelector('.results-progress')
+    expect(progress.textContent).toBe('TMDB unavailable')
+    expect(progress.hidden).toBe(false)
+    expect(progress.getAttribute('role')).toBe('status')
+    page.destroy()
   })
 
   it('aborts the active bundle stream before destroying its chart', async () => {

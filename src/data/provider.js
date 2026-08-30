@@ -116,7 +116,11 @@ export function createEpisodeDetailLoader(options = {}) {
 
 function unpackSeasons(result) {
   if (Array.isArray(result)) {
-    return { seasons: result, seasonDiagnostics: null }
+    return {
+      seasons: result,
+      seasonDiagnostics: null,
+      sourceStatus: null
+    }
   }
   if (!result || !Array.isArray(result.seasons)) {
     throw new Error('Provider returned invalid season data.')
@@ -124,7 +128,8 @@ function unpackSeasons(result) {
 
   return {
     seasons: result.seasons,
-    seasonDiagnostics: result.diagnostics ?? null
+    seasonDiagnostics: result.diagnostics ?? null,
+    sourceStatus: result.meta ?? null
   }
 }
 
@@ -239,7 +244,8 @@ function mergeProviderRecords(primaryRecord, supplementalDiagnostics) {
 
   return {
     ...mergeShowRecords(primaryRecord, supplementalRecords),
-    providerDiagnostics
+    providerDiagnostics,
+    sourceStatus: primaryRecord.sourceStatus ?? null
   }
 }
 

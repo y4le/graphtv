@@ -147,6 +147,28 @@ describe('data/provider', () => {
         seasonDiagnostics: diagnostics
       }
     ])
+    expect(bundle.sourceStatus).toBeNull()
+  })
+
+  it('threads primary source status beside provider diagnostics', async () => {
+    const sourceStatus = {
+      provider: 'ratingsdb',
+      incomplete: true,
+      sources: [{ source: 'tmdb', status: 'pending' }]
+    }
+    const bundle = await getShowBundle('ratingsdb:tt123', {
+      compareProviders: [],
+      providerLoader: async () => ({
+        getShow: async () => createShow('ratingsdb:tt123', { imdb: 'tt123' }),
+        getSeasons: async () => ({
+          seasons: [{ number: 1, title: 'Season 1', episodes: [] }],
+          meta: sourceStatus
+        })
+      })
+    })
+
+    expect(bundle.sourceStatus).toBe(sourceStatus)
+    expect(bundle.providerDiagnostics).toStrictEqual([])
   })
 
   it('rejects malformed season transport results at the provider boundary', async () => {

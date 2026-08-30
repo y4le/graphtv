@@ -13,7 +13,10 @@ import {
   renderPending,
   renderPublisherBrand
 } from './shared.js'
-import { orderVisibleRatings } from '../data/ratingProviders.js'
+import {
+  getRatingSourceLabel,
+  orderVisibleRatings
+} from '../data/ratingProviders.js'
 import { isPendingError, withPendingRetry } from '../data/pendingRetry.js'
 import { buildUrl, getUrlParams, preserveDebugParams } from '../lib/url.js'
 import { escapeHtml } from '../lib/html.js'
@@ -467,10 +470,37 @@ function updateShowContext(
 function updateProgress(container, snapshot) {
   const dataRoot = container.querySelector('.results-data')
   const progressRoot = container.querySelector('.results-progress')
-  const message = snapshot.complete ? '' : 'Loading additional ratings…'
+  const message = snapshot.complete
+    ? formatSourceStatus(snapshot.bundle?.sourceStatus)
+    : 'Loading additional ratings…'
   dataRoot.setAttribute('aria-busy', String(!snapshot.complete))
   progressRoot.textContent = message
   progressRoot.hidden = !message
+}
+
+export function formatSourceStatus(sourceStatus) {
+  const sources = Array.isArray(sourceStatus?.sources)
+    ? sourceStatus.sources
+    : []
+  const failed = sources
+    .filter((source) => source.status === 'failed')
+    .map((source) => getRatingSourceLabel(source.source))
+  const pending = sources
+    .filter((source) => source.status === 'pending')
+    .map((source) => getRatingSourceLabel(source.source))
+  const messages = []
+
+  if (failed.length > 0) {
+    messages.push(`${failed.join(', ')} unavailable`)
+  }
+  if (pending.length > 0) {
+    messages.push(`${pending.join(', ')} still loading`)
+  }
+  if (messages.length === 0 && sourceStatus?.incomplete === true) {
+    messages.push('Some ratings are still being collected')
+  }
+
+  return messages.join(' · ')
 }
 
 function showSupplementalError(container, error) {

@@ -77,11 +77,14 @@ describe('RatingsDB bundle transport', () => {
     )
     expect(show.id).toBe('ratingsdb:tt9000001')
     expect(result.seasons).toHaveLength(1)
-    expect(result.diagnostics).toStrictEqual(
-      expect.arrayContaining([
+    expect(result).not.toHaveProperty('diagnostics')
+    expect(result.meta).toMatchObject({
+      provider: 'ratingsdb',
+      incomplete: false,
+      sources: expect.arrayContaining([
         expect.objectContaining({ provider: 'ratingsdb', source: 'imdb' })
       ])
-    )
+    })
   })
 
   it('memoizes an oversized bundle that the API cache declines', async () => {
