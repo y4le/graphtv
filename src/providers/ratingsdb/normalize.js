@@ -4,6 +4,7 @@ import {
   createSeason,
   createShow
 } from '../../data/schema.js'
+import { isSeriesRef } from './seriesRef.js'
 
 const DIAGNOSTIC_STATUSES = new Map([
   ['fresh', 'loaded'],
@@ -74,6 +75,37 @@ function normalizeDiagnostic(provider) {
     lastSuccessAt: provider.lastSuccessAt ?? null,
     expiresAt: provider.expiresAt ?? null
   }
+}
+
+export function normalizeRatingsdbCard(card) {
+  if (
+    !isSeriesRef(card?.id) ||
+    typeof card?.title !== 'string' ||
+    card.title.length === 0
+  ) {
+    return null
+  }
+
+  return createShow({
+    id: `ratingsdb:${card.id}`,
+    title: card.title,
+    year: typeof card.year === 'string' ? card.year : '',
+    poster: typeof card.poster === 'string' ? card.poster : null,
+    genres: Array.isArray(card.genres) ? [...card.genres] : [],
+    ratings: [],
+    externalIds:
+      card.externalIds && typeof card.externalIds === 'object'
+        ? { ...card.externalIds }
+        : {}
+  })
+}
+
+export function normalizeRatingsdbSearch(body) {
+  if (!Array.isArray(body?.results)) {
+    return []
+  }
+
+  return body.results.map(normalizeRatingsdbCard).filter(Boolean)
 }
 
 export function normalizeRatingsdbBundle(bundle) {

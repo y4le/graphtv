@@ -5,21 +5,11 @@ import {
   requestJson
 } from '../../data/apiCache.js'
 import { memoizeBundle, readMemoizedBundle } from './bundleMemo.js'
-import { normalizeRatingsdbBundle } from './normalize.js'
-
-const TCONST_REF = /^tt[0-9]+$/u
-const ALIAS_REF = /^(?:imdb|tvmaze|tmdb):[a-z0-9]+$/iu
-
-function validateSeriesRef(value) {
-  if (
-    typeof value !== 'string' ||
-    (!TCONST_REF.test(value) && !ALIAS_REF.test(value))
-  ) {
-    throw new Error(`Invalid RatingsDB series reference: ${String(value)}`)
-  }
-
-  return value
-}
+import {
+  normalizeRatingsdbBundle,
+  normalizeRatingsdbSearch
+} from './normalize.js'
+import { assertSeriesRef, isTconst } from './seriesRef.js'
 
 function isChartBundle(value) {
   return value?.schemaVersion === 1
@@ -27,6 +17,21 @@ function isChartBundle(value) {
 
 function classifyChartBundle(value) {
   return { cache: isChartBundle(value) }
+}
+
+function classifySearchResponse(value) {
+  return { cache: Array.isArray(value?.results) }
+}
+
+function requireApiBase() {
+  const apiBase = getRatingsdbApiBase()
+  if (!apiBase) {
+    throw new Error(
+      'RatingsDB is not configured. Set VITE_RATINGSDB_API_BASE to enable it.'
+    )
+  }
+
+  return apiBase
 }
 
 export class RatingsdbPendingError extends Error {
@@ -58,8 +63,37 @@ function responseError(body) {
   return new RatingsdbResponseError(body)
 }
 
+export async function search(query, options = {}) {
+  const term = typeof query === 'string' ? query.trim() : ''
+  if (!term) {
+    return []
+  }
+
+  const apiBase = requireApiBase()
+  const body = await requestJson(
+    {
+      provider: 'ratingsdb',
+      kind: 'search',
+      id: term,
+      ttlMs: API_CACHE_TTL.search,
+      classify: classifySearchResponse
+    },
+    () => ({
+      url: `${apiBase}/api/v1/search?q=${encodeURIComponent(term)}`,
+      init: getFetchInit(options)
+    }),
+    options
+  )
+
+  if (!Array.isArray(body?.results)) {
+    throw responseError(body)
+  }
+
+  return normalizeRatingsdbSearch(body)
+}
+
 export async function loadRatingsdbBundle(id, options = {}) {
-  const ref = validateSeriesRef(id)
+  const ref = assertSeriesRef(id)
   options.signal?.throwIfAborted()
 
   const memoized = readMemoizedBundle(ref)
@@ -67,12 +101,7 @@ export async function loadRatingsdbBundle(id, options = {}) {
     return normalizeRatingsdbBundle(memoized)
   }
 
-  const apiBase = getRatingsdbApiBase()
-  if (!apiBase) {
-    throw new Error(
-      'RatingsDB is not configured. Set VITE_RATINGSDB_API_BASE to enable it.'
-    )
-  }
+  const apiBase = requireApiBase()
 
   const bundle = await requestJson(
     {
@@ -109,7 +138,7 @@ export async function getSeasons(id, _totalSeasons, options = {}) {
 
 export async function resolveShowRef({ externalIds }) {
   const imdbId = externalIds?.imdb
-  if (typeof imdbId !== 'string' || !TCONST_REF.test(imdbId)) {
+  if (!isTconst(imdbId)) {
     return null
   }
 
