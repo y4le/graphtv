@@ -94,8 +94,7 @@ function isValidEntry(entry, key, timestamp) {
   )
 }
 
-async function fetchJson(url, init) {
-  const response = await fetch(url, init)
+export async function decodeJsonResponse(response) {
   if (!response.ok) {
     const error = new Error(`Request failed with status ${response.status}`)
     error.status = response.status
@@ -103,6 +102,10 @@ async function fetchJson(url, init) {
   }
 
   return response.json()
+}
+
+async function fetchJson(url, init, decode = decodeJsonResponse) {
+  return decode(await fetch(url, init))
 }
 
 export function createApiRequestCache({
@@ -167,10 +170,14 @@ export function createApiRequestCache({
         await options.beforeNetwork?.()
         controller.signal.throwIfAborted()
         networkStarted = true
-        const value = await fetchJson(url, {
-          ...init,
-          signal: controller.signal
-        })
+        const value = await fetchJson(
+          url,
+          {
+            ...init,
+            signal: controller.signal
+          },
+          descriptor.decode
+        )
         controller.signal.throwIfAborted()
         const policy = descriptor.classify?.(value) ?? { cache: true }
         if (policy.cache !== false) {
@@ -208,7 +215,8 @@ export function createApiRequestCache({
         if (
           networkStarted &&
           !request.abandoned &&
-          diagnosedError?.name !== 'AbortError'
+          diagnosedError?.name !== 'AbortError' &&
+          !diagnosedError?.pending
         ) {
           recentFailures.delete(key)
           recentFailures.set(key, {

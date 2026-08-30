@@ -495,6 +495,80 @@ describe('API request cache', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
+  it('lets a descriptor decoder inspect the raw response', async () => {
+    const cache = createCache()
+    const decode = vi.fn(async (response) => ({
+      status: response.status,
+      retryAfter: response.headers.get('Retry-After')
+    }))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response('{}', {
+          status: 202,
+          headers: { 'Retry-After': '5' }
+        })
+      )
+    )
+
+    await expect(
+      cache.requestJson({ ...descriptor, decode }, () => ({
+        url: 'https://example.test/show/2790'
+      }))
+    ).resolves.toStrictEqual({ status: 202, retryAfter: '5' })
+    expect(decode).toHaveBeenCalledWith(expect.any(Response))
+  })
+
+  it('briefly cools down an ordinary decoder failure', async () => {
+    const cache = createCache()
+    const error = new Error('decode failed')
+    const fetchMock = vi.fn(() => Promise.resolve(jsonResponse({})))
+    vi.stubGlobal('fetch', fetchMock)
+    const failedDescriptor = {
+      ...descriptor,
+      decode: async () => {
+        throw error
+      }
+    }
+    const requestFactory = () => ({
+      url: 'https://example.test/show/2790'
+    })
+
+    await expect(
+      cache.requestJson(failedDescriptor, requestFactory)
+    ).rejects.toBe(error)
+    await expect(
+      cache.requestJson(failedDescriptor, requestFactory)
+    ).rejects.toBe(error)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('never cools down a decoder error marked as pending', async () => {
+    const cache = createCache()
+    const fetchMock = vi.fn(() => Promise.resolve(jsonResponse({})))
+    vi.stubGlobal('fetch', fetchMock)
+    const pendingDescriptor = {
+      ...descriptor,
+      decode: async () => {
+        const error = new Error('pending')
+        error.pending = true
+        throw error
+      }
+    }
+    const requestFactory = () => ({
+      url: 'https://example.test/show/2790'
+    })
+
+    await expect(
+      cache.requestJson(pendingDescriptor, requestFactory)
+    ).rejects.toMatchObject({ pending: true })
+    await expect(
+      cache.requestJson(pendingDescriptor, requestFactory)
+    ).rejects.toMatchObject({ pending: true })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect((await cache.getDebugState()).recentFailures).toBe(0)
+  })
+
   it('attaches credential-safe request context to opaque fetch failures', async () => {
     const cache = createCache()
     vi.stubGlobal(
