@@ -29,6 +29,18 @@ export function renderError(message) {
   return `<p class="state-copy error-state">${escapeHtml(message)}</p>`
 }
 
+export function renderPending(
+  message = 'This series is still being prepared. Try again in a moment.',
+  { actionLabel = 'Try again' } = {}
+) {
+  return `
+    <div class="state-copy pending-state" role="status">
+      <p class="pending-state-copy">${escapeHtml(message)}</p>
+      <button type="button" class="pending-state-action" data-pending-retry>${escapeHtml(actionLabel)}</button>
+    </div>
+  `
+}
+
 export function formatRatingBadge(
   rating,
   { show = null, selectable = false, isPrimary = false } = {}

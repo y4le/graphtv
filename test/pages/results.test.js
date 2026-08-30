@@ -412,7 +412,7 @@ describe('renderResultsPage', () => {
     page.destroy()
   })
 
-  it('renders the final pending message after exhausting its attempts', async () => {
+  it('renders an actionable pending state after exhausting its attempts', async () => {
     const bundleStream = vi.fn(async function* () {
       const error = new Error('Hydration in progress')
       error.pending = true
@@ -432,9 +432,55 @@ describe('renderResultsPage', () => {
 
     expect(bundleStream).toHaveBeenCalledTimes(3)
     expect(page.chart).toBeNull()
-    expect(container.querySelector('.error-state').textContent).toBe(
-      'Hydration in progress'
+    expect(container.querySelector('.error-state')).toBeNull()
+    expect(container.querySelector('.pending-state-copy').textContent).toBe(
+      'This series is still being prepared. Try again in a moment.'
     )
+    expect(container.querySelector('[data-pending-retry]')).not.toBeNull()
+  })
+
+  it('reloads the current page when the pending action is chosen', async () => {
+    const reloadPage = vi.fn()
+    const bundleStream = async function* () {
+      const error = new Error('Hydration in progress')
+      error.pending = true
+      error.retryAfterMs = 0
+      throw error
+    }
+    const container = document.createElement('div')
+
+    await renderResultsPage(container, 'tvmaze:1', {
+      bundleStream,
+      compareProviders: [],
+      reloadPage
+    })
+
+    container.querySelector('[data-pending-retry]').click()
+    expect(reloadPage).toHaveBeenCalledOnce()
+  })
+
+  it('focuses the pending retry action when no show title is available', async () => {
+    const bundleStream = async function* () {
+      const error = new Error('Hydration in progress')
+      error.pending = true
+      error.retryAfterMs = 0
+      throw error
+    }
+    const container = document.createElement('div')
+    document.body.append(container)
+    const page = await renderResultsPage(container, 'tvmaze:1', {
+      bundleStream,
+      compareProviders: [],
+      reloadPage: vi.fn()
+    })
+
+    page.focusInitial()
+
+    expect(document.activeElement).toBe(
+      container.querySelector('[data-pending-retry]')
+    )
+    page.destroy()
+    container.remove()
   })
 
   it('does not retry an ordinary opening failure', async () => {
@@ -491,7 +537,7 @@ describe('renderResultsPage', () => {
 
     expect(page.chart).toBeNull()
     expect(container.querySelector('.error-state')).toBeNull()
-    expect(container.textContent).toContain('Loading show details')
+    expect(container.textContent).toContain('Still preparing this series')
   })
 
   it('silently aborts initial provider work when its caller cancels', async () => {

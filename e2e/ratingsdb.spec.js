@@ -205,6 +205,44 @@ test('honors two measured pending delays before rendering a series', async ({
   expect(requests.legacyRequests).toStrictEqual([])
 })
 
+test('offers a retry after fast pending exhaustion and preserves the route', async ({
+  page
+}) => {
+  const bundle = createBundle()
+  let ready = false
+  const requests = await installRoutes(page, {
+    handleChart: (route) =>
+      ready
+        ? fulfillJson(route, bundle)
+        : fulfillJson(
+            route,
+            {
+              error: 'Hydration in progress',
+              code: 'hydration_pending'
+            },
+            { headers: { 'Retry-After': '0' }, status: 202 }
+          )
+  })
+
+  await page.goto('/?api=ratingsdb&show=ratingsdb%3Att9000001')
+
+  await expect(page.locator('.pending-state-copy')).toHaveText(
+    'This series is still being prepared. Try again in a moment.'
+  )
+  const retry = page.getByRole('button', { name: 'Try again' })
+  await expect(retry).toBeVisible()
+  expect(requests.chartPaths).toHaveLength(3)
+  await expect(page).toHaveURL(/[?&]api=ratingsdb(?:&|$)/u)
+  await expect(page).toHaveURL(/show=ratingsdb%3Att9000001/u)
+
+  ready = true
+  await retry.click()
+
+  await expect(page.locator('.episode-point').first()).toBeVisible()
+  expect(requests.chartPaths).toHaveLength(4)
+  expect(requests.legacyRequests).toStrictEqual([])
+})
+
 test('renders an unknown RatingsDB series as an error', async ({ page }) => {
   const requests = await installRoutes(page, {
     handleChart: (route) =>

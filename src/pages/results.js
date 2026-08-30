@@ -10,10 +10,11 @@ import {
   formatRatingBadge,
   renderError,
   renderLoading,
+  renderPending,
   renderPublisherBrand
 } from './shared.js'
 import { orderVisibleRatings } from '../data/ratingProviders.js'
-import { withPendingRetry } from '../data/pendingRetry.js'
+import { isPendingError, withPendingRetry } from '../data/pendingRetry.js'
 import { buildUrl, getUrlParams, preserveDebugParams } from '../lib/url.js'
 import { escapeHtml } from '../lib/html.js'
 import { forwardAbort, isAbortError } from '../lib/abort.js'
@@ -49,7 +50,8 @@ export async function renderResultsPage(container, showRef, options = {}) {
     bundleStream = streamShowBundle,
     chartFactory = createChart,
     detailLoaderFactory = createEpisodeDetailLoader,
-    retry: retryOptions = {}
+    retry: retryOptions = {},
+    reloadPage = () => window.location.reload()
   } = options
   container.innerHTML = `
     <main class="document-shell">
@@ -156,7 +158,14 @@ export async function renderResultsPage(container, showRef, options = {}) {
         }
         return snapshot
       },
-      { ...retryOptions, signal: abortController.signal }
+      {
+        ...retryOptions,
+        signal: abortController.signal,
+        onRetry(context) {
+          showPendingProgress(container)
+          retryOptions.onRetry?.(context)
+        }
+      }
     )
 
     latestShow = showSnapshot.value.show
@@ -280,9 +289,12 @@ export async function renderResultsPage(container, showRef, options = {}) {
     void iterator?.return?.().catch(() => {})
     container.removeEventListener('click', handleSeriesRatingSelection)
     if (!isAbortError(error)) {
+      const state = isPendingError(error)
+        ? renderPending()
+        : renderError(error.message)
       const chartRoot = container.querySelector('.chart-root')
       if (chartRoot) {
-        chartRoot.innerHTML = renderError(error.message)
+        chartRoot.innerHTML = state
         container
           .querySelector('.results-data')
           ?.setAttribute('aria-busy', 'false')
@@ -294,10 +306,13 @@ export async function renderResultsPage(container, showRef, options = {}) {
         container.innerHTML = `
           <main class="document-shell">
             ${renderResultsMasthead()}
-            ${renderError(error.message)}
+            ${state}
           </main>
         `
       }
+      container
+        .querySelector('[data-pending-retry]')
+        ?.addEventListener('click', reloadPage)
     }
     return {
       kind: 'results',
@@ -305,9 +320,10 @@ export async function renderResultsPage(container, showRef, options = {}) {
       chart: null,
       openComparePicker,
       focusInitial() {
-        container
-          .querySelector('.results-title')
-          ?.focus({ preventScroll: true })
+        const target =
+          container.querySelector('.results-title') ??
+          container.querySelector('[data-pending-retry]')
+        target?.focus({ preventScroll: true })
       },
       focusSearch() {
         window.location.href = buildBackHref()
@@ -335,6 +351,13 @@ export async function renderResultsPage(container, showRef, options = {}) {
         comparePicker?.destroy()
       }
     }
+  }
+}
+
+function showPendingProgress(container) {
+  const status = container.querySelector('.state-copy')
+  if (status) {
+    status.textContent = 'Still preparing this series…'
   }
 }
 

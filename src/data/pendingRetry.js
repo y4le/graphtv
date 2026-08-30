@@ -33,7 +33,8 @@ export async function withPendingRetry(
     deadlineMs = PENDING_RETRY_DEADLINE_MS,
     signal,
     now = () => Date.now(),
-    wait = waitForDelay
+    wait = waitForDelay,
+    onRetry
   } = {}
 ) {
   const startedAt = now()
@@ -54,6 +55,7 @@ export async function withPendingRetry(
       }
 
       signal?.throwIfAborted()
+      onRetry?.({ attempt: attempt + 2, delayMs, error })
       await wait(delayMs, signal)
     }
   }

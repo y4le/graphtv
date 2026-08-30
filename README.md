@@ -34,6 +34,9 @@ VITE_RATINGSDB_API_BASE=
 
 `VITE_RATINGSDB_API_BASE` is public deployment configuration, not a
 credential. Leave it unset when RatingsDB is unavailable.
+For a cross-origin RatingsDB, expose the `Retry-After` response header with
+`Access-Control-Expose-Headers: Retry-After`; otherwise pending retries use the
+client's default delay.
 
 Before opening a pull request or pushing to `master`, run the same validation
 used by CI:

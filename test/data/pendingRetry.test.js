@@ -47,23 +47,49 @@ describe('pending retry policy', () => {
   it('returns a first-attempt success without waiting', async () => {
     const clock = createClock()
     const run = vi.fn().mockResolvedValue('ready')
+    const onRetry = vi.fn()
 
-    await expect(withPendingRetry(run, clock)).resolves.toBe('ready')
+    await expect(withPendingRetry(run, { ...clock, onRetry })).resolves.toBe(
+      'ready'
+    )
     expect(run).toHaveBeenCalledOnce()
     expect(clock.wait).not.toHaveBeenCalled()
+    expect(onRetry).not.toHaveBeenCalled()
   })
 
   it('honors each server delay across three total attempts', async () => {
     const clock = createClock()
+    const firstError = pendingError(1_000)
+    const secondError = pendingError(5_000)
     const run = vi
       .fn()
-      .mockRejectedValueOnce(pendingError(1_000))
-      .mockRejectedValueOnce(pendingError(5_000))
+      .mockRejectedValueOnce(firstError)
+      .mockRejectedValueOnce(secondError)
       .mockResolvedValueOnce('ready')
+    const onRetry = vi.fn()
 
-    await expect(withPendingRetry(run, clock)).resolves.toBe('ready')
+    await expect(withPendingRetry(run, { ...clock, onRetry })).resolves.toBe(
+      'ready'
+    )
     expect(run).toHaveBeenCalledTimes(3)
     expect(clock.waits).toEqual([1_000, 5_000])
+    expect(onRetry).toHaveBeenCalledTimes(2)
+    expect(onRetry.mock.calls).toStrictEqual([
+      [
+        {
+          attempt: 2,
+          delayMs: 1_000,
+          error: firstError
+        }
+      ],
+      [
+        {
+          attempt: 3,
+          delayMs: 5_000,
+          error: secondError
+        }
+      ]
+    ])
   })
 
   it('distinguishes an absent delay from an immediate retry', async () => {
@@ -119,10 +145,14 @@ describe('pending retry policy', () => {
     const clock = createClock()
     const error = new Error('Unavailable')
     const run = vi.fn().mockRejectedValue(error)
+    const onRetry = vi.fn()
 
-    await expect(withPendingRetry(run, clock)).rejects.toBe(error)
+    await expect(withPendingRetry(run, { ...clock, onRetry })).rejects.toBe(
+      error
+    )
     expect(run).toHaveBeenCalledOnce()
     expect(clock.wait).not.toHaveBeenCalled()
+    expect(onRetry).not.toHaveBeenCalled()
   })
 
   it('does not start work for an already-aborted caller', async () => {

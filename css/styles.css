@@ -439,6 +439,30 @@ button {
   color: var(--spotColor);
 }
 
+.pending-state {
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
+}
+
+.pending-state-copy {
+  margin: 0;
+}
+
+.pending-state-action {
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--lineStrong);
+  background: transparent;
+  color: var(--textPrimary);
+  cursor: pointer;
+}
+
+.pending-state-action:hover,
+.pending-state-action:focus-visible {
+  border-color: var(--spotColor);
+  color: var(--spotColor);
+}
+
 .search-results-list {
   list-style: none;
   padding: 0;
