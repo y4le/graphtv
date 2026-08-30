@@ -7,6 +7,7 @@ Updated August 21, 2026. The redesign plan is complete; this document records th
 - Vite builds a static, client-side application with D3 used only for visualization primitives.
 - Provider transports normalize TVmaze, TMDB, and OMDb responses into one schema. Cross-provider alignment is conservative and provenance-aware.
 - Results load as a stream: the primary provider renders first and configured supplemental providers update the same chart model as they settle.
+- A series that is still pending is retried a bounded number of times using the server's delay; the page gives up instead of retrying early when that delay would exceed its request budget.
 - Show comparison is a lazy route (`?show=…&vs=…`). Each show streams and fails independently, while a page-level coordinator owns the shared source, rating domain, episode-ordinal viewport, active lane, and slot-qualified selection URL.
 - Provider work is bounded, abortable, cached, and cancelled when its stream ends or its caller aborts.
 - One responsive SVG chart uses a shared viewport model on desktop and mobile. The sparkline, chart navigation, pointer gestures, and keyboard commands all update that model; the abandoned separate scrolling renderer was removed.

@@ -13,6 +13,7 @@ import {
   renderPublisherBrand
 } from './shared.js'
 import { orderVisibleRatings } from '../data/ratingProviders.js'
+import { withPendingRetry } from '../data/pendingRetry.js'
 import { buildUrl, getUrlParams, preserveDebugParams } from '../lib/url.js'
 import { escapeHtml } from '../lib/html.js'
 import { forwardAbort, isAbortError } from '../lib/abort.js'
@@ -47,7 +48,8 @@ export async function renderResultsPage(container, showRef, options = {}) {
   const {
     bundleStream = streamShowBundle,
     chartFactory = createChart,
-    detailLoaderFactory = createEpisodeDetailLoader
+    detailLoaderFactory = createEpisodeDetailLoader,
+    retry: retryOptions = {}
   } = options
   container.innerHTML = `
     <main class="document-shell">
@@ -139,17 +141,23 @@ export async function renderResultsPage(container, showRef, options = {}) {
     const debugEnabled = true
     const { provider } = parseShowRef(showRef)
     primaryProvider = provider
-    const progress = bundleStream(showRef, {
-      compareProviders:
-        options.compareProviders ?? getComparisonProviders(provider),
-      providerLoader: options.providerLoader,
-      signal: abortController.signal
-    })
-    iterator = progress[Symbol.asyncIterator]()
-    const showSnapshot = await iterator.next()
-    if (showSnapshot.done || showSnapshot.value.phase !== 'show') {
-      throw new Error('Provider returned no show details.')
-    }
+    const showSnapshot = await withPendingRetry(
+      async () => {
+        const progress = bundleStream(showRef, {
+          compareProviders:
+            options.compareProviders ?? getComparisonProviders(provider),
+          providerLoader: options.providerLoader,
+          signal: abortController.signal
+        })
+        iterator = progress[Symbol.asyncIterator]()
+        const snapshot = await iterator.next()
+        if (snapshot.done || snapshot.value.phase !== 'show') {
+          throw new Error('Provider returned no show details.')
+        }
+        return snapshot
+      },
+      { ...retryOptions, signal: abortController.signal }
+    )
 
     latestShow = showSnapshot.value.show
     renderResultsShell(container, showSnapshot.value.show)

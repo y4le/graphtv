@@ -361,6 +361,139 @@ describe('renderResultsPage', () => {
     expect(chart.destroy).toHaveBeenCalledOnce()
   })
 
+  it('retries two pending opening snapshots before rendering the chart', async () => {
+    const bundle = createBundle()
+    const attempts = []
+    const waits = []
+    let currentTime = 0
+    const bundleStream = async function* () {
+      attempts.push(attempts.length + 1)
+      if (attempts.length < 3) {
+        const error = new Error('Hydration in progress')
+        error.pending = true
+        error.retryAfterMs = attempts.length === 1 ? 1_000 : null
+        throw error
+      }
+      yield {
+        phase: 'show',
+        show: bundle.show,
+        pendingProviders: [],
+        complete: false
+      }
+      yield {
+        phase: 'primary',
+        bundle,
+        pendingProviders: [],
+        complete: true
+      }
+    }
+    const container = document.createElement('div')
+
+    const page = await renderResultsPage(container, 'tvmaze:1', {
+      bundleStream,
+      chartFactory: () => createChartStub(),
+      detailLoaderFactory: () => vi.fn(),
+      compareProviders: [],
+      retry: {
+        now: () => currentTime,
+        wait: async (delayMs) => {
+          waits.push(delayMs)
+          currentTime += delayMs
+        }
+      }
+    })
+
+    expect(attempts).toHaveLength(3)
+    expect(waits).toEqual([1_000, 1_000])
+    expect(container.querySelector('.results-title').textContent).toBe(
+      'Example'
+    )
+    expect(page.chart).not.toBeNull()
+    page.destroy()
+  })
+
+  it('renders the final pending message after exhausting its attempts', async () => {
+    const bundleStream = vi.fn(async function* () {
+      const error = new Error('Hydration in progress')
+      error.pending = true
+      error.retryAfterMs = null
+      throw error
+    })
+    const container = document.createElement('div')
+
+    const page = await renderResultsPage(container, 'tvmaze:1', {
+      bundleStream,
+      compareProviders: [],
+      retry: {
+        now: () => 0,
+        wait: async () => {}
+      }
+    })
+
+    expect(bundleStream).toHaveBeenCalledTimes(3)
+    expect(page.chart).toBeNull()
+    expect(container.querySelector('.error-state').textContent).toBe(
+      'Hydration in progress'
+    )
+  })
+
+  it('does not retry an ordinary opening failure', async () => {
+    const wait = vi.fn()
+    const bundleStream = vi.fn(async function* () {
+      throw new Error('Provider unavailable')
+    })
+    const container = document.createElement('div')
+
+    await renderResultsPage(container, 'tvmaze:1', {
+      bundleStream,
+      compareProviders: [],
+      retry: { wait }
+    })
+
+    expect(bundleStream).toHaveBeenCalledOnce()
+    expect(wait).not.toHaveBeenCalled()
+    expect(container.querySelector('.error-state').textContent).toBe(
+      'Provider unavailable'
+    )
+  })
+
+  it('silently cancels a pending wait when the page caller aborts', async () => {
+    const controller = new AbortController()
+    let waitStarted
+    const started = new Promise((resolve) => {
+      waitStarted = resolve
+    })
+    const bundleStream = async function* () {
+      const error = new Error('Hydration in progress')
+      error.pending = true
+      error.retryAfterMs = 1_000
+      throw error
+    }
+    const container = document.createElement('div')
+    const pagePromise = renderResultsPage(container, 'tvmaze:1', {
+      bundleStream,
+      compareProviders: [],
+      signal: controller.signal,
+      retry: {
+        wait: (_delayMs, signal) =>
+          new Promise((_resolve, reject) => {
+            waitStarted()
+            signal.addEventListener('abort', () => reject(signal.reason), {
+              once: true
+            })
+          })
+      }
+    })
+
+    await started
+    controller.abort()
+    const page = await pagePromise
+
+    expect(page.chart).toBeNull()
+    expect(container.querySelector('.error-state')).toBeNull()
+    expect(container.textContent).toContain('Loading show details')
+  })
+
   it('silently aborts initial provider work when its caller cancels', async () => {
     let streamSignal
     const controller = new AbortController()
@@ -494,5 +627,13 @@ function createBundle({ supplemental = false } = {}) {
     providerDiagnostics: supplemental
       ? [{ provider: 'tmdb', role: 'supplemental', status: 'loaded' }]
       : []
+  }
+}
+
+function createChartStub() {
+  return {
+    updateSeasons: vi.fn(),
+    destroy: vi.fn(),
+    getDebugState: vi.fn(() => ({}))
   }
 }
