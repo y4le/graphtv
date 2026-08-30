@@ -22,6 +22,7 @@ describe('tmdb normalization', () => {
         id: 'tmdb:1438',
         title: 'The Wire',
         year: '2002',
+        endYear: null,
         plot: 'The Baltimore drug war through detectives and dealers.',
         poster:
           'https://image.tmdb.org/t/p/w780/4lbclFySvugI51fwsyxBTOm4DqK.jpg',
@@ -80,6 +81,7 @@ describe('tmdb normalization', () => {
       id: 'tmdb:1438',
       title: 'The Wire',
       year: '2002',
+      endYear: null,
       plot: 'The Baltimore drug war through detectives and dealers.',
       poster: 'https://image.tmdb.org/t/p/w780/4lbclFySvugI51fwsyxBTOm4DqK.jpg',
       totalSeasons: 1,

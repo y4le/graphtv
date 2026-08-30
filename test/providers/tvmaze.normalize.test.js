@@ -18,6 +18,7 @@ describe('tvmaze normalization', () => {
         id: 'tvmaze:179',
         title: 'The Wire',
         year: '2002',
+        endYear: null,
         plot: null,
         poster:
           'https://static.tvmaze.com/uploads/images/original_untouched/8/20216.jpg',
@@ -34,6 +35,7 @@ describe('tvmaze normalization', () => {
       id: 'tvmaze:179',
       title: 'The Wire',
       year: '2002',
+      endYear: null,
       plot: 'Told from the points of view of both the Baltimore homicide and narcotics detectives and their targets.',
       poster:
         'https://static.tvmaze.com/uploads/images/original_untouched/8/20216.jpg',
