@@ -27,6 +27,7 @@ Updated August 21, 2026. The redesign plan is complete; this document records th
 ## Deliberate constraints
 
 - Production has no test database or mock-data runtime path. Fixtures live under `test/` only.
+- The pinned RatingsDB S01 chart contracts live under `test/fixtures/ratingsdb/`; contract tests can compare them byte-for-byte with a local source tree through `RATINGSDB_CONTRACTS_DIR`.
 - GitHub Pages is a static deployment. TMDB and OMDb credentials configured for a build are recoverable by browser users; encoding prevents accidental source-control disclosure, not extraction. A server-side proxy is required if those credentials ever need to be secret.
 - TVmaze remains the keyless baseline, so the application works without build credentials.
 - Source maps are not published in production builds.

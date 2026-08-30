@@ -29,7 +29,11 @@ Use `.env.local` for provider credentials:
 ```bash
 TMDB_BEARER_TOKEN=
 OMDB_API_KEY=
+VITE_RATINGSDB_API_BASE=
 ```
+
+`VITE_RATINGSDB_API_BASE` is public deployment configuration, not a
+credential. Leave it unset when RatingsDB is unavailable.
 
 Before opening a pull request or pushing to `master`, run the same validation
 used by CI:

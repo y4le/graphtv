@@ -4,3 +4,6 @@ coverage/
 dist/
 node_modules/
 src/generated/
+
+# RatingsDB contract copies must stay byte-identical to their source.
+test/fixtures/ratingsdb/

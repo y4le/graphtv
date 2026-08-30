@@ -1,0 +1,76 @@
+{
+  "sourceRepository": "ratingsdb",
+  "sourceSlice": "S01",
+  "sourceCommit": "b4ab24e2e4c5256ad845ec12c5b9c0f5917077c4",
+  "sourceRoot": "docs/contracts",
+  "localRoot": "test/fixtures/ratingsdb",
+  "compareEnv": "RATINGSDB_CONTRACTS_DIR",
+  "files": [
+    {
+      "path": "cold.json",
+      "source": "fixtures/chart/cold.json",
+      "kind": "golden",
+      "sha256": "a31c4e0c9295af59a2c72efd568ce16140f726433226fea2b943e13f73b73cfe"
+    },
+    {
+      "path": "invalid-ratings.json",
+      "source": "fixtures/chart/invalid-ratings.json",
+      "kind": "golden",
+      "sha256": "7d88ba2d449899d1d734dd1c5c7144439a1a487530b7d37a1b93b17032284eab"
+    },
+    {
+      "path": "long-run.json",
+      "source": "fixtures/chart/long-run.json",
+      "kind": "golden",
+      "sha256": "b0b8cb0e8c21c92cced420d6ff366f4c29ba2f143051dea314462295e8f87d58"
+    },
+    {
+      "path": "rt-absent.json",
+      "source": "fixtures/chart/rt-absent.json",
+      "kind": "golden",
+      "sha256": "678557bc0aa11fa2261ab9d9679bff2f818b98af7dc683d04df1a71bb7752ff7"
+    },
+    {
+      "path": "schemas/chart-bundle.v1.schema.json",
+      "source": "chart-bundle.v1.schema.json",
+      "kind": "schema",
+      "sha256": "b53eda930357304da68f9f60d9b4f5e85589ee222dfdd8ec38b8f1b46885f649"
+    },
+    {
+      "path": "schemas/chart-feed.v1.schema.json",
+      "source": "chart-feed.v1.schema.json",
+      "kind": "schema",
+      "sha256": "b6dcdc81d838e931b8d1c80faa32a05610bf4dd05119ff84440f329196ea7a7f"
+    },
+    {
+      "path": "schemas/chart-search.v1.schema.json",
+      "source": "chart-search.v1.schema.json",
+      "kind": "schema",
+      "sha256": "c8eae2a61caf422c8f444fab9dd34bc75fd3b6705fcebd463dbf388c3c207732"
+    },
+    {
+      "path": "short-series.json",
+      "source": "fixtures/chart/short-series.json",
+      "kind": "golden",
+      "sha256": "7756b8963b81f2b72dfd756c5187298cbe6414425d1156852d5ab7d3549df4a6"
+    },
+    {
+      "path": "specials.json",
+      "source": "fixtures/chart/specials.json",
+      "kind": "golden",
+      "sha256": "0e96abd00eaf065f291cf976a11a3732b2dd6b9ed9fc4f5efcd70169bd15e5d5"
+    },
+    {
+      "path": "split-parts.json",
+      "source": "fixtures/chart/split-parts.json",
+      "kind": "golden",
+      "sha256": "fdf21b2240469177abfe7022cd44867403d5e19d34e3a2af60ba90f6776f73a4"
+    },
+    {
+      "path": "unnumbered.json",
+      "source": "fixtures/chart/unnumbered.json",
+      "kind": "golden",
+      "sha256": "eef15daf3cd376104779cbe24444e35dd7c333a0794b65bd16e915668655eef7"
+    }
+  ]
+}
