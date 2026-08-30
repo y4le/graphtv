@@ -58,6 +58,32 @@ function createBundle() {
   return bundle
 }
 
+function createCompanionBundle(id = 'tt9000900', title = 'Companion Show') {
+  const bundle = createBundle()
+  bundle.show.id = id
+  bundle.show.title = title
+  bundle.show.totalSeasons = 1
+  bundle.show.externalIds.imdb = id
+  bundle.seasons = bundle.seasons.slice(0, 1)
+  bundle.seasons[0].episodes = bundle.seasons[0].episodes.map(
+    (episode, index) => {
+      const episodeId = `tt${9_000_901 + index}`
+      return {
+        ...episode,
+        id: episodeId,
+        sourceIds: { ...episode.sourceIds, imdb: episodeId }
+      }
+    }
+  )
+  bundle.stats.episodes = bundle.seasons[0].episodes.length
+  bundle.stats.rated = {
+    imdb: bundle.stats.episodes,
+    tmdb: bundle.stats.episodes,
+    combined: bundle.stats.episodes
+  }
+  return bundle
+}
+
 function createDiagnosticsBundle() {
   const bundle = createBundle()
   bundle.incomplete = true
@@ -160,6 +186,38 @@ test('searches into a RatingsDB chart without contacting legacy hosts', async ({
   await expect(page).toHaveURL(/show=ratingsdb%3Att9000001/u)
   await expect(page).toHaveURL(/[?&]api=ratingsdb(?:&|$)/u)
   expect(requests.chartPaths).toStrictEqual(['/api/v1/series/tt9000001/chart'])
+  expect(requests.legacyRequests).toStrictEqual([])
+})
+
+test('compares two RatingsDB series without contacting legacy hosts', async ({
+  page
+}) => {
+  const primary = createBundle()
+  const companion = createCompanionBundle()
+  const requests = await installRoutes(page, {
+    async handleChart(route) {
+      const reference = new URL(route.request().url()).pathname.split('/')[4]
+      await fulfillJson(
+        route,
+        reference === companion.show.id ? companion : primary
+      )
+    }
+  })
+
+  await page.goto(
+    '/?api=ratingsdb&show=ratingsdb%3Att9000001&vs=ratingsdb%3Att9000900'
+  )
+
+  await expect(
+    page.getByRole('heading', { name: 'Contract Show vs Companion Show' })
+  ).toBeVisible()
+  await expect(page.locator('.comparison-lane')).toHaveCount(2)
+  // Both lanes load concurrently, so only the set of request paths is stable.
+  expect([...requests.chartPaths].sort()).toStrictEqual([
+    '/api/v1/series/tt9000001/chart',
+    '/api/v1/series/tt9000900/chart'
+  ])
+  await expect(page).toHaveURL(/[?&]api=ratingsdb(?:&|$)/u)
   expect(requests.legacyRequests).toStrictEqual([])
 })
 
