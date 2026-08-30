@@ -1,16 +1,25 @@
 import { mergeShowRecords } from './merge.js'
 import { createEpisodeDetailLoader as createDetailLoader } from './episodeDetails.js'
 import { CLIENT_SECRET_KEYS, hasClientSecret } from '../config/clientSecrets.js'
+import { isConfigured as isRatingsdbConfigured } from '../config/ratingsdb.js'
 import { createErrorDiagnostic } from './errorDiagnostics.js'
 import { forwardAbort, isAbortError } from '../lib/abort.js'
+import { DEFAULT_PROVIDER, parseShowRef } from './showRef.js'
+
+export {
+  DEFAULT_PROVIDER,
+  getActiveProvider,
+  parseShowRef,
+  resolveActiveShowRef
+} from './showRef.js'
 
 const PROVIDER_LOADERS = {
   omdb: () => import('../providers/omdb/transport.js'),
   tmdb: () => import('../providers/tmdb/transport.js'),
-  tvmaze: () => import('../providers/tvmaze/transport.js')
+  tvmaze: () => import('../providers/tvmaze/transport.js'),
+  ratingsdb: () => import('../providers/ratingsdb/transport.js')
 }
 
-const DEFAULT_PROVIDER = 'tvmaze'
 const PROVIDER_META = {
   omdb: {
     label: 'OMDb',
@@ -23,27 +32,14 @@ const PROVIDER_META = {
   tvmaze: {
     label: 'TVmaze',
     alwaysAvailable: true
+  },
+  ratingsdb: {
+    label: 'RatingsDB',
+    isConfigured: isRatingsdbConfigured,
+    standalone: true,
+    access: 'self-hosted',
+    requirement: 'VITE_RATINGSDB_API_BASE'
   }
-}
-
-export function parseShowRef(showRef) {
-  const [provider, ...idParts] = showRef.split(':')
-
-  const id = idParts.join(':')
-  if (!provider || !id) {
-    throw new Error(`Invalid show reference: ${showRef}`)
-  }
-
-  return {
-    provider,
-    id
-  }
-}
-
-export function getActiveProvider(
-  urlParams = new URLSearchParams(window.location.search)
-) {
-  return urlParams.get('api') || DEFAULT_PROVIDER
 }
 
 export function getProviderLabel(providerName) {
@@ -61,6 +57,10 @@ export function isProviderConfigured(providerName) {
     return true
   }
 
+  if (meta.isConfigured) {
+    return meta.isConfigured()
+  }
+
   return hasClientSecret(meta.requiresSecret)
 }
 
@@ -69,14 +69,22 @@ export function getProviderCatalog() {
     provider,
     label: meta.label,
     configured: isProviderConfigured(provider),
-    access: meta.alwaysAvailable ? 'public' : 'client-keyed',
-    requirement: meta.alwaysAvailable ? 'none' : meta.requiresSecret
+    access: meta.access ?? (meta.alwaysAvailable ? 'public' : 'client-keyed'),
+    requirement:
+      meta.requirement ?? (meta.alwaysAvailable ? 'none' : meta.requiresSecret)
   }))
 }
 
 export function getComparisonProviders(primaryProvider) {
+  if (PROVIDER_META[primaryProvider]?.standalone) {
+    return []
+  }
+
   return Object.keys(PROVIDER_LOADERS).filter(
-    (provider) => provider !== primaryProvider && isProviderConfigured(provider)
+    (provider) =>
+      provider !== primaryProvider &&
+      !PROVIDER_META[provider]?.standalone &&
+      isProviderConfigured(provider)
   )
 }
 

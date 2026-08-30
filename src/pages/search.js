@@ -1,6 +1,7 @@
 import {
   getActiveProvider,
   getProviderCatalog,
+  resolveActiveShowRef,
   searchShows
 } from '../data/provider.js'
 import { SHOW_INDEX } from '../data/showIndexData.js'
@@ -362,7 +363,7 @@ function formatSearchResultMeta(show) {
 export function buildShowLink(showId, { includeQuery = true } = {}) {
   const params = preserveDebugParams(new URLSearchParams())
   const currentParams = getUrlParams()
-  params.set('show', showId)
+  params.set('show', resolveActiveShowRef(showId))
   if (includeQuery && currentParams.has('q')) {
     params.set('q', currentParams.get('q'))
   }

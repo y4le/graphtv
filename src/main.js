@@ -1,5 +1,6 @@
 import '../css/styles.css'
 
+import { getActiveProvider, resolveActiveShowRef } from './data/showRef.js'
 import { buildUrl, getUrlParams, normalizeLegacyParams } from './lib/url.js'
 import { createKeyboardController } from './ui/keyboard.js'
 import { createOverlayController } from './ui/overlayController.js'
@@ -11,6 +12,15 @@ async function bootstrap() {
   const app = document.querySelector('#app')
   initializeTheme()
   const normalizedParams = normalizeLegacyParams()
+  const activeProvider = getActiveProvider(normalizedParams)
+  for (const key of ['show', 'vs']) {
+    if (normalizedParams.has(key)) {
+      normalizedParams.set(
+        key,
+        resolveActiveShowRef(normalizedParams.get(key), activeProvider)
+      )
+    }
+  }
   const canonicalSearch = normalizedParams.toString()
 
   if (canonicalSearch !== window.location.search.slice(1)) {
