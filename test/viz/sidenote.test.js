@@ -290,7 +290,7 @@ describe('createSidenote', () => {
     ).toEqual(['7.5', '8.4'])
     expect(
       root.querySelector('.sidenote-comparison-rating-source').textContent
-    ).toBe('IMDb')
+    ).toBe('IMDb (OMDb)')
     const rankTriggers = root.querySelectorAll(
       '.sidenote-comparison-rating-rank-trigger'
     )
@@ -322,8 +322,8 @@ describe('createSidenote', () => {
         (tooltip) => tooltip.textContent
       )
     ).toEqual([
-      'Rank 8 of 12 rated episodes by IMDb score, from highest to lowest.',
-      'Rank 2 of 12 rated episodes by IMDb score, from highest to lowest.'
+      'Rank 8 of 12 rated episodes by IMDb (OMDb) score, from highest to lowest.',
+      'Rank 2 of 12 rated episodes by IMDb (OMDb) score, from highest to lowest.'
     ])
     expect(
       Array.from(root.querySelectorAll('.vote-count-tooltip'), (tooltip) =>
@@ -492,12 +492,12 @@ describe('createSidenote', () => {
       Array.from(ratings.querySelectorAll('.sidenote-rating-source')).map(
         (source) => source.textContent
       )
-    ).toEqual(['IMDb', 'TVmaze', 'TMDB'])
+    ).toEqual(['TVmaze', 'TMDB', 'IMDb (OMDb)'])
     expect(
       Array.from(ratings.querySelectorAll('[data-provider-rating]')).map(
         (value) => value.textContent
       )
-    ).toEqual(['8.2', '7.5', '7.8'])
+    ).toEqual(['7.5', '7.8', '8.2'])
     expect(
       ratings.querySelector('.sidenote-rating-primary-value').textContent
     ).toBe('8.2')
@@ -505,7 +505,7 @@ describe('createSidenote', () => {
       Array.from(ratings.querySelectorAll('.vote-count-trigger')).map(
         (votes) => votes.textContent
       )
-    ).toEqual(['(4k)', '(47)'])
+    ).toEqual(['(47)', '(4k)'])
     expect(root.querySelector('.sidenote-caption').textContent).not.toContain(
       '8.2'
     )
@@ -519,9 +519,9 @@ describe('createSidenote', () => {
         (source) => source.getAttribute('href')
       )
     ).toEqual([
-      'https://www.imdb.com/title/tt0739785/',
       'https://www.tvmaze.com/episodes/1002',
-      'https://www.themoviedb.org/tv/1438/season/1/episode/2'
+      'https://www.themoviedb.org/tv/1438/season/1/episode/2',
+      'https://www.imdb.com/title/tt0739785/'
     ])
   })
 
@@ -555,7 +555,7 @@ describe('createSidenote', () => {
 
     expect(primary.tagName).toBe('BUTTON')
     expect(primary.getAttribute('aria-label')).toBe(
-      'IMDb rating 8.2, plotted rating'
+      'IMDb (OMDb) rating 8.2, plotted rating'
     )
     expect(secondary.textContent).toBe('7.8')
     expect(
@@ -892,7 +892,7 @@ describe('createSidenote', () => {
     )
 
     expect(root.querySelector('.trend-summary-provenance').textContent).toBe(
-      'Plotting IMDb · source spread shows TVmaze and TMDB · 13 of 19 rated, 6 episodes use other sources and are excluded'
+      'Plotting IMDb (OMDb) · source spread shows TVmaze and TMDB · 13 of 19 rated, 6 episodes use other sources and are excluded'
     )
     expect(root.textContent).toContain('0.6 points · within seasons')
     const seasonRankings = root.querySelector('.trend-summary-season-rankings')

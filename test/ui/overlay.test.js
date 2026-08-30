@@ -621,6 +621,33 @@ describe('credits overlay', () => {
 })
 
 describe('debug overlay', () => {
+  it('persists the hidden-rating preference and reloads', () => {
+    const setShowHiddenRatings = vi.fn()
+    const reloadPage = vi.fn()
+    const overlayController = createOverlayController()
+
+    openDebugOverlay(
+      overlayController,
+      {
+        debugEnabled: true,
+        getDebugSections: () => []
+      },
+      {
+        getShowHiddenRatings: () => false,
+        setShowHiddenRatings,
+        reloadPage
+      }
+    )
+
+    const button = document.querySelector('[data-debug-toggle-hidden-ratings]')
+    expect(button.textContent).toBe('Show hidden rating sources')
+
+    button.click()
+
+    expect(setShowHiddenRatings).toHaveBeenCalledWith(true)
+    expect(reloadPage).toHaveBeenCalledOnce()
+  })
+
   it('clears provider caches and reloads the page', async () => {
     let finishClearing
     const clearCaches = vi.fn(

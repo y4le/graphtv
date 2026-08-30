@@ -133,11 +133,14 @@ describe('data/stats', () => {
 
   it('keeps a true zero score while rejecting an unvoted TMDB sentinel', () => {
     expect(
-      isUsableProviderRating({
-        source: 'rtCritics',
-        rating: 0,
-        votes: 1
-      })
+      isUsableProviderRating(
+        {
+          source: 'rtCritics',
+          rating: 0,
+          votes: 1
+        },
+        { includeHidden: true }
+      )
     ).toBe(true)
     expect(
       isUsableProviderRating({ source: 'tmdb', rating: 0, votes: 0 })
@@ -430,7 +433,7 @@ describe('data/stats', () => {
     expect(topIds.some((id) => bottomIds.includes(id))).toBe(false)
   })
 
-  it('selects IMDb when it covers at least 60% of rateable episodes', () => {
+  it('selects the source with the widest coverage', () => {
     const episodes = Array.from({ length: 5 }, (_, index) => ({
       ratings: [
         { source: 'tmdb', rating: 8 + index / 10, votes: 5 },
@@ -439,9 +442,89 @@ describe('data/stats', () => {
     }))
 
     expect(selectPrimaryRatingSource(episodes)).toMatchObject({
-      source: 'omdb',
+      source: 'tmdb',
       eligibleEpisodes: 5
     })
+  })
+
+  it('uses registry order only to break equal-coverage ties', () => {
+    const equalCoverage = [
+      {
+        ratings: [
+          { source: 'imdb', rating: 8.4 },
+          { source: 'combined', rating: 8.2 }
+        ]
+      },
+      {
+        ratings: [
+          { source: 'imdb', rating: 8.1 },
+          { source: 'combined', rating: 8 }
+        ]
+      }
+    ]
+    const lowerCombinedCoverage = [
+      ...equalCoverage,
+      { ratings: [{ source: 'imdb', rating: 7.9 }] }
+    ]
+
+    expect(selectPrimaryRatingSource(equalCoverage).source).toBe('combined')
+    expect(selectPrimaryRatingSource(lowerCombinedCoverage).source).toBe('imdb')
+  })
+
+  it('excludes hidden sources from selection until they are revealed', () => {
+    const episodes = [
+      {
+        ratings: [
+          { source: 'imdb', rating: 8.1 },
+          { source: 'rtCritics', rating: 0, votes: 1 }
+        ]
+      },
+      { ratings: [{ source: 'rtCritics', rating: 8.5, votes: 2 }] }
+    ]
+
+    expect(selectPrimaryRatingSource(episodes)).toMatchObject({
+      source: 'imdb',
+      eligibleEpisodes: 1
+    })
+    expect(
+      selectPrimaryRatingSource(episodes, { includeHidden: true }).source
+    ).toBe('rtCritics')
+    expect(
+      selectPrimaryRatingSource([
+        { ratings: [{ source: 'rtCritics', rating: 8.5, votes: 2 }] }
+      ])
+    ).toMatchObject({ source: null, eligibleEpisodes: 0 })
+  })
+
+  it('keeps hidden sources out of fallbacks and rating spread', () => {
+    const ratings = [
+      { source: 'imdb', rating: 8 },
+      { source: 'rtCritics', rating: 0, votes: 1 }
+    ]
+
+    expect(resolveEpisodeRating(ratings, 'rtCritics')).toStrictEqual({
+      rating: 8,
+      ratingSource: 'imdb',
+      isFallbackRating: true
+    })
+    expect(getRatingSpread(ratings)).toBeNull()
+    expect(
+      resolveEpisodeRating(ratings, 'rtCritics', undefined, {
+        includeHidden: true
+      })
+    ).toMatchObject({ rating: 0, ratingSource: 'rtCritics' })
+    expect(getRatingSpread(ratings, { includeHidden: true })).toStrictEqual({
+      min: 0,
+      max: 8,
+      sources: ['imdb', 'rtCritics']
+    })
+  })
+
+  it('does not mistake an Array filter index for hidden-source permission', () => {
+    const rating = { source: 'rtCritics', rating: 8, votes: 1 }
+
+    expect(isUsableProviderRating(rating, 1)).toBe(false)
+    expect([rating, rating].filter(isUsableProviderRating)).toStrictEqual([])
   })
 
   it('prefers TVmaze to TMDB when IMDb coverage is too sparse', () => {

@@ -87,7 +87,7 @@ describe('renderComparisonPage', () => {
     expect(container.querySelector('.comparison-caution')).toBeNull()
     expect(container.querySelector('.comparison-summary')).not.toBeNull()
     expect(container.querySelector('.comparison-method-note').textContent).toBe(
-      'IMDb ratings reflect each show’s voting audience. Adjacent values provide context, not a winner.'
+      'IMDb (OMDb) ratings reflect each show’s voting audience. Adjacent values provide context, not a winner.'
     )
     expect(container.querySelector('.comparison-summary caption')).toBeNull()
     expect(container.querySelector('.comparison-summary thead')).toBeNull()
@@ -388,7 +388,7 @@ describe('renderComparisonPage', () => {
         container.querySelectorAll('.comparison-identity p'),
         (paragraph) => paragraph.textContent
       ).filter((text) => text.startsWith('Plotted on'))
-    ).toEqual(['Plotted on IMDb', 'Plotted on TVmaze'])
+    ).toEqual(['Plotted on IMDb (OMDb)', 'Plotted on TVmaze'])
     expect(container.querySelector('.comparison-lane-context-key')).toBeNull()
     expect(
       chartFactory.mock.results[0].value.updateSeasons.mock.calls.at(-1)[1]

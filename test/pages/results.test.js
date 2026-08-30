@@ -258,20 +258,20 @@ describe('renderResultsPage', () => {
       ratingRows.map(
         (row) => row.querySelector('.rating-badge-source').textContent
       )
-    ).toEqual(['IMDb', 'TVmaze', 'TMDB'])
+    ).toEqual(['TVmaze', 'TMDB', 'IMDb (OMDb)'])
     expect(
       ratingRows.map(
         (row) => row.querySelector('.vote-count-trigger')?.textContent ?? ''
       )
-    ).toEqual(['(1.1m)', '', '(8.3k)'])
+    ).toEqual(['', '(8.3k)', '(1.1m)'])
     expect(
       ratingRows.map((row) =>
         row.querySelector('.rating-badge-source').getAttribute('href')
       )
     ).toEqual([
-      'https://www.imdb.com/title/tt123/',
       'https://www.tvmaze.com/shows/1',
-      'https://www.themoviedb.org/tv/1438'
+      'https://www.themoviedb.org/tv/1438',
+      'https://www.imdb.com/title/tt123/'
     ])
     expect(
       container.querySelector('.rating-badge.is-primary').dataset.ratingProvider

@@ -16,22 +16,65 @@ function getNumericId(value) {
   return /^[1-9]\d*$/u.test(id) ? id : null
 }
 
+function getSlugId(value) {
+  if (typeof value !== 'string') {
+    return null
+  }
+
+  const id = value
+  return /^[a-z0-9][a-z0-9-]*$/iu.test(id) ? encodeURIComponent(id) : null
+}
+
+function getHttpUrl(value) {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' || url.protocol === 'http:'
+      ? url.href
+      : null
+  } catch {
+    return null
+  }
+}
+
 function getEpisodeNumber(value, { allowZero = false } = {}) {
   return Number.isInteger(value) && (allowZero ? value >= 0 : value > 0)
     ? value
     : null
 }
 
-const IMDB_LINKS = Object.freeze({
+function createImdbLinks(episodeSource) {
+  return Object.freeze({
+    series({ show }) {
+      const id = getImdbTitleId(show?.externalIds?.imdb)
+      return id ? `https://www.imdb.com/title/${id}/` : null
+    },
+    episode({ episode }) {
+      const id = getImdbTitleId(episode?.sourceIds?.[episodeSource])
+      return id ? `https://www.imdb.com/title/${id}/` : null
+    }
+  })
+}
+
+const IMDB_LINKS = createImdbLinks('imdb')
+const OMDB_LINKS = createImdbLinks('omdb')
+
+const TRAKT_LINKS = Object.freeze({
   series({ show }) {
-    const id = getImdbTitleId(show?.externalIds?.imdb)
-    return id ? `https://www.imdb.com/title/${id}/` : null
-  },
-  episode({ episode }) {
-    const id = getImdbTitleId(episode?.sourceIds?.omdb)
-    return id ? `https://www.imdb.com/title/${id}/` : null
+    const id = getSlugId(show?.externalIds?.trakt)
+    return id ? `https://trakt.tv/shows/${id}` : null
   }
 })
+
+function createExternalUrlLinks(externalId) {
+  return Object.freeze({
+    series({ show }) {
+      return getHttpUrl(show?.externalIds?.[externalId])
+    }
+  })
+}
+
+const ROTTEN_TOMATOES_LINKS = createExternalUrlLinks('rt_url')
+const METACRITIC_LINKS = createExternalUrlLinks('mc_url')
 
 const TVMAZE_LINKS = Object.freeze({
   series({ show }) {
@@ -66,28 +109,78 @@ const TMDB_LINKS = Object.freeze({
 export const RATING_PROVIDER_REGISTRY = Object.freeze(
   [
     {
-      source: 'omdb',
-      label: 'IMDb',
+      source: 'combined',
+      label: 'Combined',
       order: 0,
+      showInRatings: true
+    },
+    {
+      source: 'imdb',
+      label: 'IMDb',
+      order: 1,
       showInRatings: true,
       links: IMDB_LINKS
     },
     {
       source: 'tvmaze',
       label: 'TVmaze',
-      order: 1,
+      order: 2,
       showInRatings: true,
       links: TVMAZE_LINKS
     },
     {
       source: 'tmdb',
       label: 'TMDB',
-      order: 2,
+      order: 3,
       showInRatings: true,
       minimumVotes: 5,
       links: TMDB_LINKS
+    },
+    {
+      source: 'trakt',
+      label: 'Trakt',
+      order: 4,
+      showInRatings: true,
+      links: TRAKT_LINKS
+    },
+    {
+      source: 'rtCritics',
+      label: 'RT Critics',
+      order: 5,
+      showInRatings: false,
+      links: ROTTEN_TOMATOES_LINKS
+    },
+    {
+      source: 'rtAudience',
+      label: 'RT Audience',
+      order: 6,
+      showInRatings: false,
+      links: ROTTEN_TOMATOES_LINKS
+    },
+    {
+      source: 'mcCritics',
+      label: 'Metacritic',
+      order: 7,
+      showInRatings: false,
+      links: METACRITIC_LINKS
+    },
+    {
+      source: 'mcAudience',
+      label: 'Metacritic Users',
+      order: 8,
+      showInRatings: false,
+      links: METACRITIC_LINKS
+    },
+    {
+      source: 'omdb',
+      label: 'IMDb (OMDb)',
+      order: 9,
+      showInRatings: true,
+      links: OMDB_LINKS
     }
-  ].map(Object.freeze)
+  ].map((provider) =>
+    Object.freeze({ ...DEFAULT_RATING_PROVIDER, ...provider })
+  )
 )
 
 const RATING_PROVIDERS_BY_SOURCE = new Map(
@@ -97,6 +190,35 @@ const RATING_PROVIDERS_BY_SOURCE = new Map(
 export const RATING_SOURCE_PRIORITY = RATING_PROVIDER_REGISTRY.filter(
   (provider) => provider.showInRatings
 ).map((provider) => provider.source)
+
+const SHOW_HIDDEN_RATINGS_KEY = 'graphtv:show-hidden-ratings'
+let showHiddenRatings = readShowHiddenRatings()
+
+function readShowHiddenRatings() {
+  try {
+    return window.localStorage.getItem(SHOW_HIDDEN_RATINGS_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+export function getShowHiddenRatings() {
+  return showHiddenRatings
+}
+
+export function setShowHiddenRatings(value) {
+  showHiddenRatings = Boolean(value)
+
+  try {
+    if (showHiddenRatings) {
+      window.localStorage.setItem(SHOW_HIDDEN_RATINGS_KEY, 'true')
+    } else {
+      window.localStorage.removeItem(SHOW_HIDDEN_RATINGS_KEY)
+    }
+  } catch {
+    // Keep the session preference when browser storage is unavailable.
+  }
+}
 
 export function getRatingProvider(source) {
   const registered = RATING_PROVIDERS_BY_SOURCE.get(source)
@@ -120,6 +242,13 @@ export function getRatingMinimumVotes(source) {
   return getRatingProvider(source).minimumVotes ?? 0
 }
 
+export function isRatingSourceVisible(
+  source,
+  includeHidden = getShowHiddenRatings()
+) {
+  return includeHidden || getRatingProvider(source).showInRatings
+}
+
 export function getRatingSourceUrl(
   source,
   { show = null, episode = null } = {}
@@ -136,14 +265,17 @@ export function getRatingSourceUrl(
   return links?.series?.({ show }) ?? null
 }
 
-export function orderVisibleRatings(ratings = []) {
+export function orderVisibleRatings(
+  ratings = [],
+  { includeHidden = getShowHiddenRatings() } = {}
+) {
   return ratings
     .map((rating, index) => ({
       index,
       provider: getRatingProvider(rating.source),
       rating
     }))
-    .filter(({ provider }) => provider.showInRatings)
+    .filter(({ provider }) => includeHidden || provider.showInRatings)
     .sort(
       (left, right) =>
         left.provider.order - right.provider.order || left.index - right.index

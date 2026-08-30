@@ -474,12 +474,13 @@ describe('createChart', () => {
 
     chart = createChart(container, seasons, {
       detailRoot,
-      initialSelection: 's01e01'
+      initialSelection: 's01e01',
+      primaryRatingSource: 'omdb'
     })
 
     expect(chart.getDebugState().ratings.primarySource).toBe('omdb')
     expect(detailRoot.querySelector('.sidenote-rank').textContent).toBe(
-      'Series rank 3 of 3 rated episodes · IMDb'
+      'Series rank 3 of 3 rated episodes · IMDb (OMDb)'
     )
 
     chart.moveEpisode(3)
@@ -495,7 +496,7 @@ describe('createChart', () => {
     ).toContain('Not calculated · different rating sources')
     expect(
       detailRoot.querySelector('.sidenote-comparison-metrics').textContent
-    ).toContain('4 episodes · 3 rated by IMDb')
+    ).toContain('4 episodes · 3 rated by IMDb (OMDb)')
   })
 
   it('offers the browse view only when no full-series trend exists', () => {
@@ -1730,27 +1731,27 @@ describe('createChart', () => {
     })
     chart.moveEpisode(1)
 
-    expect(chart.getDebugState().ratings.primarySource).toBe('omdb')
-    expect(onPrimaryRatingSourceChange).toHaveBeenLastCalledWith('omdb')
-    expect(chart.setPrimaryRatingSource('tmdb')).toBe(true)
+    expect(chart.getDebugState().ratings.primarySource).toBe('tmdb')
+    expect(onPrimaryRatingSourceChange).toHaveBeenLastCalledWith('tmdb')
+    expect(chart.setPrimaryRatingSource('omdb')).toBe(true)
     expect(chart.getDebugState()).toMatchObject({
       selectedPointId: 'episode-1',
-      ratings: { primarySource: 'tmdb' }
+      ratings: { primarySource: 'omdb' }
     })
     expect(
       getRenderedPoint(container, 'episode-1').getAttribute(
         'data-rating-source'
       )
-    ).toBe('tmdb')
+    ).toBe('omdb')
     expect(
       container.querySelector('.sidenote-rating-primary').textContent
-    ).toContain('TMDB 7.0')
-    expect(onPrimaryRatingSourceChange).toHaveBeenLastCalledWith('tmdb')
+    ).toContain('IMDb (OMDb) 8.0')
+    expect(onPrimaryRatingSourceChange).toHaveBeenLastCalledWith('omdb')
 
     chart.updateSeasons(seasons)
-    expect(chart.getDebugState().ratings.primarySource).toBe('tmdb')
+    expect(chart.getDebugState().ratings.primarySource).toBe('omdb')
     expect(chart.setPrimaryRatingSource('missing')).toBe(false)
-    expect(chart.getDebugState().ratings.primarySource).toBe('tmdb')
+    expect(chart.getDebugState().ratings.primarySource).toBe('omdb')
   })
 
   it('cycles available primary rating sources in provider order', () => {
@@ -1775,21 +1776,21 @@ describe('createChart', () => {
     })
     chart.moveEpisode(1)
 
-    expect(chart.getDebugState().ratings.primarySource).toBe('omdb')
+    expect(chart.getDebugState().ratings.primarySource).toBe('tvmaze')
     expect(chart.cyclePrimaryRatingSource()).toBe(true)
     expect(chart.getDebugState()).toMatchObject({
       selectedPointId: 'episode-1',
-      ratings: { primarySource: 'tvmaze' }
+      ratings: { primarySource: 'tmdb' }
     })
     expect(chart.cyclePrimaryRatingSource()).toBe(true)
-    expect(chart.getDebugState().ratings.primarySource).toBe('tmdb')
-    expect(chart.cyclePrimaryRatingSource()).toBe(true)
     expect(chart.getDebugState().ratings.primarySource).toBe('omdb')
+    expect(chart.cyclePrimaryRatingSource()).toBe(true)
+    expect(chart.getDebugState().ratings.primarySource).toBe('tvmaze')
     expect(onPrimaryRatingSourceChange.mock.calls).toEqual([
-      ['omdb'],
       ['tvmaze'],
       ['tmdb'],
-      ['omdb']
+      ['omdb'],
+      ['tvmaze']
     ])
   })
 
@@ -1822,7 +1823,7 @@ describe('createChart', () => {
     ]
 
     updateUiSettings({ palette: 'rainbow' })
-    chart = createChart(container, seasons)
+    chart = createChart(container, seasons, { primaryRatingSource: 'omdb' })
 
     const fallback = container.querySelector('[data-rating-fallback="true"]')
     expect(fallback).not.toBeNull()
@@ -4059,7 +4060,7 @@ describe('createChart', () => {
     await vi.advanceTimersByTimeAsync(1)
     expect(loadEpisodeDetails).toHaveBeenCalledTimes(1)
     expect(loadEpisodeDetails.mock.calls[0][0].title).toBe('Episode 3')
-    expect(detailRoot.textContent).toContain('IMDb n/a')
+    expect(detailRoot.textContent).toContain('IMDb (OMDb) n/a')
     expect(getVoteCounts(detailRoot)).toContain('(3.4k)')
   })
 
@@ -4106,7 +4107,7 @@ describe('createChart', () => {
     expect(loadEpisodeDetails).toHaveBeenCalledTimes(1)
     expect(loadEpisodeDetails.mock.calls[0][0].title).toBe('Episode 2')
     expect(container.querySelector('.sidenote-votes-loading')).toBeNull()
-    expect(container.textContent).toContain('IMDb 8.3')
+    expect(container.textContent).toContain('IMDb (OMDb) 8.3')
     expect(getVoteCounts(container)).toContain('(4.2k)')
   })
 

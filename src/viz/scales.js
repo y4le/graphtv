@@ -282,7 +282,9 @@ function createSeriesRankingsBySource(points) {
   const pointsBySource = new Map()
 
   for (const point of points) {
-    for (const rating of point.ratings.filter(isUsableProviderRating)) {
+    for (const rating of point.ratings.filter((candidate) =>
+      isUsableProviderRating(candidate)
+    )) {
       const sourcePoints = pointsBySource.get(rating.source) ?? []
       sourcePoints.push({
         id: point.id,

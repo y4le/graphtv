@@ -1,7 +1,9 @@
 import {
   RATING_SOURCE_PRIORITY,
   getRatingMinimumVotes,
-  getRatingSourceLabel
+  getRatingProvider,
+  getRatingSourceLabel,
+  isRatingSourceVisible
 } from './ratingProviders.js'
 
 export { RATING_SOURCE_PRIORITY, getRatingSourceLabel }
@@ -744,10 +746,11 @@ export function isTrustedRating(rating) {
   )
 }
 
-export function isUsableProviderRating(rating) {
+export function isUsableProviderRating(rating, { includeHidden } = {}) {
   const minimumVotes = getRatingMinimumVotes(rating?.source)
 
   return (
+    isRatingSourceVisible(rating?.source, includeHidden) &&
     isTrustedRating(rating) &&
     isUsableRating(rating?.rating) &&
     (minimumVotes === 0 ||
@@ -755,22 +758,20 @@ export function isUsableProviderRating(rating) {
   )
 }
 
-export function selectPrimaryRatingSource(
-  episodes = [],
-  {
-    priority = RATING_SOURCE_PRIORITY,
-    minimumCoverage = MIN_PRIMARY_RATING_COVERAGE
-  } = {}
-) {
+export function selectPrimaryRatingSource(episodes = [], options = {}) {
+  const { minimumCoverage = MIN_PRIMARY_RATING_COVERAGE, includeHidden } =
+    options
+  const isSelectable = (rating) =>
+    isUsableProviderRating(rating, { includeHidden })
   const eligibleEpisodes = episodes.filter((episode) =>
-    episode.ratings?.some(isUsableProviderRating)
+    episode.ratings?.some((rating) => isSelectable(rating))
   )
   const counts = new Map()
 
   for (const episode of eligibleEpisodes) {
     const sources = new Set(
       episode.ratings
-        .filter(isUsableProviderRating)
+        .filter((rating) => isSelectable(rating))
         .map((rating) => rating.source)
     )
     for (const source of sources) {
@@ -791,18 +792,12 @@ export function selectPrimaryRatingSource(
     }
 
     return (
-      sourceRank(left.source, priority) - sourceRank(right.source, priority)
+      getRatingProvider(left.source).order -
+      getRatingProvider(right.source).order
     )
   })
 
-  const source =
-    priority.find(
-      (candidate) =>
-        (counts.get(candidate) ?? 0) / Math.max(eligibleCount, 1) >=
-        minimumCoverage
-    ) ??
-    coverage[0]?.source ??
-    null
+  const source = coverage[0]?.source ?? null
 
   return {
     source,
@@ -815,9 +810,12 @@ export function selectPrimaryRatingSource(
 export function resolveEpisodeRating(
   ratings = [],
   primarySource,
-  priority = RATING_SOURCE_PRIORITY
+  priority = RATING_SOURCE_PRIORITY,
+  { includeHidden } = {}
 ) {
-  const usableRatings = ratings.filter(isUsableProviderRating)
+  const usableRatings = ratings.filter((rating) =>
+    isUsableProviderRating(rating, { includeHidden })
+  )
   const sources = [
     primarySource,
     ...priority,
@@ -846,8 +844,10 @@ export function resolveEpisodeRating(
   }
 }
 
-export function getRatingSpread(ratings = []) {
-  const usableRatings = ratings.filter(isUsableProviderRating)
+export function getRatingSpread(ratings = [], { includeHidden } = {}) {
+  const usableRatings = ratings.filter((rating) =>
+    isUsableProviderRating(rating, { includeHidden })
+  )
   if (usableRatings.length < 2) {
     return null
   }
@@ -858,9 +858,4 @@ export function getRatingSpread(ratings = []) {
     max: Math.max(...values),
     sources: usableRatings.map((rating) => rating.source)
   }
-}
-
-function sourceRank(source, priority) {
-  const index = priority.indexOf(source)
-  return index === -1 ? Number.MAX_SAFE_INTEGER : index
 }

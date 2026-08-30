@@ -1,4 +1,6 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+import { setShowHiddenRatings } from '../../src/data/ratingProviders.js'
 
 import {
   buildChartModel,
@@ -12,6 +14,9 @@ import {
 } from '../../src/viz/scales.js'
 
 describe('rating scale domains', () => {
+  afterEach(() => {
+    setShowHiddenRatings(false)
+  })
   it('uses an injected breakpoint detector for model construction', () => {
     const breakpointDetector = vi.fn(() => null)
 
@@ -166,6 +171,7 @@ describe('rating scale domains', () => {
   })
 
   it('keeps a true zero rating in the chart and y-axis domain', () => {
+    setShowHiddenRatings(true)
     const model = buildChartModel([
       {
         number: 1,
@@ -198,18 +204,38 @@ describe('rating scale domains', () => {
     expect(scales.yDomain).toStrictEqual([0, 0.6])
   })
 
-  it('uses a show-wide preferred source and marks per-episode fallbacks', () => {
+  it('keeps a hidden zero rating out of the chart by default', () => {
     const model = buildChartModel([
       {
         number: 1,
-        episodes: Array.from({ length: 5 }, (_, index) =>
-          createEpisode(`episode-${index}`, [
-            { source: 'tmdb', rating: 7 + index / 10 },
-            ...(index < 3 ? [{ source: 'omdb', rating: 9 + index / 10 }] : [])
+        episodes: [
+          createEpisode('zero-percent', [
+            { source: 'rtCritics', rating: 0, votes: 1 }
           ])
-        )
+        ]
       }
     ])
+
+    expect(model.primaryRatingSource).toBeNull()
+    expect(model.points[0].rating).toBeNull()
+    expect(model.ratedPoints).toStrictEqual([])
+  })
+
+  it('uses a show-wide preferred source and marks per-episode fallbacks', () => {
+    const model = buildChartModel(
+      [
+        {
+          number: 1,
+          episodes: Array.from({ length: 5 }, (_, index) =>
+            createEpisode(`episode-${index}`, [
+              { source: 'tmdb', rating: 7 + index / 10 },
+              ...(index < 3 ? [{ source: 'omdb', rating: 9 + index / 10 }] : [])
+            ])
+          )
+        }
+      ],
+      { primaryRatingSource: 'omdb' }
+    )
 
     expect(model.primaryRatingSource).toBe('omdb')
     expect(model.points.map((point) => point.rating)).toEqual([
@@ -505,8 +531,9 @@ describe('rating scale domains', () => {
       { showSourceSpread: true }
     )
 
-    expect(primaryOnlyScales.yDomain[0]).toBeGreaterThan(7)
-    expect(primaryOnlyScales.yDomain[1]).toBeLessThan(9)
+    expect(model.primaryRatingSource).toBe('tmdb')
+    expect(primaryOnlyScales.yDomain[0]).toBeLessThan(2)
+    expect(primaryOnlyScales.yDomain[1]).toBeGreaterThan(9)
     expect(spreadScales.yDomain).toEqual([0, 10])
   })
 

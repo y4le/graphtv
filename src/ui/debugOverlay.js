@@ -1,5 +1,9 @@
 import { clearApiCache } from '../data/apiCache.js'
 import { resetAllAppData } from '../data/appData.js'
+import {
+  getShowHiddenRatings,
+  setShowHiddenRatings
+} from '../data/ratingProviders.js'
 import { escapeHtml } from '../lib/html.js'
 import { getMotionBehavior } from './overlayMotion.js'
 import '../../css/overlays.css'
@@ -19,12 +23,23 @@ export function openDebugOverlay(overlayController, page, options = {}) {
         'Reset graphtv? This clears provider caches, view settings, request history, and all other graphtv data stored in this browser. This cannot be undone.'
       ))
   const reloadPage = options.reloadPage ?? (() => window.location.reload())
+  const readShowHiddenRatings =
+    options.getShowHiddenRatings ?? getShowHiddenRatings
+  const writeShowHiddenRatings =
+    options.setShowHiddenRatings ?? setShowHiddenRatings
+  const hiddenRatingsVisible = readShowHiddenRatings()
 
   overlayController.open({
     id: 'debug',
     title: 'Debug',
     className: 'overlay-debug',
     content: `
+      <div class="debug-view-actions" aria-label="Debug view actions">
+        <div class="debug-data-action">
+          <button type="button" class="debug-cache-button" data-debug-toggle-hidden-ratings>${hiddenRatingsVisible ? 'Hide' : 'Show'} hidden rating sources</button>
+          <p>Reveal rating sources that are hidden from the normal chart.</p>
+        </div>
+      </div>
       <div class="debug-data-actions" aria-label="Debug data actions">
         <div class="debug-data-action">
           <button type="button" class="debug-cache-button" data-debug-clear-caches>Clear caches</button>
@@ -60,6 +75,11 @@ export function openDebugOverlay(overlayController, page, options = {}) {
         fullReset,
         reloadPage
       })
+      bindDebugViewActions(content, {
+        hiddenRatingsVisible,
+        reloadPage,
+        setShowHiddenRatings: writeShowHiddenRatings
+      })
     },
     onKeyDown(event, { content }) {
       if (event.key === 'j' || event.key === 'ArrowDown') {
@@ -73,6 +93,18 @@ export function openDebugOverlay(overlayController, page, options = {}) {
       }
     }
   })
+}
+
+function bindDebugViewActions(
+  content,
+  { hiddenRatingsVisible, reloadPage, setShowHiddenRatings }
+) {
+  content
+    .querySelector('[data-debug-toggle-hidden-ratings]')
+    .addEventListener('click', () => {
+      setShowHiddenRatings(!hiddenRatingsVisible)
+      reloadPage()
+    })
 }
 
 function bindDebugDataActions(
