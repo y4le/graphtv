@@ -45,6 +45,12 @@ describe('renderComparisonPage', () => {
     })
     await page.whenSettled
 
+    expect(page.getCreditsContext()).toStrictEqual({
+      aggregator: null,
+      providers: ['omdb'],
+      show: bundles['tvmaze:1'].show
+    })
+
     expect(container.querySelector('.comparison-title').textContent).toBe(
       'First Show vs Second Show'
     )

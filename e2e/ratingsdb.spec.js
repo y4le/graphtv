@@ -312,6 +312,42 @@ test('reveals hidden RatingsDB rating sources from the debug overlay', async ({
   expect(requests.legacyRequests).toStrictEqual([])
 })
 
+test('credits the rating sources a RatingsDB chart actually shows', async ({
+  page
+}) => {
+  const requests = await installRoutes(page)
+  await page.goto('/?api=ratingsdb&show=ratingsdb%3Att9000001')
+  await expect(page.locator('.episode-point').first()).toBeVisible()
+
+  await page.getByRole('button', { name: /Help/u }).click()
+  await page.getByRole('button', { name: 'Credits & attribution' }).click()
+  const credits = page.locator('[data-credit-provider]')
+  await expect(credits).toHaveCount(3)
+  expect(
+    await credits.evaluateAll((items) =>
+      items.map((item) => item.dataset.creditProvider)
+    )
+  ).toStrictEqual(['ratingsdb', 'imdb', 'tmdb'])
+  await expect(page.locator('.credits-current-data')).not.toContainText(
+    'Used with permission'
+  )
+  await page.getByRole('button', { name: 'Close overlay' }).click()
+
+  await page.keyboard.press('Shift+D')
+  await page.getByRole('button', { name: 'Show hidden rating sources' }).click()
+  await expect(page.locator('.episode-point').first()).toBeVisible()
+  await page.getByRole('button', { name: /Help/u }).click()
+  await page.getByRole('button', { name: 'Credits & attribution' }).click()
+
+  await expect(credits).toHaveCount(5)
+  expect(
+    await credits.evaluateAll((items) =>
+      items.map((item) => item.dataset.creditProvider)
+    )
+  ).toStrictEqual(['ratingsdb', 'imdb', 'tmdb', 'rottentomatoes', 'metacritic'])
+  expect(requests.legacyRequests).toStrictEqual([])
+})
+
 test('adopts landing references for RatingsDB without loading legacy data', async ({
   page
 }) => {

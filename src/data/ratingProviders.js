@@ -282,3 +282,45 @@ export function orderVisibleRatings(
     )
     .map(({ rating }) => rating)
 }
+
+export function getDisplayedRatingSources(
+  bundleOrBundles,
+  { includeHidden = getShowHiddenRatings() } = {}
+) {
+  const bundles = Array.isArray(bundleOrBundles)
+    ? bundleOrBundles
+    : [bundleOrBundles]
+  const sources = new Map()
+
+  function collect(ratings) {
+    for (const rating of ratings ?? []) {
+      const source = rating?.source
+      if (
+        typeof source !== 'string' ||
+        source.length === 0 ||
+        sources.has(source) ||
+        !isRatingSourceVisible(source, includeHidden)
+      ) {
+        continue
+      }
+      sources.set(source, {
+        source,
+        order: getRatingProvider(source).order,
+        index: sources.size
+      })
+    }
+  }
+
+  for (const bundle of bundles) {
+    collect(bundle?.show?.ratings)
+    for (const season of bundle?.seasons ?? []) {
+      for (const episode of season?.episodes ?? []) {
+        collect(episode?.ratings)
+      }
+    }
+  }
+
+  return Array.from(sources.values())
+    .sort((left, right) => left.order - right.order || left.index - right.index)
+    .map(({ source }) => source)
+}

@@ -14,6 +14,7 @@ import {
   renderPublisherBrand
 } from './shared.js'
 import {
+  getDisplayedRatingSources,
   getRatingSourceLabel,
   orderVisibleRatings
 } from '../data/ratingProviders.js'
@@ -246,7 +247,8 @@ export async function renderResultsPage(container, showRef, options = {}) {
       },
       getCreditsContext() {
         return {
-          providers: getLoadedProviders(latestBundle),
+          aggregator: latestBundle?.sourceStatus?.provider ?? null,
+          providers: getDisplayedRatingSources(latestBundle),
           show: latestShow
         }
       },
@@ -336,7 +338,11 @@ export async function renderResultsPage(container, showRef, options = {}) {
       },
       getCreditsContext() {
         return {
-          providers: latestShow && primaryProvider ? [primaryProvider] : [],
+          aggregator: null,
+          providers: getDisplayedRatingSources({
+            show: latestShow,
+            seasons: []
+          }),
           show: latestShow
         }
       },
@@ -521,19 +527,6 @@ async function consumeRemainingSnapshots(iterator, onSnapshot) {
     }
     await onSnapshot(next.value)
   }
-}
-
-function getLoadedProviders(bundle) {
-  if (Array.isArray(bundle?.sourceRecords)) {
-    return bundle.sourceRecords.map((record) => record.provider)
-  }
-
-  return [
-    bundle?.primarySource,
-    ...(bundle?.providerDiagnostics ?? [])
-      .filter((diagnostic) => diagnostic.status === 'loaded')
-      .map((diagnostic) => diagnostic.provider)
-  ].filter(Boolean)
 }
 
 function buildBackHref() {

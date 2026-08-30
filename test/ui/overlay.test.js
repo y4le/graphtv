@@ -502,7 +502,7 @@ describe('keyboard help overlay', () => {
         document.querySelectorAll('[data-credit-provider]'),
         (item) => item.dataset.creditProvider
       )
-    ).toEqual(['tvmaze', 'omdb', 'tmdb'])
+    ).toEqual(['tvmaze', 'tmdb', 'omdb'])
 
     document.querySelector('[data-credits-back]').click()
 
@@ -599,6 +599,56 @@ describe('credits overlay', () => {
       'No television shows were canceled in the making of this graph.'
     )
     expect(content.textContent).not.toContain('Self-rating')
+  })
+
+  it('credits RatingsDB and only the visible sources in its chart', () => {
+    const overlayController = createOverlayController()
+    openCreditsOverlay(overlayController, {
+      kind: 'results',
+      getCreditsContext: () => ({
+        aggregator: 'ratingsdb',
+        providers: ['combined', 'imdb', 'tmdb'],
+        show: {
+          title: 'Contract Show',
+          externalIds: { imdb: 'tt9000001', tmdb: '9001' }
+        }
+      })
+    })
+
+    expect(
+      Array.from(
+        document.querySelectorAll('[data-credit-provider]'),
+        (item) => item.dataset.creditProvider
+      )
+    ).toStrictEqual(['ratingsdb', 'imdb', 'tmdb'])
+    const text = document.querySelector('.credits-current-data').textContent
+    expect(text).toContain('Chart data assembled by RatingsDB.')
+    expect(text).toContain(
+      'The combined rating is computed by RatingsDB from the sources listed here.'
+    )
+    expect(text).not.toContain('Used with permission')
+    expect(document.querySelector('[data-credit-provider="tvmaze"]')).toBeNull()
+    expect(document.querySelector('[data-credit-provider="omdb"]')).toBeNull()
+  })
+
+  it('deduplicates hidden source families without inventing notices', () => {
+    const overlayController = createOverlayController()
+    openCreditsOverlay(overlayController, {
+      kind: 'results',
+      getCreditsContext: () => ({
+        providers: ['rtAudience', 'mcAudience', 'rtCritics', 'mcCritics'],
+        show: { title: 'Hidden Sources', externalIds: {} }
+      })
+    })
+
+    const credits = Array.from(
+      document.querySelectorAll('[data-credit-provider]')
+    )
+    expect(credits.map((item) => item.dataset.creditProvider)).toStrictEqual([
+      'rottentomatoes',
+      'metacritic'
+    ])
+    expect(credits.every((item) => item.querySelector('p') === null)).toBe(true)
   })
 
   it('states when the current page has no external data', () => {

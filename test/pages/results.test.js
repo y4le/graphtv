@@ -262,6 +262,7 @@ describe('renderResultsPage', () => {
     const page = await pagePromise
     expect(chartFactory).toHaveBeenCalledTimes(1)
     expect(page.getCreditsContext()).toEqual({
+      aggregator: null,
       providers: ['tvmaze'],
       show: primaryBundle.show
     })
@@ -341,7 +342,8 @@ describe('renderResultsPage', () => {
       container.querySelector('.results-data').getAttribute('aria-busy')
     ).toBe('false')
     expect(page.getCreditsContext()).toEqual({
-      providers: ['tvmaze', 'omdb', 'tmdb'],
+      aggregator: null,
+      providers: ['tvmaze', 'tmdb', 'omdb'],
       show: supplementalBundle.show
     })
 
@@ -386,6 +388,55 @@ describe('renderResultsPage', () => {
     expect(progress.textContent).toBe('TMDB unavailable')
     expect(progress.hidden).toBe(false)
     expect(progress.getAttribute('role')).toBe('status')
+    page.destroy()
+  })
+
+  it('credits visible rating rows instead of provider status rows', async () => {
+    const bundle = createBundle()
+    bundle.primarySource = 'ratingsdb'
+    bundle.show.ratings = [
+      { source: 'combined', rating: 8.4, votes: null },
+      { source: 'imdb', rating: 8.5, votes: 100 }
+    ]
+    bundle.seasons[0].episodes[0].ratings = [
+      { source: 'tmdb', rating: 8.1, votes: 20 },
+      { source: 'rtCritics', rating: 9.2, votes: 10 }
+    ]
+    bundle.sourceStatus = {
+      provider: 'ratingsdb',
+      sources: [
+        { source: 'imdb', status: 'loaded' },
+        { source: 'tvmaze', status: 'failed' }
+      ]
+    }
+    const bundleStream = async function* () {
+      yield {
+        phase: 'show',
+        show: bundle.show,
+        pendingProviders: [],
+        complete: false
+      }
+      yield {
+        phase: 'primary',
+        bundle,
+        pendingProviders: [],
+        complete: true
+      }
+    }
+    const container = document.createElement('div')
+
+    const page = await renderResultsPage(container, 'ratingsdb:tt9000001', {
+      bundleStream,
+      chartFactory: () => createChartStub(),
+      detailLoaderFactory: () => vi.fn(),
+      compareProviders: []
+    })
+
+    expect(page.getCreditsContext()).toStrictEqual({
+      aggregator: 'ratingsdb',
+      providers: ['combined', 'imdb', 'tmdb'],
+      show: bundle.show
+    })
     page.destroy()
   })
 
@@ -669,6 +720,7 @@ describe('renderResultsPage', () => {
       container.querySelector('.results-data').getAttribute('aria-busy')
     ).toBe('false')
     expect(page.getCreditsContext()).toEqual({
+      aggregator: null,
       providers: ['tvmaze'],
       show: createBundle().show
     })

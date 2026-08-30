@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   RATING_PROVIDER_REGISTRY,
   RATING_SOURCE_PRIORITY,
+  getDisplayedRatingSources,
   getRatingMinimumVotes,
   getRatingProvider,
   getRatingSourceLabel,
@@ -170,6 +171,42 @@ describe('rating provider registry', () => {
       order: Number.MAX_SAFE_INTEGER,
       showInRatings: true
     })
+  })
+
+  it('derives credited sources from visible show and episode ratings', () => {
+    const first = {
+      show: {
+        ratings: [
+          { source: 'tmdb', rating: 7.8 },
+          { source: 'combined', rating: 8.1 }
+        ]
+      },
+      seasons: [
+        {
+          episodes: [
+            {
+              ratings: [
+                { source: 'imdb', rating: 8.2 },
+                { source: 'rtCritics', rating: 8.4 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+    const second = {
+      show: { ratings: [{ source: 'tvmaze', rating: 8 }] },
+      seasons: []
+    }
+
+    expect(getDisplayedRatingSources(first)).toStrictEqual([
+      'combined',
+      'imdb',
+      'tmdb'
+    ])
+    expect(
+      getDisplayedRatingSources([first, second], { includeHidden: true })
+    ).toStrictEqual(['combined', 'imdb', 'tvmaze', 'tmdb', 'rtCritics'])
   })
 
   it('builds source-owned series links from validated external ids', () => {

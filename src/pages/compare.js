@@ -14,6 +14,7 @@ import {
   selectComparisonRatingSource
 } from '../data/comparison.js'
 import {
+  getDisplayedRatingSources,
   getRatingSourceLabel,
   orderVisibleRatings
 } from '../data/ratingProviders.js'
@@ -705,14 +706,14 @@ export async function renderComparisonPage(
       window.location.href = buildSearchHref()
     },
     getCreditsContext() {
+      const bundles = COMPARISON_SLOT_IDS.map((slot) => slots[slot].bundle)
       return {
-        providers: Array.from(
-          new Set(
-            COMPARISON_SLOT_IDS.flatMap((slot) =>
-              getLoadedProviders(slots[slot].bundle)
-            )
-          )
-        ),
+        aggregator: bundles.some(
+          (bundle) => bundle?.sourceStatus?.provider === 'ratingsdb'
+        )
+          ? 'ratingsdb'
+          : null,
+        providers: getDisplayedRatingSources(bundles),
         show: slots[activeSlot].show
       }
     },
@@ -1171,12 +1172,6 @@ function buildSingleShowHref(showRef) {
 
 function buildSearchHref() {
   return buildUrl(preserveDebugParams(new URLSearchParams()))
-}
-
-function getLoadedProviders(bundle) {
-  return (bundle?.sourceRecords ?? [])
-    .map((record) => record.provider)
-    .filter(Boolean)
 }
 
 function formatNumber(value) {

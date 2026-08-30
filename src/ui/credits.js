@@ -1,18 +1,27 @@
 import tmdbLogoMarkup from '../assets/tmdb-blue-short.svg?raw'
-import { getRatingSourceUrl } from '../data/ratingProviders.js'
+import {
+  ATTRIBUTION_BY_SOURCE,
+  ATTRIBUTION_SUBJECTS
+} from '../data/attribution.js'
+import {
+  getRatingProvider,
+  getRatingSourceUrl
+} from '../data/ratingProviders.js'
 import { escapeHtml } from '../lib/html.js'
-
-const CREDITED_PROVIDERS = new Set(['omdb', 'tmdb', 'tvmaze'])
 
 export function renderCreditsContent(page) {
   const context = page.getCreditsContext?.() ?? {}
-  const providers = Array.from(
+  const sources = Array.from(
     new Set(
       (Array.isArray(context.providers) ? context.providers : []).filter(
-        (provider) => CREDITED_PROVIDERS.has(provider)
+        (source) => typeof source === 'string' && source.length > 0
       )
     )
+  ).sort(
+    (left, right) =>
+      getRatingProvider(left).order - getRatingProvider(right).order
   )
+  const credits = getAttributionEntries(context.aggregator, sources)
   const show = context.show ?? null
 
   return `
@@ -42,9 +51,13 @@ export function renderCreditsContent(page) {
       <section class="credits-section credits-current-data" aria-labelledby="credits-data-title">
         <h3 id="credits-data-title">Data on this page</h3>
         ${
-          providers.length > 0
-            ? `<div class="credits-provider-list">${providers
-                .map((provider) => renderProviderCredit(provider, show))
+          credits.length > 0
+            ? `<div class="credits-provider-list">${credits
+                .map((credit) =>
+                  renderProviderCredit(credit, show, {
+                    hasCombined: sources.includes('combined')
+                  })
+                )
                 .join('')}</div>`
             : '<p class="credits-empty">No external TV data is currently displayed on this page.</p>'
         }
@@ -72,57 +85,86 @@ export function renderCreditsContent(page) {
   `
 }
 
-function renderProviderCredit(provider, show) {
-  if (provider === 'tvmaze') {
-    return `
-      <article class="credits-provider" data-credit-provider="tvmaze">
-        <h4><a href="https://www.tvmaze.com/">TVmaze</a></h4>
-        <p>
-          TV data and artwork provided by TVmaze. TVmaze API data is licensed under
-          <a href="https://www.tvmaze.com/api#licensing">CC BY-SA</a>.
-        </p>
-        ${renderProviderSeriesLink(provider, show)}
-      </article>
-    `
+function getAttributionEntries(aggregator, sources) {
+  const credits = []
+  const seen = new Set()
+
+  function add(subject, source = null) {
+    const descriptor = ATTRIBUTION_SUBJECTS[subject]
+    if (!descriptor || seen.has(subject)) {
+      return
+    }
+    seen.add(subject)
+    credits.push({ subject, source, descriptor })
   }
 
-  if (provider === 'tmdb') {
-    return `
-      <article class="credits-provider credits-provider-tmdb" data-credit-provider="tmdb">
-        <h4>
-          <a class="credits-tmdb-logo" href="https://www.themoviedb.org/" aria-label="TMDB">
-            <span aria-hidden="true">${tmdbLogoMarkup}</span>
-          </a>
-        </h4>
-        <p>TV data and artwork provided by TMDB.</p>
-        <p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
-        ${renderProviderSeriesLink(provider, show)}
-      </article>
-    `
+  if (aggregator === 'ratingsdb') {
+    add('ratingsdb')
   }
+  for (const source of sources) {
+    const subject = ATTRIBUTION_BY_SOURCE[source]
+    if (subject) {
+      add(subject, source)
+    }
+  }
+
+  return credits
+}
+
+function renderProviderCredit(
+  { subject, source, descriptor },
+  show,
+  { hasCombined }
+) {
+  const notices = [
+    ...descriptor.notices,
+    ...(hasCombined && descriptor.combinedNotice
+      ? [descriptor.combinedNotice]
+      : [])
+  ]
 
   return `
-    <article class="credits-provider" data-credit-provider="omdb">
-      <h4><a href="https://www.omdbapi.com/">OMDb API</a></h4>
-      <p>
-        Episode metadata and IMDb ratings provided through the OMDb API. OMDb content is licensed under
-        <a href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a>.
-        OMDb is not endorsed by or affiliated with IMDb.com.
-      </p>
-      ${renderProviderSeriesLink(provider, show)}
+    <article class="credits-provider${descriptor.logo ? ' credits-provider-tmdb' : ''}" data-credit-provider="${escapeHtml(subject)}">
+      ${renderProviderHeading(descriptor)}
+      ${notices.map((notice) => `<p>${escapeHtml(notice)}</p>`).join('')}
+      ${renderProviderLicense(descriptor.license)}
+      ${renderProviderSeriesLink(source, descriptor.linkLabel, show)}
     </article>
   `
 }
 
-function renderProviderSeriesLink(provider, show) {
-  const url = getRatingSourceUrl(provider, { show })
-  if (!url || !show?.title) {
+function renderProviderHeading(descriptor) {
+  if (descriptor.logo) {
+    return `
+      <h4>
+        <a class="credits-tmdb-logo" href="${escapeHtml(descriptor.href)}" aria-label="${escapeHtml(descriptor.name)}">
+          <span aria-hidden="true">${tmdbLogoMarkup}</span>
+        </a>
+      </h4>
+    `
+  }
+
+  const name = escapeHtml(descriptor.name)
+  const heading = descriptor.href
+    ? `<a href="${escapeHtml(descriptor.href)}">${name}</a>`
+    : name
+  return `<h4>${heading}</h4>`
+}
+
+function renderProviderLicense(license) {
+  if (!license) {
+    return ''
+  }
+  return `<p>${escapeHtml(license.prefix)} <a href="${escapeHtml(license.href)}">${escapeHtml(license.label)}</a>.</p>`
+}
+
+function renderProviderSeriesLink(source, linkLabel, show) {
+  const url = source ? getRatingSourceUrl(source, { show }) : null
+  if (!url || !show?.title || !linkLabel) {
     return ''
   }
 
-  const destination =
-    provider === 'omdb' ? 'IMDb' : provider === 'tmdb' ? 'TMDB' : 'TVmaze'
-  return `<p class="credits-series-link"><a href="${escapeHtml(url)}">View “${escapeHtml(show.title)}” on ${destination}</a></p>`
+  return `<p class="credits-series-link"><a href="${escapeHtml(url)}">View “${escapeHtml(show.title)}” on ${escapeHtml(linkLabel)}</a></p>`
 }
 
 function renderRatingGraphLink(show) {
