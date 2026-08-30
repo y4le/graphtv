@@ -143,7 +143,7 @@ describe('rating scale domains', () => {
     ])
   })
 
-  it('excludes missing and zero ratings from primary selection and the y-axis domain', () => {
+  it('excludes missing ratings and unvoted TMDB sentinels from the chart', () => {
     const model = createModel()
     const scales = createMainScales(
       model,
@@ -163,6 +163,39 @@ describe('rating scale domains', () => {
     ])
     expect(scales.yDomain[0]).toBeGreaterThan(0)
     expect(scales.yDomain).toEqual([8.02, 8.78])
+  })
+
+  it('keeps a true zero rating in the chart and y-axis domain', () => {
+    const model = buildChartModel([
+      {
+        number: 1,
+        episodes: [
+          createEpisode('zero-percent', [
+            {
+              source: 'rtCritics',
+              rating: 0,
+              votes: 1,
+              metric: 'percentagePositive'
+            }
+          ])
+        ]
+      }
+    ])
+    const scales = createMainScales(
+      model,
+      { start: 1, end: 1 },
+      { width: 600, height: 400 }
+    )
+
+    expect(model.points[0]).toMatchObject({
+      id: 'zero-percent',
+      rating: 0,
+      ratingSource: 'rtCritics'
+    })
+    expect(model.ratedPoints.map((point) => point.id)).toStrictEqual([
+      'zero-percent'
+    ])
+    expect(scales.yDomain).toStrictEqual([0, 0.6])
   })
 
   it('uses a show-wide preferred source and marks per-episode fallbacks', () => {
@@ -624,10 +657,10 @@ function createModel() {
       number: 1,
       episodes: [
         createEpisode('missing', [{ source: 'tmdb', rating: null }]),
-        createEpisode('zero', [{ source: 'tmdb', rating: 0 }]),
+        createEpisode('zero', [{ source: 'tmdb', rating: 0, votes: 0 }]),
         createEpisode('rated', [
           { source: 'tvmaze', rating: 8.2 },
-          { source: 'tmdb', rating: 0 }
+          { source: 'tmdb', rating: 0, votes: 0 }
         ]),
         createEpisode('also-rated', [{ source: 'omdb', rating: 8.6 }])
       ]

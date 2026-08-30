@@ -19,7 +19,7 @@ export function createProviderRating(
   return {
     ...metadata,
     source,
-    rating: isUsableRating(rating) ? rating : null,
+    rating: isUsableRating(rating) ? (rating === 0 ? 0 : rating) : null,
     votes: typeof votes === 'number' ? votes : null
   }
 }

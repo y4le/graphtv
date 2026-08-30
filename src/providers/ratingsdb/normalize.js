@@ -1,4 +1,9 @@
-import { createEpisode, createSeason, createShow } from '../../data/schema.js'
+import {
+  createEpisode,
+  createProviderRating,
+  createSeason,
+  createShow
+} from '../../data/schema.js'
 
 const DIAGNOSTIC_STATUSES = new Map([
   ['fresh', 'loaded'],
@@ -11,20 +16,16 @@ const DIAGNOSTIC_STATUSES = new Map([
 ])
 
 function normalizeRating(rating, sourceIds = {}) {
-  const normalized = {
-    source: rating.source,
-    rating: rating.rating ?? null,
-    votes: rating.votes ?? null
-  }
+  const metadata = {}
 
   if (rating.metric) {
-    normalized.metric = rating.metric
+    metadata.metric = rating.metric
   }
   if (rating.contributors) {
-    normalized.contributors = [...rating.contributors]
+    metadata.contributors = [...rating.contributors]
   }
   if (rating.alignment) {
-    normalized.provenance = {
+    metadata.provenance = {
       providerEpisodeId: sourceIds[rating.source] ?? null,
       strategy: rating.alignment.strategy,
       confidence: rating.alignment.confidence,
@@ -35,7 +36,12 @@ function normalizeRating(rating, sourceIds = {}) {
     }
   }
 
-  return normalized
+  return createProviderRating(
+    rating.source,
+    rating.rating ?? null,
+    rating.votes ?? null,
+    metadata
+  )
 }
 
 function normalizeEpisode(episode) {

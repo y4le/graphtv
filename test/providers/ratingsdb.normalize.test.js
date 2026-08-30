@@ -128,6 +128,17 @@ describe('RatingsDB bundle normalization', () => {
     ])
   })
 
+  it('normalizes a wire negative zero to positive zero', () => {
+    const bundle = readBundle('invalid-ratings')
+    bundle.seasons[0].episodes[0].ratings[1].rating = -0
+
+    const rating = findEpisode(normalizeRatingsdbBundle(bundle), 'tt9000004')
+      .ratings[1].rating
+
+    expect(Object.is(rating, 0)).toBe(true)
+    expect(Object.is(rating, -0)).toBe(false)
+  })
+
   it('maps strong wire alignment onto trusted provenance', () => {
     const result = normalizeRatingsdbBundle(readBundle('split-parts'))
     const rating = findEpisode(result, 'tt9000002').ratings.find(

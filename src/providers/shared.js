@@ -29,10 +29,14 @@ export function parseNumericValue(value) {
 }
 
 export function createRatings(source, rating, votes = null, metadata = {}) {
+  const value = parseNumericValue(rating)
+
+  // Legacy provider payloads can report an unrated title as zero rather than
+  // null (TMDB's vote_average is the live case), so reject that sentinel here.
   return [
     createProviderRating(
       source,
-      parseNumericValue(rating),
+      value > 0 ? value : null,
       parseNumericValue(votes),
       metadata
     )

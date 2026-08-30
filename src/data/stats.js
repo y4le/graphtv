@@ -721,10 +721,12 @@ function toTrendExtreme(point) {
 }
 
 export function isUsableRating(value) {
+  // This is only a 0–10 range check. Provider-specific sentinels are rejected
+  // when ratings are constructed so genuine zero scores remain usable.
   return (
     typeof value === 'number' &&
     Number.isFinite(value) &&
-    value > 0 &&
+    value >= 0 &&
     value <= 10
   )
 }

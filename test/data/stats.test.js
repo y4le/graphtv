@@ -4,6 +4,7 @@ import {
   createCachedSeriesBreakpointDetector,
   detectSeriesBreakpoint,
   getRatingSpread,
+  isUsableRating,
   isUsableProviderRating,
   linearRegression,
   linearRegressionFromPoints,
@@ -115,6 +116,32 @@ describe('data/stats', () => {
     expect(
       isUsableProviderRating({ source: 'tvmaze', rating: 8, votes: null })
     ).toBe(true)
+  })
+
+  it.each([
+    [0, true],
+    [-0, true],
+    [10, true],
+    [-0.1, false],
+    [10.1, false],
+    [Number.NaN, false],
+    [null, false],
+    ['8', false]
+  ])('treats %j as usable: %s', (value, expected) => {
+    expect(isUsableRating(value)).toBe(expected)
+  })
+
+  it('keeps a true zero score while rejecting an unvoted TMDB sentinel', () => {
+    expect(
+      isUsableProviderRating({
+        source: 'rtCritics',
+        rating: 0,
+        votes: 1
+      })
+    ).toBe(true)
+    expect(
+      isUsableProviderRating({ source: 'tmdb', rating: 0, votes: 0 })
+    ).toBe(false)
   })
 
   it('computes a standard linear regression', () => {
