@@ -19,7 +19,7 @@ Updated August 21, 2026. The redesign plan is complete; this document records th
 - `src/data/`: normalized models, merging, alignment, comparison-source policy, caches, and provider orchestration
 - `src/providers/`: provider-specific transport and normalization
 - `src/pages/`: search/results page composition and page lifecycle
-- `src/ui/`: reusable overlays, carousels, keyboard routing, and supporting UI
+- `src/ui/`: reusable overlays, keyboard routing, and supporting UI
 - `src/viz/`: chart model, marks, viewport behavior, themes, and sidenotes
 - `src/lib/`: small environment-independent helpers
 - `test/`: unit, integration, DOM, CSS-contract, and build-configuration coverage
