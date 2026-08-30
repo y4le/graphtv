@@ -18,7 +18,7 @@
     "pretest": "npm run prepare:client-secrets",
     "test": "vitest run",
     "test:watch": "vitest",
-    "pretest:e2e": "GRAPHTV_DISABLE_CLIENT_SECRETS=1 npm run build",
+    "pretest:e2e": "GRAPHTV_DISABLE_CLIENT_SECRETS=1 VITE_RATINGSDB_API_BASE=https://ratingsdb.test npm run build",
     "test:e2e": "playwright test",
     "prelint": "npm run prepare:client-secrets",
     "lint": "eslint src test e2e scripts eslint.config.js vite.config.js playwright.config.js",

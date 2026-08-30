@@ -1,0 +1,289 @@
+import { readFileSync } from 'node:fs'
+
+import { expect, test } from '@playwright/test'
+
+const RATINGSDB_ORIGIN = 'https://ratingsdb.test'
+const legacyProviderRoutes = [
+  'https://api.tvmaze.com/**',
+  'https://api.themoviedb.org/**',
+  'https://www.omdbapi.com/**'
+]
+const baseBundle = JSON.parse(
+  readFileSync(
+    new URL('../test/fixtures/ratingsdb/short-series.json', import.meta.url),
+    'utf8'
+  )
+)
+const searchResponse = {
+  results: [
+    {
+      id: 'tt9000001',
+      title: 'Contract Show',
+      year: '2026',
+      poster: null,
+      genres: ['Drama', 'Mystery'],
+      externalIds: {
+        imdb: 'tt9000001',
+        tmdb: '9001',
+        tvmaze: '901'
+      }
+    }
+  ]
+}
+
+function createBundle() {
+  const bundle = structuredClone(baseBundle)
+  const episodeTemplate = bundle.seasons[0].episodes[0]
+  bundle.show.poster = null
+  bundle.show.totalSeasons = 2
+  bundle.seasons = [1, 2].map((season) => ({
+    number: season,
+    title: `Season ${season}`,
+    episodes: Array.from({ length: 12 }, (_, index) => {
+      const sequence = (season - 1) * 12 + index
+      const episodeId = `tt${String(9_000_002 + sequence)}`
+      return {
+        ...structuredClone(episodeTemplate),
+        id: episodeId,
+        title: `Episode ${sequence + 1}`,
+        season,
+        episode: index + 1,
+        date: `202${season + 4}-${String(index + 1).padStart(2, '0')}-01`,
+        sourceIds: { imdb: episodeId }
+      }
+    })
+  }))
+  bundle.stats.episodes = 24
+  bundle.stats.rated = { imdb: 24, tmdb: 24, combined: 24 }
+  return bundle
+}
+
+function createDiagnosticsBundle() {
+  const bundle = createBundle()
+  bundle.providers = [
+    {
+      source: 'imdb',
+      status: 'fresh',
+      contributed: true,
+      lastSuccessAt: '2026-09-01T10:00:00Z',
+      expiresAt: '2026-09-01T18:00:00Z'
+    },
+    {
+      source: 'tmdb',
+      status: 'failed',
+      contributed: false,
+      reason: 'upstream_error'
+    },
+    {
+      source: 'rtCritics',
+      status: 'redacted',
+      contributed: false,
+      reason: 'provider_redacted'
+    },
+    {
+      source: 'combined',
+      status: 'computed',
+      contributed: true
+    }
+  ]
+  return bundle
+}
+
+async function installRoutes(
+  page,
+  { bundle = createBundle(), handleChart } = {}
+) {
+  const legacyRequests = []
+  const chartPaths = []
+  const chartRequestTimes = []
+
+  for (const pattern of legacyProviderRoutes) {
+    await page.route(pattern, (route) => {
+      legacyRequests.push(route.request().url())
+      return route.abort('blockedbyclient')
+    })
+  }
+
+  await page.route(`${RATINGSDB_ORIGIN}/**`, async (route) => {
+    const url = new URL(route.request().url())
+    if (url.pathname === '/api/v1/search') {
+      await fulfillJson(route, searchResponse)
+      return
+    }
+
+    if (/^\/api\/v1\/series\/[^/]+\/chart$/u.test(url.pathname)) {
+      chartPaths.push(url.pathname)
+      chartRequestTimes.push(Date.now())
+      if (handleChart) {
+        await handleChart(route, chartPaths.length)
+      } else {
+        await fulfillJson(route, bundle)
+      }
+      return
+    }
+
+    await route.abort('failed')
+  })
+
+  return { chartPaths, chartRequestTimes, legacyRequests }
+}
+
+async function fulfillJson(route, body, { headers = {}, status = 200 } = {}) {
+  await route.fulfill({
+    status,
+    headers: {
+      'access-control-allow-origin': '*',
+      'access-control-expose-headers': 'Retry-After',
+      ...headers
+    },
+    json: body
+  })
+}
+
+test('searches into a RatingsDB chart without contacting legacy hosts', async ({
+  page
+}) => {
+  const requests = await installRoutes(page)
+  await page.goto('/?api=ratingsdb')
+
+  const searchbox = page.getByRole('searchbox', { name: 'Show title' })
+  await searchbox.fill('Contract Show')
+  await searchbox.press('Enter')
+  await expect(page.getByRole('link', { name: /Contract Show/u })).toBeVisible()
+  await page.keyboard.press('Enter')
+
+  await expect(
+    page.getByRole('heading', { name: 'Contract Show' })
+  ).toBeVisible()
+  await expect(page.locator('.episode-point').first()).toBeVisible()
+  await expect(page).toHaveURL(/show=ratingsdb%3Att9000001/u)
+  await expect(page).toHaveURL(/[?&]api=ratingsdb(?:&|$)/u)
+  expect(requests.chartPaths).toStrictEqual(['/api/v1/series/tt9000001/chart'])
+  expect(requests.legacyRequests).toStrictEqual([])
+})
+
+test('honors two measured pending delays before rendering a series', async ({
+  page
+}) => {
+  const bundle = createBundle()
+  const requests = await installRoutes(page, {
+    async handleChart(route, attempt) {
+      if (attempt < 3) {
+        await fulfillJson(
+          route,
+          {
+            error: 'Hydration in progress',
+            code: 'hydration_pending',
+            degradation: {
+              capability: 'hydration',
+              reason: 'request_budget_exhausted'
+            }
+          },
+          { headers: { 'Retry-After': '2' }, status: 202 }
+        )
+        return
+      }
+      await fulfillJson(route, bundle)
+    }
+  })
+
+  await page.goto('/?api=ratingsdb&show=ratingsdb%3Att9000001')
+
+  await expect(page.locator('.episode-point').first()).toBeVisible()
+  expect(requests.chartRequestTimes).toHaveLength(3)
+  expect(
+    requests.chartRequestTimes[1] - requests.chartRequestTimes[0]
+  ).toBeGreaterThanOrEqual(1_900)
+  expect(
+    requests.chartRequestTimes[2] - requests.chartRequestTimes[1]
+  ).toBeGreaterThanOrEqual(1_900)
+  expect(requests.chartPaths).toStrictEqual([
+    '/api/v1/series/tt9000001/chart',
+    '/api/v1/series/tt9000001/chart',
+    '/api/v1/series/tt9000001/chart'
+  ])
+  expect(requests.legacyRequests).toStrictEqual([])
+})
+
+test('renders an unknown RatingsDB series as an error', async ({ page }) => {
+  const requests = await installRoutes(page, {
+    handleChart: (route) =>
+      fulfillJson(route, { error: 'Not found' }, { status: 404 })
+  })
+
+  await page.goto('/?api=ratingsdb&show=ratingsdb%3Att9999999')
+
+  await expect(page.locator('.error-state')).toBeVisible()
+  expect(requests.chartPaths).toStrictEqual(['/api/v1/series/tt9999999/chart'])
+  expect(requests.legacyRequests).toStrictEqual([])
+})
+
+test('exposes RatingsDB provider statuses through debug diagnostics', async ({
+  page
+}) => {
+  const requests = await installRoutes(page, {
+    bundle: createDiagnosticsBundle()
+  })
+  await page.goto('/?api=ratingsdb&show=ratingsdb%3Att9000001')
+  await expect(page.locator('.episode-point').first()).toBeVisible()
+
+  await page.keyboard.press('Shift+D')
+  const section = page.locator('.debug-section').filter({
+    has: page.getByRole('heading', { name: 'Provider diagnostics' })
+  })
+  const href = await section.locator('.debug-raw-link').getAttribute('href')
+  const diagnostics = JSON.parse(
+    decodeURIComponent(href.slice(href.indexOf(',') + 1))
+  )
+  const sources = Object.fromEntries(
+    diagnostics[0].seasonDiagnostics.map((item) => [
+      item.source,
+      { reason: item.reason, status: item.status }
+    ])
+  )
+
+  expect(sources).toStrictEqual({
+    combined: { reason: null, status: 'loaded' },
+    imdb: { reason: null, status: 'loaded' },
+    rtCritics: { reason: 'provider_redacted', status: 'skipped' },
+    tmdb: { reason: 'upstream_error', status: 'failed' }
+  })
+  expect(requests.legacyRequests).toStrictEqual([])
+})
+
+test('reveals hidden RatingsDB rating sources from the debug overlay', async ({
+  page
+}) => {
+  const requests = await installRoutes(page)
+  await page.goto('/?api=ratingsdb&show=ratingsdb%3Att9000001')
+
+  const ratingSources = page.locator('.rating-badge-source')
+  await expect(ratingSources).toHaveText(['Combined', 'IMDb'])
+  await page.keyboard.press('Shift+D')
+  await page.getByRole('button', { name: 'Show hidden rating sources' }).click()
+
+  await expect(ratingSources).toHaveText([
+    'Combined',
+    'IMDb',
+    'RT Critics',
+    'Metacritic'
+  ])
+  expect(requests.legacyRequests).toStrictEqual([])
+})
+
+test('adopts landing references for RatingsDB without loading legacy data', async ({
+  page
+}) => {
+  const requests = await installRoutes(page)
+  await page.goto('/?api=ratingsdb')
+
+  const href = await page
+    .getByRole('link', { name: /^Breaking Bad,/u })
+    .getAttribute('href')
+  const target = new URL(href, page.url())
+
+  expect(target.searchParams.get('show')).toBe('ratingsdb:tvmaze:169')
+  expect(target.searchParams.get('api')).toBe('ratingsdb')
+  expect(requests.chartPaths).toStrictEqual([])
+  expect(requests.legacyRequests).toStrictEqual([])
+})
