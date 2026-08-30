@@ -6,6 +6,7 @@ export const API_CACHE_TTL = Object.freeze({
   search: DAY_MS,
   collection: DAY_MS,
   popularCollection: 3 * DAY_MS,
+  bundle: DAY_MS,
   show: DAY_MS,
   episodes: DAY_MS,
   season: DAY_MS,
