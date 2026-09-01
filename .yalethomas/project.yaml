@@ -1,4 +1,4 @@
-schema: 1
+schema: 2
 title: graphtv
 description: Explore television episode ratings across seasons, trends, and multiple data providers.
 bullets:
@@ -12,6 +12,10 @@ link: https://yalethom.as/graphtv/
 type: visualization
 tags:
   - television
-  - data visualization
+skills:
+  - Data Visualization
   - D3
+  - API Integration
+  - Web Performance
+  - Web
 svg: .yalethomas/card.svg
